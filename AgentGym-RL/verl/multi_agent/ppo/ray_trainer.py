@@ -22,8 +22,16 @@ from verl.agent_trainer.ppo.ray_trainer import (
 )
 from verl.agent_trainer.ppo.ray_trainer import compute_data_metrics as compute_single_agent_metrics
 from verl.multi_agent.utils.agent_dataset.rl_dataset import RLHFDataset, collate_fn
-from verl.utils.seqlen_balancing import get_seqlen_balanced_partitions, log_seqlen_unbalance
-from verl.utils.checkpoint.checkpoint_manager import find_latest_ckpt_path
+
+
+def _infer_task_name(batch) -> str:
+    try:
+        item_ids = batch.non_tensor_batch.get("item_id")
+        if item_ids is not None and len(item_ids) > 0:
+            return str(item_ids[0]).split("_", 1)[0]
+    except Exception:
+        pass
+    return "unknown"
 
 
 def compute_data_metrics(batch, use_critic=True):
@@ -31,14 +39,15 @@ def compute_data_metrics(batch, use_critic=True):
     if "planner_response_mask" not in batch.batch.keys():
         return metrics
 
+    task_name = _infer_task_name(batch)
     planner_tokens = batch.batch["planner_response_mask"].sum(-1).float()
     executor_tokens = batch.batch["executor_response_mask"].sum(-1).float()
     reward_events = batch.batch["reward_event_mask"].sum(-1).float()
     env_rounds = batch.batch.get("team_env_rounds", batch.batch["task_rounds"]).float()
-    valid_actions = batch.batch.get(
-        "executor_action_valid",
-        torch.ones_like(env_rounds, dtype=torch.float32),
-    ).float()
+    valid_actions = batch.batch.get("executor_action_valid", torch.ones_like(env_rounds, dtype=torch.float32)).float()
+    valid_format = batch.batch.get("executor_native_format_valid", torch.ones_like(env_rounds, dtype=torch.float32)).float()
+    env_step_failed = batch.batch.get("env_step_failed", torch.zeros_like(env_rounds, dtype=torch.float32)).float()
+    timeout_occurred = batch.batch.get("timeout_occurred", torch.zeros_like(env_rounds, dtype=torch.float32)).float()
 
     metrics.update(
         {
@@ -48,8 +57,12 @@ def compute_data_metrics(batch, use_critic=True):
                 (torch.mean(planner_tokens) / (torch.mean(executor_tokens) + 1e-6)).detach().item()
             ),
             "executor_invalid_action_rate": (1.0 - torch.mean(valid_actions)).detach().item(),
+            f"invalid_action_rate/{task_name}": (1.0 - torch.mean(valid_actions)).detach().item(),
             "env_rounds/mean": torch.mean(env_rounds).detach().item(),
             "reward_events/mean": torch.mean(reward_events).detach().item(),
+            f"env_step_failures/{task_name}": torch.mean(env_step_failed).detach().item(),
+            f"timeout_rate/{task_name}": torch.mean(timeout_occurred).detach().item(),
+            f"executor_native_format_violations/{task_name}": (1.0 - torch.mean(valid_format)).detach().item(),
         }
     )
     return metrics
@@ -109,7 +122,7 @@ class RayPPOTrainer(BaseRayPPOTrainer):
     def fit(self):
         # ORIGINAL FLOW DIFFERENCE:
         # single-agent path logged only aggregate trajectory metrics.
-        # multi-agent path adds planner/executor token and reward-event metrics.
+        # multi-agent path adds planner/executor token and task-specific rollout reliability metrics.
         from omegaconf import OmegaConf
         from verl.utils.tracking import Tracking
 

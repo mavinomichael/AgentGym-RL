@@ -1,15 +1,24 @@
+# Multi-agent extension.
+# Derived from: /Users/mavinomichael/PycharmProjects/AgentGym-RL/AgentGym-RL/verl/agent_trainer/config/generation.yaml
+# Original file left untouched for comparison.
+
+defaults:
+  - task: webarena
+  - runtime: qwen2_5_7b_1gpu_smoke
+  - _self_
+
 trainer:
-  nnodes: 1
-  n_gpus_per_node: 8
+  nnodes: ${runtime.nnodes}
+  n_gpus_per_node: ${runtime.n_gpus_per_node}
 
 data:
-  path: null
-  max_prompt_length: 1024
-  max_response_length: 15360
+  path: ${oc.env:DATA_ROOT,.}/${task.eval_dir}
+  max_prompt_length: ${task.eval_max_prompt_length}
+  max_response_length: ${task.eval_max_response_length}
   prompt_key: item_id
-  n_samples: 1
+  n_samples: ${runtime.eval_n_samples}
   output_path: null
-  batch_size: 16
+  batch_size: ${task.eval_batch_size}
 
 multi_agent:
   enabled: true
@@ -20,63 +29,63 @@ multi_agent:
   reward_mode: delta_per_executor_step
   roles:
     planner:
-      max_tokens: 256
-      temperature: 1.0
+      max_tokens: ${task.planner_max_tokens}
+      temperature: ${runtime.eval_temperature}
     executor:
-      max_tokens: 256
-      temperature: 1.0
+      max_tokens: ${task.executor_max_tokens}
+      temperature: ${runtime.eval_temperature}
 
 agentgym:
-  task_name: sciworld
-  env_addr: 'http://localhost:5000'
+  task_name: ${task.task_name}
+  env_addr: ${runtime.env_server_url}
   max_retries: 10
-  max_rounds: 10
-  timeout: 300
+  max_rounds: ${task.eval_max_rounds}
+  timeout: ${task.default_timeout}
 
 model:
-  path: null
+  path: ${runtime.model_path}
   external_lib: null
 
 rollout:
   name: vllm
-  temperature: 1.0
+  temperature: ${runtime.eval_temperature}
   top_k: -1
   top_p: 1
   prompt_length: ${data.max_prompt_length}
   response_length: ${data.max_response_length}
   dtype: bfloat16
-  gpu_memory_utilization: 0.5
+  gpu_memory_utilization: ${runtime.eval_gpu_memory_utilization}
   ignore_eos: False
   enforce_eager: True
   free_cache_engine: True
   load_format: dummy_dtensor
-  tensor_model_parallel_size: 2
-  max_num_batched_tokens: 8192
-  max_model_len: 32768
-  max_num_seqs: 1024
+  tensor_model_parallel_size: ${runtime.tensor_model_parallel_size}
+  max_num_batched_tokens: ${runtime.max_num_batched_tokens}
+  max_model_len: ${runtime.max_model_len}
+  max_num_seqs: ${runtime.max_num_seqs}
   log_prob_micro_batch_size: null
   log_prob_micro_batch_size_per_gpu: 1
   log_prob_use_dynamic_bsz: ${actor.use_dynamic_bsz}
   log_prob_max_token_len_per_gpu: ${actor.ppo_max_token_len_per_gpu}
-  max_tokens: 1024
+  max_tokens: ${task.rollout_max_tokens}
   disable_log_stats: True
   enable_chunked_prefill: True
   do_sample: True
   n: 1
   send_interval: 1
-  rollout_log_dir: null
+  rollout_log_dir: ${oc.env:SAVE_ROOT,checkpoints}/eval_logs/${task.task_name}
 
 actor:
   strategy: fsdp
-  ppo_mini_batch_size: 16
+  ppo_mini_batch_size: ${task.ppo_mini_batch_size}
   ppo_micro_batch_size: null
   ppo_micro_batch_size_per_gpu: 1
   use_dynamic_bsz: False
-  ppo_max_token_len_per_gpu: 16384
+  ppo_max_token_len_per_gpu: ${runtime.actor_ppo_max_token_len_per_gpu}
   grad_clip: 1.0
   clip_ratio: 0.2
   entropy_coeff: 0.001
-  use_kl_loss: null
+  use_kl_loss: False
   kl_loss_coef: 0.001
   kl_loss_type: low_var_kl
   ppo_epochs: 1

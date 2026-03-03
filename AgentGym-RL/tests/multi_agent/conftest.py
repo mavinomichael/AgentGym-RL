@@ -5,13 +5,23 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = ROOT.parent
+
+for candidate in (ROOT, REPO_ROOT):
+    candidate_str = str(candidate)
+    if candidate_str not in sys.path:
+        sys.path.insert(0, candidate_str)
 
 
 def _ensure_package(name: str) -> None:
     if name in sys.modules:
         return
     module = types.ModuleType(name)
-    module.__path__ = []
+    package_path = ROOT.joinpath(*name.split("."))
+    if package_path.is_dir():
+        module.__path__ = [str(package_path)]
+    else:
+        module.__path__ = [str(ROOT)]
     sys.modules[name] = module
 
 

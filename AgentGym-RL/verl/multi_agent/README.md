@@ -7,8 +7,9 @@ Design goals:
 - no edits required to the original single-agent path
 - detachable by removing `verl/multi_agent` and the corresponding `examples/*/MultiAgent` folders
 
-Initial scope:
+Current scope:
 - planner + executor topology
 - shared actor policy
 - centralized critic over the joint transcript
-- SciWorld pilot environment
+- five RL environments: `webarena`, `sciworld`, `searchqa`, `babyai`, `textcraft`
+- Qwen-first runnable configs for 8-GPU training and 1-GPU smoke evaluation

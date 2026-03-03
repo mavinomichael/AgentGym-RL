@@ -1,0 +1,25 @@
+# Multi-agent extension.
+
+task_name: searchqa
+train_file: AgentItemId/searchqa_train.json
+eval_dir: AgentEval/searchqa
+max_prompt_length: 1024
+max_response_length: 8192
+default_max_rounds: 5
+rollout_max_tokens: 512
+planner_max_tokens: 192
+executor_max_tokens: 512
+train_batch_size: 32
+rollout_n: 4
+ppo_mini_batch_size: 8
+ppo_micro_batch_size_per_gpu: 1
+critic_ppo_micro_batch_size_per_gpu: 1
+default_timeout: 600
+invalid_action_patterns:
+  - "Your previous action is invalid."
+executor_native_format_hint: "Begin directly with SearchQA tags like <think>, <search>, <information>, and <answer>."
+eval_max_prompt_length: 750
+eval_max_response_length: 14098
+eval_batch_size: 32
+eval_max_rounds: 30
+total_epochs: 20

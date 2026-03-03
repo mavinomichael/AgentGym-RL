@@ -1,8 +1,8 @@
 # Multi-agent extension.
-# Derived from: /Users/mavinomichael/PycharmProjects/AgentGym-RL/AgentGym-RL/verl/workers/rollout/agent_vllm_rollout/vllm_rollout.py
-# Original file left untouched for comparison.
+# Derived from: /Users/mavinomichael/PycharmProjects/AgentGym-RL/AgentGym-RL/verl/multi_agent
+# Original files left untouched for comparison.
 
-from verl.multi_agent.envs.prompt_policy import (
+from .prompt_policy import (
     CONTROL_SPEAKER_ID,
     EXECUTOR_SPEAKER_ID,
     PLANNER_SPEAKER_ID,
@@ -15,12 +15,13 @@ from verl.multi_agent.envs.prompt_policy import (
     is_executor_payload_valid,
     normalize_executor_payload,
 )
-from verl.multi_agent.envs.task_registry import get_task_profile
+from .task_registry import TaskProfile, get_task_profile, list_task_profiles
 
 __all__ = [
     "CONTROL_SPEAKER_ID",
     "EXECUTOR_SPEAKER_ID",
     "PLANNER_SPEAKER_ID",
+    "TaskProfile",
     "build_executor_turn_prompt",
     "build_multi_agent_bootstrap",
     "build_multi_agent_instruction",
@@ -29,5 +30,6 @@ __all__ = [
     "detect_invalid_action",
     "get_task_profile",
     "is_executor_payload_valid",
+    "list_task_profiles",
     "normalize_executor_payload",
 ]

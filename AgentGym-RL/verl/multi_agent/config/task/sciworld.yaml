@@ -1,0 +1,25 @@
+# Multi-agent extension.
+
+task_name: sciworld
+train_file: AgentItemId/sciworld_train.json
+eval_dir: AgentEval/sciworld
+max_prompt_length: 1024
+max_response_length: 4096
+default_max_rounds: 20
+rollout_max_tokens: 200
+planner_max_tokens: 128
+executor_max_tokens: 200
+train_batch_size: 16
+rollout_n: 8
+ppo_mini_batch_size: 8
+ppo_micro_batch_size_per_gpu: 1
+critic_ppo_micro_batch_size_per_gpu: 1
+default_timeout: 600
+invalid_action_patterns:
+  - "Invalid Action."
+executor_native_format_hint: "Use the SciWorld action format exactly as accepted by the environment."
+eval_max_prompt_length: 1024
+eval_max_response_length: 8192
+eval_batch_size: 32
+eval_max_rounds: 30
+total_epochs: 10

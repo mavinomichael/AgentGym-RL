@@ -20,18 +20,20 @@ class FakeEnv:
 
 def test_max_rounds_counts_environment_actions_not_speaker_turns():
     env = FakeEnv()
+    profile = planner_executor.get_task_profile("searchqa")
     max_rounds = 2
     rounds = 0
     observation = "obs-0"
     while rounds < max_rounds:
-        planner_prompt = planner_executor.build_planner_turn_prompt(observation)
-        planner_message = f"Planner: derived from {planner_prompt}"
-        executor_prompt = planner_executor.build_executor_turn_prompt(observation, planner_message)
-        executor_message = f"Executor: action from {executor_prompt}"
-        result = env.step(planner_executor.strip_speaker_prefix(executor_message, "Executor"))
+        planner_prompt = planner_executor.build_planner_turn_prompt(observation, profile)
+        planner_message = f"Derived from {planner_prompt}"
+        executor_prompt = planner_executor.build_executor_turn_prompt(observation, planner_message, profile)
+        executor_message = f"<search>{executor_prompt[:10]}</search>"
+        result = env.step(planner_executor.normalize_executor_payload(executor_message, profile))
         observation = result["observation"]
         rounds += 1
         if result["done"]:
             break
     assert len(env.actions) == 2
     assert rounds == 2
+    assert env.actions[0].startswith("<search>")

@@ -1,11 +1,21 @@
+# Multi-agent extension.
+# Derived from: /Users/mavinomichael/PycharmProjects/AgentGym-RL/AgentGym-RL/verl/agent_trainer/config/ppo_trainer.yaml
+# Original file left untouched for comparison.
+
+defaults:
+  - task: webarena
+  - runtime: qwen2_5_7b_8gpu
+  - algo: multi_agent_gae
+  - _self_
+
 data:
   tokenizer: null
-  train_file: ~/data/rlhf/gsm8k/train.parquet
-  val_files: ~/data/rlhf/gsm8k/test.parquet
+  train_file: ${oc.env:DATA_ROOT,.}/${task.train_file}
+  val_files: null
   prompt_key: item_id
-  max_prompt_length: 2048
-  max_response_length: 4096
-  train_batch_size: 1024
+  max_prompt_length: ${task.max_prompt_length}
+  max_response_length: ${task.max_response_length}
+  train_batch_size: ${task.train_batch_size}
   val_batch_size: null
   return_raw_input_ids: False
   return_raw_chat: True
@@ -20,38 +30,38 @@ multi_agent:
   reward_mode: delta_per_executor_step
   roles:
     planner:
-      max_tokens: 256
-      temperature: 1.0
+      max_tokens: ${task.planner_max_tokens}
+      temperature: ${runtime.temperature}
     executor:
-      max_tokens: 256
-      temperature: 1.0
+      max_tokens: ${task.executor_max_tokens}
+      temperature: ${runtime.temperature}
 
 actor_rollout_ref:
   hybrid_engine: True
   model:
-    path: ~/models/deepseek-llm-7b-chat
+    path: ${runtime.model_path}
     external_lib: null
     override_config: {}
     enable_gradient_checkpointing: True
     use_remove_padding: False
   actor:
     strategy: fsdp
-    ppo_mini_batch_size: 256
+    ppo_mini_batch_size: ${task.ppo_mini_batch_size}
     ppo_micro_batch_size: null
-    ppo_micro_batch_size_per_gpu: null
+    ppo_micro_batch_size_per_gpu: ${task.ppo_micro_batch_size_per_gpu}
     use_dynamic_bsz: False
-    ppo_max_token_len_per_gpu: 16384
+    ppo_max_token_len_per_gpu: ${runtime.actor_ppo_max_token_len_per_gpu}
     grad_clip: 1.0
     clip_ratio: 0.2
     entropy_coeff: 0.001
-    use_kl_loss: False
-    kl_loss_coef: 0.001
+    use_kl_loss: ${algo.use_kl_loss}
+    kl_loss_coef: ${algo.kl_coef}
     kl_loss_type: low_var_kl
-    ppo_epochs: 1
+    ppo_epochs: ${algo.ppo_epochs}
     shuffle: False
     ulysses_sequence_parallel_size: 1
     optim:
-      lr: 1e-6
+      lr: ${algo.policy_learning_rate}
       lr_warmup_steps_ratio: 0.
       min_lr_ratio: null
       warmup_style: constant
@@ -74,29 +84,29 @@ actor_rollout_ref:
     log_prob_max_token_len_per_gpu: ${actor_rollout_ref.actor.ppo_max_token_len_per_gpu}
     ulysses_sequence_parallel_size: ${actor_rollout_ref.actor.ulysses_sequence_parallel_size}
   agentgym:
-    task_name: sciworld
-    env_addr: 'http://localhost:5000'
+    task_name: ${task.task_name}
+    env_addr: ${runtime.env_server_url}
     max_retries: 10
-    max_rounds: 10
-    timeout: 300
+    max_rounds: ${task.default_max_rounds}
+    timeout: ${task.default_timeout}
   rollout:
     name: vllm
-    temperature: 1.0
+    temperature: ${runtime.temperature}
     top_k: -1
     top_p: 1
     prompt_length: ${data.max_prompt_length}
     response_length: ${data.max_response_length}
     dtype: bfloat16
-    gpu_memory_utilization: 0.5
+    gpu_memory_utilization: ${runtime.gpu_memory_utilization}
     ignore_eos: False
     enforce_eager: True
     free_cache_engine: True
     load_format: dummy_dtensor
-    tensor_model_parallel_size: 2
-    max_num_batched_tokens: 8192
-    max_model_len: 32768
-    max_num_seqs: 1024
-    max_tokens: 1024
+    tensor_model_parallel_size: ${runtime.tensor_model_parallel_size}
+    max_num_batched_tokens: ${runtime.max_num_batched_tokens}
+    max_model_len: ${runtime.max_model_len}
+    max_num_seqs: ${runtime.max_num_seqs}
+    max_tokens: ${task.rollout_max_tokens}
     log_prob_micro_batch_size: null
     log_prob_micro_batch_size_per_gpu: 1
     log_prob_use_dynamic_bsz: ${actor_rollout_ref.actor.use_dynamic_bsz}
@@ -104,21 +114,21 @@ actor_rollout_ref:
     disable_log_stats: True
     enable_chunked_prefill: True
     do_sample: True
-    n: 1
+    n: ${task.rollout_n}
     send_interval: 1
-    rollout_log_dir: null
+    rollout_log_dir: ${trainer.default_local_dir}/rollout_logs
 
 critic:
   rollout_n: ${actor_rollout_ref.rollout.n}
   strategy: fsdp
   optim:
-    lr: 1e-5
+    lr: ${algo.critic_learning_rate}
     lr_warmup_steps_ratio: 0.
     min_lr_ratio: null
     warmup_style: constant
     total_training_steps: -1
   model:
-    path: ~/models/deepseek-llm-7b-chat
+    path: ${runtime.model_path}
     tokenizer_path: ${actor_rollout_ref.model.path}
     override_config: {}
     external_lib: ${actor_rollout_ref.model.external_lib}
@@ -131,13 +141,13 @@ critic:
       wrap_policy:
         min_num_params: 0
       fsdp_size: -1
-  ppo_mini_batch_size: ${actor_rollout_ref.actor.ppo_mini_batch_size}
+  ppo_mini_batch_size: ${task.ppo_mini_batch_size}
   ppo_micro_batch_size: null
-  ppo_micro_batch_size_per_gpu: null
+  ppo_micro_batch_size_per_gpu: ${task.critic_ppo_micro_batch_size_per_gpu}
   forward_micro_batch_size: ${critic.ppo_micro_batch_size}
   forward_micro_batch_size_per_gpu: ${critic.ppo_micro_batch_size_per_gpu}
   use_dynamic_bsz: ${actor_rollout_ref.actor.use_dynamic_bsz}
-  ppo_max_token_len_per_gpu: 32768
+  ppo_max_token_len_per_gpu: ${runtime.critic_ppo_max_token_len_per_gpu}
   forward_max_token_len_per_gpu: ${critic.ppo_max_token_len_per_gpu}
   ulysses_sequence_parallel_size: 1
   ppo_epochs: ${actor_rollout_ref.actor.ppo_epochs}
@@ -150,7 +160,7 @@ reward_model:
   strategy: fsdp
   model:
     input_tokenizer: ${actor_rollout_ref.model.path}
-    path: ~/models/FsfairX-LLaMA3-RM-v0.1
+    path: null
     external_lib: ${actor_rollout_ref.model.external_lib}
     use_remove_padding: False
     fsdp_config:
@@ -168,33 +178,34 @@ reward_model:
   sandbox_fusion:
     url: null
     max_concurrent: 64
+
 custom_reward_function:
   path: null
   name: null
 
 algorithm:
-  gamma: 1.0
-  lam: 1.0
-  adv_estimator: gae
-  kl_penalty: kl
+  gamma: ${algo.gamma}
+  lam: ${algo.lam}
+  adv_estimator: ${algo.adv_estimator}
+  kl_penalty: ${algo.kl_penalty}
   rounds_ctrl:
-    type: fixed
-    rounds: 15
-    steps_scaling_inter: 100
+    type: ${algo.rounds_ctrl_type}
+    rounds: ${task.default_max_rounds}
+    steps_scaling_inter: ${algo.steps_scaling_inter}
   kl_ctrl:
     type: fixed
-    kl_coef: 0.001
+    kl_coef: ${algo.kl_coef}
 
 trainer:
-  total_epochs: 30
+  total_epochs: ${task.total_epochs}
   total_training_steps: null
-  project_name: verl_multi_agent
-  experiment_name: sciworld_planner_executor
-  logger: ['console', 'wandb']
+  project_name: agentgym_multi_agent
+  experiment_name: ${oc.env:EXP_NAME,${task.task_name}_planner_executor}
+  logger: ${runtime.loggers}
   val_generations_to_log_to_wandb: 0
-  nnodes: 1
-  n_gpus_per_node: 8
-  save_freq: -1
+  nnodes: ${runtime.nnodes}
+  n_gpus_per_node: ${runtime.n_gpus_per_node}
+  save_freq: ${runtime.save_freq}
   resume_mode: auto
   resume_from_path: False
   test_freq: -1
@@ -202,5 +213,5 @@ trainer:
   default_hdfs_dir: null
   remove_previous_ckpt_in_save: False
   del_local_ckpt_after_load: False
-  default_local_dir: checkpoints/${trainer.project_name}/${trainer.experiment_name}
+  default_local_dir: ${oc.env:SAVE_ROOT,checkpoints}/${trainer.project_name}/${trainer.experiment_name}
   storage_mode: local

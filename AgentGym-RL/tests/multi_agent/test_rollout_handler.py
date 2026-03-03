@@ -29,7 +29,7 @@ def make_handler(tokenizer):
     prompt_ids = tokenizer.encode("<|im_end|>", add_special_tokens=False)
     return schemas.RolloutHandler(
         messages=[schemas.Message(role="user", content="bootstrap")],
-        task_name="sciworld",
+        task_name="searchqa",
         item_id=1,
         score=0.0,
         done=False,
@@ -70,9 +70,9 @@ def test_masks_are_disjoint_and_rewards_attach_to_executor_terminal_token():
     handler = make_handler(tokenizer)
     handler.add_user_message(tokenizer, "obs")
     handler.add_user_message(tokenizer, "planner turn")
-    handler.add_assistant_message(tokenizer, "Planner: search the room", planner_executor.PLANNER_SPEAKER_ID)
+    handler.add_assistant_message(tokenizer, "Search the room first.", planner_executor.PLANNER_SPEAKER_ID)
     handler.add_user_message(tokenizer, "executor turn")
-    handler.add_assistant_message(tokenizer, "Executor: look around", planner_executor.EXECUTOR_SPEAKER_ID)
+    handler.add_assistant_message(tokenizer, "<search>room</search>", planner_executor.EXECUTOR_SPEAKER_ID)
     handler.mark_last_executor_reward(2.5)
     handler.truncate_output_ids()
 
@@ -88,14 +88,29 @@ def test_masks_are_disjoint_and_rewards_attach_to_executor_terminal_token():
     assert abs(sum(reward_values) - 2.5) < 1e-6
 
 
+def test_speaker_metadata_is_separate_from_message_content():
+    tokenizer = FakeTokenizer()
+    handler = make_handler(tokenizer)
+    handler.add_user_message(tokenizer, "planner prompt")
+    handler.add_assistant_message(tokenizer, "Use the search tool.", planner_executor.PLANNER_SPEAKER_ID)
+    handler.add_user_message(tokenizer, "executor prompt")
+    handler.add_assistant_message(tokenizer, "<search>water</search>", planner_executor.EXECUTOR_SPEAKER_ID)
+
+    assistant_messages = [message for message in handler.messages if message.role == "assistant"]
+    assert assistant_messages[0].speaker == "planner"
+    assert assistant_messages[0].content == "Use the search tool."
+    assert assistant_messages[1].speaker == "executor"
+    assert assistant_messages[1].content == "<search>water</search>"
+
+
 def test_one_env_round_can_contain_two_assistant_turns_and_one_reward_event():
     tokenizer = FakeTokenizer()
     handler = make_handler(tokenizer)
     handler.add_user_message(tokenizer, "initial observation")
     handler.add_user_message(tokenizer, "planner prompt")
-    handler.add_assistant_message(tokenizer, "Planner: collect water", planner_executor.PLANNER_SPEAKER_ID)
+    handler.add_assistant_message(tokenizer, "Collect the sample.", planner_executor.PLANNER_SPEAKER_ID)
     handler.add_user_message(tokenizer, "executor prompt")
-    handler.add_assistant_message(tokenizer, "Executor: use beaker", planner_executor.EXECUTOR_SPEAKER_ID)
+    handler.add_assistant_message(tokenizer, "<answer>sample</answer>", planner_executor.EXECUTOR_SPEAKER_ID)
     handler.mark_last_executor_reward(1.0)
     handler.team_env_rounds += 1
     handler.truncate_output_ids()

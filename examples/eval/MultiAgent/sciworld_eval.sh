@@ -1,37 +1,26 @@
-set -x
-export VLLM_USE_MODELSCOPE=0
-export VLLM_WORKER_MULTIPROC_METHOD=spawn
-export VLLM_ATTENTION_BACKEND=XFORMERS
+#!/usr/bin/env bash
+set -euo pipefail
 
-task_name="sciworld"
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+# shellcheck source=/dev/null
+source "$SCRIPT_DIR/../../../scripts/multi_agent/common.sh"
 
-cd AgentGym-RL
-source activate
-conda activate agentgym-rl
+TASK_NAME="sciworld"
+TRAIN_ROOT=$(multi_agent::train_root)
 
-env_server_url="http://127.0.0.1:36005"
-sample_num=1
-max_rounds=30
-ckpt_path="global_step_150/actor"
-model_path=${ckpt_path}/huggingface
+export DATA_ROOT="${DATA_ROOT:-$TRAIN_ROOT}"
+export ENV_SERVER_URL="${ENV_SERVER_URL:-http://127.0.0.1:36005}"
+export SAVE_ROOT="${SAVE_ROOT:-$(multi_agent::repo_root)/runs}"
+export EXP_NAME="${EXP_NAME:-sciworld_planner_executor_eval}"
+export N_GPUS="${N_GPUS:-1}"
+export TP_SIZE="${TP_SIZE:-1}"
+export VLLM_USE_MODELSCOPE="${VLLM_USE_MODELSCOPE:-0}"
+export VLLM_WORKER_MULTIPROC_METHOD="${VLLM_WORKER_MULTIPROC_METHOD:-spawn}"
+export VLLM_ATTENTION_BACKEND="${VLLM_ATTENTION_BACKEND:-XFORMERS}"
 
-cd AgentGym-RL/scripts
-python model_merger.py --local_dir ${ckpt_path}
+multi_agent::maybe_merge_checkpoint "$TRAIN_ROOT"
+multi_agent::require_var MODEL_PATH
+multi_agent::print_run_header "eval" "$TASK_NAME"
 
-HYDRA_FULL_ERROR=1 python3 -m verl.multi_agent.main_generation \
-    data.path=AgentEval/${task_name} \
-    data.max_prompt_length=1024 \
-    data.max_response_length=8192 \
-    data.n_samples=${sample_num} \
-    data.batch_size=32 \
-    agentgym.task_name=${task_name} \
-    agentgym.env_addr=${env_server_url} \
-    agentgym.max_rounds=${max_rounds} \
-    agentgym.timeout=500 \
-    model.path=${model_path} \
-    rollout.gpu_memory_utilization=0.95 \
-    rollout.temperature=1 \
-    rollout.max_model_len=32768 \
-    rollout.max_tokens=200 \
-    rollout.tensor_model_parallel_size=1 \
-    rollout.rollout_log_dir=executer_logs
+cd "$TRAIN_ROOT"
+HYDRA_FULL_ERROR=1 python3 -m verl.multi_agent.main_generation   task=$TASK_NAME   runtime=qwen2_5_7b_1gpu_smoke   "$@"

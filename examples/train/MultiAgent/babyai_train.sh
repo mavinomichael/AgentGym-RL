@@ -5,14 +5,14 @@ SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/../../../scripts/multi_agent/common.sh"
 
-TASK_NAME="sciworld"
+TASK_NAME="babyai"
 TRAIN_ROOT=$(multi_agent::train_root)
 
 export MODEL_PATH="${MODEL_PATH:-}"
 export DATA_ROOT="${DATA_ROOT:-$TRAIN_ROOT}"
 export ENV_SERVER_URL="${ENV_SERVER_URL:-http://127.0.0.1:36005}"
 export SAVE_ROOT="${SAVE_ROOT:-$(multi_agent::repo_root)/runs}"
-export EXP_NAME="${EXP_NAME:-sciworld_planner_executor}"
+export EXP_NAME="${EXP_NAME:-babyai_planner_executor}"
 export N_GPUS="${N_GPUS:-8}"
 export TP_SIZE="${TP_SIZE:-1}"
 export WANDB_MODE="${WANDB_MODE:-offline}"

@@ -1,0 +1,14 @@
+# Multi-agent extension.
+# Shared-policy PPO with centralized critic over the joint transcript.
+
+adv_estimator: gae
+use_kl_loss: false
+kl_penalty: kl
+gamma: 1.0
+lam: 1.0
+kl_coef: 0.001
+policy_learning_rate: 1e-6
+critic_learning_rate: 1e-5
+ppo_epochs: 1
+rounds_ctrl_type: fixed
+steps_scaling_inter: 100

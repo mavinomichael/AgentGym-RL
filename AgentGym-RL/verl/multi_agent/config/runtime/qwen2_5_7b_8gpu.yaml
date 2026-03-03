@@ -1,0 +1,20 @@
+# Multi-agent extension.
+# Primary runtime profile for 8-GPU training with Qwen2.5-7B-Instruct.
+
+model_path: ${oc.env:MODEL_PATH,}
+env_server_url: ${oc.env:ENV_SERVER_URL,http://127.0.0.1:36005}
+nnodes: ${oc.env:NNODES,1}
+n_gpus_per_node: ${oc.env:N_GPUS,8}
+tensor_model_parallel_size: ${oc.env:TP_SIZE,1}
+gpu_memory_utilization: ${oc.env:GPU_MEMORY_UTILIZATION,0.7}
+eval_gpu_memory_utilization: ${oc.env:EVAL_GPU_MEMORY_UTILIZATION,0.95}
+temperature: ${oc.env:TRAIN_TEMPERATURE,1.0}
+eval_temperature: ${oc.env:EVAL_TEMPERATURE,1.0}
+eval_n_samples: ${oc.env:EVAL_N_SAMPLES,1}
+max_num_batched_tokens: ${oc.env:MAX_NUM_BATCHED_TOKENS,8192}
+max_model_len: ${oc.env:MAX_MODEL_LEN,32768}
+max_num_seqs: ${oc.env:MAX_NUM_SEQS,1024}
+actor_ppo_max_token_len_per_gpu: ${oc.env:ACTOR_MAX_TOKEN_LEN_PER_GPU,16384}
+critic_ppo_max_token_len_per_gpu: ${oc.env:CRITIC_MAX_TOKEN_LEN_PER_GPU,32768}
+save_freq: ${oc.env:SAVE_FREQ,25}
+loggers: [console]

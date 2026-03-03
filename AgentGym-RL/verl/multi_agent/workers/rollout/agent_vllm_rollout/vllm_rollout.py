@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 import time
-from typing import List
+from typing import List, Tuple
 
 import torch
 import torch.distributed
@@ -17,14 +17,17 @@ from torch.nn.utils.rnn import pad_sequence
 from tqdm import tqdm
 
 from verl import DataProto
-from verl.multi_agent.workers.rollout.agent_vllm_rollout.planner_executor import (
+from verl.multi_agent.envs import (
     CONTROL_SPEAKER_ID,
     EXECUTOR_SPEAKER_ID,
     PLANNER_SPEAKER_ID,
     build_executor_turn_prompt,
     build_planner_turn_prompt,
     compute_reward_delta,
-    strip_speaker_prefix,
+    detect_invalid_action,
+    get_task_profile,
+    is_executor_payload_valid,
+    normalize_executor_payload,
 )
 from verl.multi_agent.workers.rollout.schemas import Message, RolloutHandler, _pre_process_inputs
 from verl.utils.agentgym.client import init_env_client
@@ -34,8 +37,18 @@ from verl.workers.rollout.agent_vllm_rollout.vllm_rollout import vLLMRollout as 
 
 
 class vLLMRollout(BaseVLLMRollout):
-    def __init__(self, actor_module: nn.Module, rollout_config: DictConfig, agentgym_config: DictConfig, tokenizer, model_hf_config, multi_agent_config=None, **kwargs):
+    def __init__(
+        self,
+        actor_module: nn.Module,
+        rollout_config: DictConfig,
+        agentgym_config: DictConfig,
+        tokenizer,
+        model_hf_config,
+        multi_agent_config=None,
+        **kwargs,
+    ):
         self.multi_agent_config = multi_agent_config
+        self.task_profile = get_task_profile(agentgym_config.task_name)
         super().__init__(
             actor_module=actor_module,
             rollout_config=rollout_config,
@@ -46,11 +59,11 @@ class vLLMRollout(BaseVLLMRollout):
         )
         self.role_defaults = {
             "planner": {
-                "max_tokens": int(self._multi_agent_get("roles.planner.max_tokens", min(256, self.config.max_tokens))),
+                "max_tokens": int(self._multi_agent_get("roles.planner.max_tokens", self.task_profile.planner_max_tokens)),
                 "temperature": float(self._multi_agent_get("roles.planner.temperature", self.config.temperature)),
             },
             "executor": {
-                "max_tokens": int(self._multi_agent_get("roles.executor.max_tokens", min(256, self.config.max_tokens))),
+                "max_tokens": int(self._multi_agent_get("roles.executor.max_tokens", self.task_profile.executor_max_tokens)),
                 "temperature": float(self._multi_agent_get("roles.executor.temperature", self.config.temperature)),
             },
         }
@@ -74,10 +87,15 @@ class vLLMRollout(BaseVLLMRollout):
             current = getattr(current, key)
         return current
 
+    def _parse_item_id(self, raw_item_id: str) -> Tuple[str, int]:
+        task_name, item_id = raw_item_id.split("_", 1)
+        return task_name, int(item_id)
+
     def preprocess_prompt_to_rollout_handler(self, prompts: DataProto, n: int) -> List[RolloutHandler]:
         assert "raw_prompt" in prompts.non_tensor_batch.keys(), "raw_prompt is not in non_tensor_batch, need to set data.return_raw_chat=True"
         handler_list = []
         for i, raw_prompt in enumerate(prompts.non_tensor_batch["raw_prompt"]):
+            task_name, item_id = self._parse_item_id(prompts.non_tensor_batch["item_id"][i])
             for _ in range(n):
                 input_ids = _pre_process_inputs(self.pad_token_id, prompts.batch["input_ids"][i])
                 attention_mask = _pre_process_inputs(0, prompts.batch["attention_mask"][i])
@@ -85,8 +103,8 @@ class vLLMRollout(BaseVLLMRollout):
                 prompt_len = len(input_ids)
                 handler = RolloutHandler(
                     messages=[Message(role=prompt["role"], content=prompt["content"]) for prompt in raw_prompt],
-                    task_name=prompts.non_tensor_batch["item_id"][i].split("_")[0],
-                    item_id=int(prompts.non_tensor_batch["item_id"][i].split("_")[-1]),
+                    task_name=task_name,
+                    item_id=item_id,
                     score=0.0,
                     done=False,
                     input_ids=list(input_ids),
@@ -136,16 +154,31 @@ class vLLMRollout(BaseVLLMRollout):
             "temperature": self.role_defaults[role]["temperature"],
         }
         if not do_sample:
-            overrides.update({
-                "best_of": 1,
-                "top_p": 1.0,
-                "top_k": -1,
-                "min_p": 0.0,
-                "temperature": 0.0,
-                "n": 1,
-            })
+            overrides.update(
+                {
+                    "best_of": 1,
+                    "top_p": 1.0,
+                    "top_k": -1,
+                    "min_p": 0.0,
+                    "temperature": 0.0,
+                    "n": 1,
+                }
+            )
         overrides.update(extra_kwargs)
         return overrides
+
+    def _pad_tensor_list(self, tensors, pad_value, total_length, dtype=None):
+        padded = pad_sequence(tensors, batch_first=True, padding_value=pad_value)
+        if padded.shape[1] < total_length:
+            padded = pad_sequence_to_length(padded, total_length, pad_value)
+        if dtype is not None:
+            padded = padded.to(dtype=dtype)
+        return padded
+
+    def _mark_timeout(self, handler: RolloutHandler) -> None:
+        handler.timeout_occurred = 1.0
+        handler.env_step_failed = 1.0
+        handler.executor_action_valid = 0.0
 
     @torch.no_grad()
     def generate_sequences(self, prompts: DataProto, **kwargs) -> DataProto:
@@ -156,7 +189,7 @@ class vLLMRollout(BaseVLLMRollout):
             self.inference_engine.init_cache_engine()
 
         global_steps = prompts.meta_info.get("global_steps", None)
-        max_rounds = prompts.meta_info.get("max_rounds", 10)
+        max_rounds = prompts.meta_info.get("max_rounds", self.task_profile.default_max_rounds)
         cur_device = prompts.batch["input_ids"].device
         do_sample = prompts.meta_info.get("do_sample", True)
 
@@ -170,15 +203,18 @@ class vLLMRollout(BaseVLLMRollout):
         for idx, rollout_handler in enumerate(rollout_handler_ls):
             try:
                 env_clients[idx].reset(rollout_handler.item_id)
-                task = env_clients[idx].observe()
-                rollout_handler.latest_observation = task
-                rollout_handler.add_user_message(self.tokenizer, task)
+                observation = env_clients[idx].observe()
+                rollout_handler.latest_observation = observation
+                rollout_handler.add_user_message(self.tokenizer, observation)
             except TimeoutError:
                 rollout_handler.done = True
-                rollout_handler.score = 0.0
+                self._mark_timeout(rollout_handler)
+            except Exception as exc:
+                rollout_handler.done = True
+                rollout_handler.env_step_failed = 1.0
                 rollout_handler.executor_action_valid = 0.0
+                rollout_handler.latest_observation = str(exc)
 
-        task_rounds = [0] * batch_size
         rounds = 0
         rollout_bar = tqdm(total=max_rounds, desc="Multi-agent rounds", disable=torch.distributed.get_rank() != 0)
 
@@ -189,7 +225,10 @@ class vLLMRollout(BaseVLLMRollout):
 
             planner_prompt_ids = []
             for idx in active_indices:
-                planner_turn_prompt = build_planner_turn_prompt(rollout_handler_ls[idx].latest_observation)
+                planner_turn_prompt = build_planner_turn_prompt(
+                    rollout_handler_ls[idx].latest_observation,
+                    self.task_profile,
+                )
                 rollout_handler_ls[idx].add_user_message(self.tokenizer, planner_turn_prompt)
                 planner_prompt_ids.append(rollout_handler_ls[idx].get_generation_prompt(self.tokenizer))
 
@@ -208,13 +247,12 @@ class vLLMRollout(BaseVLLMRollout):
             executor_prompt_ids = []
             for local_i, idx in enumerate(active_indices):
                 planner_text = self.tokenizer.decode(planner_response_ids[local_i], skip_special_tokens=True).strip()
-                if not planner_text.startswith("Planner:"):
-                    planner_text = f"Planner: {planner_text}".strip()
                 rollout_handler_ls[idx].latest_planner_message = planner_text
                 rollout_handler_ls[idx].add_assistant_message(self.tokenizer, planner_text, PLANNER_SPEAKER_ID)
                 executor_turn_prompt = build_executor_turn_prompt(
                     rollout_handler_ls[idx].latest_observation,
                     planner_text,
+                    self.task_profile,
                 )
                 rollout_handler_ls[idx].add_user_message(self.tokenizer, executor_turn_prompt)
                 executor_prompt_ids.append(rollout_handler_ls[idx].get_generation_prompt(self.tokenizer))
@@ -230,33 +268,48 @@ class vLLMRollout(BaseVLLMRollout):
             time.sleep(self.config.send_interval)
 
             def agent_step(local_i, idx):
-                raw_content = self.tokenizer.decode(executor_response_ids[local_i], skip_special_tokens=True).strip()
-                content = raw_content if raw_content.startswith("Executor:") else f"Executor: {raw_content}".strip()
-                rollout_handler_ls[idx].add_assistant_message(self.tokenizer, content, EXECUTOR_SPEAKER_ID)
-                action_content = strip_speaker_prefix(content, "Executor")
-                task_rounds[idx] += 1
-                rollout_handler_ls[idx].team_env_rounds += 1
+                handler = rollout_handler_ls[idx]
+                raw_content = self.tokenizer.decode(executor_response_ids[local_i], skip_special_tokens=True)
+                content = normalize_executor_payload(raw_content, self.task_profile)
+                handler.add_assistant_message(self.tokenizer, content, EXECUTOR_SPEAKER_ID)
+                if not is_executor_payload_valid(content, self.task_profile):
+                    handler.executor_native_format_valid = 0.0
+                handler.team_env_rounds += 1
                 try:
-                    step_output = env_clients[idx].step(action_content)
-                    if isinstance(step_output.state, str) and step_output.state.startswith("Invalid Action."):
-                        rollout_handler_ls[idx].executor_action_valid = 0.0
+                    step_output = env_clients[idx].step(content)
+                    state = step_output.state
+                    reward = float(step_output.reward)
+                    done = bool(step_output.done)
+                    if detect_invalid_action(state, self.task_profile):
+                        handler.executor_action_valid = 0.0
                     delta_reward = 0.0
                     if self.reward_mode == "delta_per_executor_step":
-                        delta_reward = compute_reward_delta(previous_scores[idx], step_output.reward)
-                    rollout_handler_ls[idx].mark_last_executor_reward(delta_reward)
-                    previous_scores[idx] = step_output.reward
-                    rollout_handler_ls[idx].score = step_output.reward
-                    rollout_handler_ls[idx].done = step_output.done
-                    rollout_handler_ls[idx].latest_observation = step_output.state
-                    rollout_handler_ls[idx].add_user_message(self.tokenizer, step_output.state)
-                    return step_output.done
-                except Exception:
-                    rollout_handler_ls[idx].executor_action_valid = 0.0
-                    rollout_handler_ls[idx].done = True
+                        delta_reward = compute_reward_delta(previous_scores[idx], reward)
+                    handler.mark_last_executor_reward(delta_reward)
+                    previous_scores[idx] = reward
+                    handler.score = reward
+                    handler.done = done
+                    handler.latest_observation = state
+                    handler.add_user_message(self.tokenizer, state)
+                    return done
+                except TimeoutError:
+                    self._mark_timeout(handler)
+                    handler.done = True
+                    return True
+                except Exception as exc:
+                    handler.env_step_failed = 1.0
+                    handler.executor_action_valid = 0.0
+                    handler.done = True
+                    handler.latest_observation = str(exc)
+                    try:
+                        handler.add_user_message(self.tokenizer, str(exc))
+                    except Exception:
+                        pass
                     return True
 
             with ThreadPoolExecutor(max_workers=len(active_indices)) as executor:
                 step_dones = list(executor.map(lambda args: agent_step(*args), [(i, idx) for i, idx in enumerate(active_indices)]))
+
             rounds += 1
             rollout_bar.update(1)
             if all(step_dones):
@@ -278,8 +331,10 @@ class vLLMRollout(BaseVLLMRollout):
         response_reward_event_mask = []
         team_env_rounds = []
         executor_action_valid = []
+        executor_native_format_valid = []
+        env_step_failed = []
+        timeout_occurred = []
         messages = []
-        prompt_speaker_ids = []
 
         for handler in rollout_handler_ls:
             handler.truncate_output_ids()
@@ -293,25 +348,19 @@ class vLLMRollout(BaseVLLMRollout):
             response_reward_event_mask.append(torch.tensor(handler.response_reward_event_mask, dtype=torch.int, device=cur_device))
             team_env_rounds.append(handler.team_env_rounds)
             executor_action_valid.append(handler.executor_action_valid)
+            executor_native_format_valid.append(handler.executor_native_format_valid)
+            env_step_failed.append(handler.env_step_failed)
+            timeout_occurred.append(handler.timeout_occurred)
             messages.append(handler.messages)
-            prompt_speaker_ids.append(torch.zeros_like(prompts.batch["input_ids"][0], device=cur_device, dtype=torch.int))
 
-        def _pad_tensor_list(tensors, pad_value, total_length, dtype=None):
-            padded = pad_sequence(tensors, batch_first=True, padding_value=pad_value)
-            if padded.shape[1] < total_length:
-                padded = pad_sequence_to_length(padded, total_length, pad_value)
-            if dtype is not None:
-                padded = padded.to(dtype=dtype)
-            return padded
-
-        response_ids = _pad_tensor_list(response_ids, self.pad_token_id, self.config.response_length)
-        response_attention_mask = _pad_tensor_list(response_attention_mask, 0, self.config.response_length)
-        response_loss_mask = _pad_tensor_list(response_loss_mask, 0, self.config.response_length)
-        response_speaker_ids = _pad_tensor_list(response_speaker_ids, CONTROL_SPEAKER_ID, self.config.response_length)
-        response_planner_mask = _pad_tensor_list(response_planner_mask, 0, self.config.response_length)
-        response_executor_mask = _pad_tensor_list(response_executor_mask, 0, self.config.response_length)
-        response_scores = _pad_tensor_list(response_scores, 0.0, self.config.response_length, dtype=torch.float32)
-        response_reward_event_mask = _pad_tensor_list(response_reward_event_mask, 0, self.config.response_length)
+        response_ids = self._pad_tensor_list(response_ids, self.pad_token_id, self.config.response_length)
+        response_attention_mask = self._pad_tensor_list(response_attention_mask, 0, self.config.response_length)
+        response_loss_mask = self._pad_tensor_list(response_loss_mask, 0, self.config.response_length)
+        response_speaker_ids = self._pad_tensor_list(response_speaker_ids, CONTROL_SPEAKER_ID, self.config.response_length)
+        response_planner_mask = self._pad_tensor_list(response_planner_mask, 0, self.config.response_length)
+        response_executor_mask = self._pad_tensor_list(response_executor_mask, 0, self.config.response_length)
+        response_scores = self._pad_tensor_list(response_scores, 0.0, self.config.response_length, dtype=torch.float32)
+        response_reward_event_mask = self._pad_tensor_list(response_reward_event_mask, 0, self.config.response_length)
 
         prompt_input_ids = prompts.batch["input_ids"].repeat_interleave(self.config.n, dim=0)
         prompt_attention_mask = prompts.batch["attention_mask"].repeat_interleave(self.config.n, dim=0)
@@ -329,18 +378,24 @@ class vLLMRollout(BaseVLLMRollout):
 
         if global_steps and self.config.rollout_log_dir is not None:
             try:
-                os.makedirs(os.path.join(self.config.rollout_log_dir, f"step{global_steps}"), exist_ok=True)
-                with open(os.path.join(self.config.rollout_log_dir, f"step{global_steps}/{torch.distributed.get_rank()}.json"), "w") as file_obj:
-                    json_msg = []
-                    for idx, msgs in enumerate(messages):
-                        json_msg.append(
+                log_dir = os.path.join(self.config.rollout_log_dir, f"step{global_steps}")
+                os.makedirs(log_dir, exist_ok=True)
+                log_path = os.path.join(log_dir, f"{torch.distributed.get_rank()}.json")
+                with open(log_path, "w", encoding="utf-8") as file_obj:
+                    json.dump(
+                        [
                             {
                                 "item_id": rollout_handler_ls[idx].item_id,
+                                "task_name": rollout_handler_ls[idx].task_name,
                                 "conversations": [msg.to_dict() for msg in msgs],
                                 "reward": rollout_handler_ls[idx].score,
                             }
-                        )
-                    json.dump(json_msg, file_obj, ensure_ascii=True, indent=4)
+                            for idx, msgs in enumerate(messages)
+                        ],
+                        file_obj,
+                        ensure_ascii=True,
+                        indent=2,
+                    )
             except Exception:
                 pass
 
@@ -367,6 +422,9 @@ class vLLMRollout(BaseVLLMRollout):
                 "reward_event_mask": response_reward_event_mask,
                 "team_env_rounds": torch.tensor(team_env_rounds, dtype=torch.float32, device=cur_device),
                 "executor_action_valid": torch.tensor(executor_action_valid, dtype=torch.float32, device=cur_device),
+                "executor_native_format_valid": torch.tensor(executor_native_format_valid, dtype=torch.float32, device=cur_device),
+                "env_step_failed": torch.tensor(env_step_failed, dtype=torch.float32, device=cur_device),
+                "timeout_occurred": torch.tensor(timeout_occurred, dtype=torch.float32, device=cur_device),
             },
             batch_size=batch_size,
         )

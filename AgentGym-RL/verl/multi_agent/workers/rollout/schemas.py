@@ -14,17 +14,14 @@ try:
 except ModuleNotFoundError:  # pragma: no cover - fallback for lightweight test environments
     PreTrainedTokenizer = Any
 
-from .agent_vllm_rollout.planner_executor import (
-    CONTROL_SPEAKER_ID,
-    EXECUTOR_SPEAKER_ID,
-    PLANNER_SPEAKER_ID,
-)
+from .agent_vllm_rollout.planner_executor import CONTROL_SPEAKER_ID, EXECUTOR_SPEAKER_ID, PLANNER_SPEAKER_ID
 
 
 def _pre_process_inputs(pad_token_id, prompt_token_ids: Any) -> List[int]:
+    if torch is None:
+        raise ModuleNotFoundError("torch is required to preprocess inputs")
     non_pad_index = torch.nonzero(prompt_token_ids != pad_token_id, as_tuple=False)[0][0]
-    token_ids = prompt_token_ids[non_pad_index:].tolist()
-    return token_ids
+    return prompt_token_ids[non_pad_index:].tolist()
 
 
 class Message:
@@ -115,23 +112,27 @@ class RolloutHandler:
         self.response_reward_event_mask = response_reward_event_mask
         self.max_response_len = max_response_len
         self.max_model_len = max_model_len
+
         self.team_env_rounds = 0
         self.executor_action_valid = 1.0
+        self.executor_native_format_valid = 1.0
+        self.env_step_failed = 0.0
+        self.timeout_occurred = 0.0
         self.last_executor_score_index = None
         self.latest_observation = ""
         self.latest_planner_message = ""
         self.format_config = {
             "qwen": {
-                "assistat_prefix_msg": "\n<|im_start|>assistant\n",
-                "assistat_suffix_msg": "<|im_end|>",
+                "assistant_prefix_msg": "\n<|im_start|>assistant\n",
+                "assistant_suffix_msg": "<|im_end|>",
                 "user_prefix_msg": "\n<|im_start|>user\n",
                 "user_suffix_msg": "<|im_end|>",
             }
         }
 
     def get_generation_prompt(self, tokenizer: PreTrainedTokenizer) -> List[int]:
-        conversations = [msg.to_dict() for msg in self.messages]
-        cleaned = [{"role": msg["role"], "content": msg["content"]} for msg in conversations]
+        conversations = [message.to_dict() for message in self.messages]
+        cleaned = [{"role": item["role"], "content": item["content"]} for item in conversations]
         return tokenizer.apply_chat_template(cleaned, add_generation_prompt=True, tokenize=True)
 
     def _append_segment(
@@ -152,12 +153,6 @@ class RolloutHandler:
         self.executor_response_mask += executor_mask
         self.score_values += [0.0] * len(append_token_ids)
         self.reward_event_mask += [0] * len(append_token_ids)
-        assert len(self.input_ids) == len(self.attention_mask) == len(self.position_ids) == len(self.loss_mask)
-        assert len(self.speaker_ids) == len(self.input_ids)
-        assert len(self.planner_response_mask) == len(self.input_ids)
-        assert len(self.executor_response_mask) == len(self.input_ids)
-        assert len(self.score_values) == len(self.input_ids)
-        assert len(self.reward_event_mask) == len(self.input_ids)
 
     def add_user_message(
         self,
@@ -179,9 +174,7 @@ class RolloutHandler:
             local_loss_mask = [0] * (len(prefix_token_ids) + len(content_token_ids))
         else:
             max_len = max(len(prefix_token_ids), len(suffix_token_ids))
-            raise ValueError(
-                f"Unsupported end of message format: {tokenizer.decode(self.input_ids[-max_len:])}"
-            )
+            raise ValueError(f"Unsupported end of message format: {tokenizer.decode(self.input_ids[-max_len:])}")
         append_token_ids += suffix_token_ids
         local_loss_mask += [0] * len(suffix_token_ids)
         self._append_segment(
@@ -201,24 +194,22 @@ class RolloutHandler:
     ) -> None:
         speaker = "planner" if speaker_id == PLANNER_SPEAKER_ID else "executor"
         self.messages.append(Message(role="assistant", content=content, speaker=speaker))
-        prefix_msg = self.format_config[format]["assistat_prefix_msg"]
-        suffix_msg = self.format_config[format]["assistat_suffix_msg"]
+        prefix_msg = self.format_config[format]["assistant_prefix_msg"]
+        suffix_msg = self.format_config[format]["assistant_suffix_msg"]
         prefix_token_ids = tokenizer.encode(prefix_msg, add_special_tokens=False)
         suffix_token_ids = tokenizer.encode(suffix_msg, add_special_tokens=False)
-        response = tokenizer.encode(content, add_special_tokens=False)
+        content_token_ids = tokenizer.encode(content, add_special_tokens=False)
         if self.input_ids[-len(prefix_token_ids):] == prefix_token_ids:
-            append_token_ids = response
-            local_loss_mask = [1] * len(response)
-            role_mask = [1] * len(response)
+            append_token_ids = content_token_ids
+            local_loss_mask = [1] * len(content_token_ids)
+            role_mask = [1] * len(content_token_ids)
         elif self.input_ids[-len(suffix_token_ids):] == suffix_token_ids:
-            append_token_ids = prefix_token_ids + response
-            local_loss_mask = [0] * len(prefix_token_ids) + [1] * len(response)
-            role_mask = [0] * len(prefix_token_ids) + [1] * len(response)
+            append_token_ids = prefix_token_ids + content_token_ids
+            local_loss_mask = [0] * len(prefix_token_ids) + [1] * len(content_token_ids)
+            role_mask = [0] * len(prefix_token_ids) + [1] * len(content_token_ids)
         else:
             max_len = max(len(prefix_token_ids), len(suffix_token_ids))
-            raise ValueError(
-                f"Unsupported end of message format: {tokenizer.decode(self.input_ids[-max_len:])}"
-            )
+            raise ValueError(f"Unsupported end of message format: {tokenizer.decode(self.input_ids[-max_len:])}")
         append_token_ids += suffix_token_ids
         local_loss_mask += [1] * len(suffix_token_ids)
         role_mask += [1] * len(suffix_token_ids)
@@ -250,6 +241,7 @@ class RolloutHandler:
         self.executor_response_mask = self.executor_response_mask[: self.max_model_len]
         self.score_values = self.score_values[: self.max_model_len]
         self.reward_event_mask = self.reward_event_mask[: self.max_model_len]
+
         prompt_len = len(self.prompt_ids)
         response_slice = slice(prompt_len, min(len(self.input_ids), prompt_len + self.max_response_len))
         self.response_ids = self.input_ids[response_slice]

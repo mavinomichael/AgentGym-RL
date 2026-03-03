@@ -1,0 +1,25 @@
+# Multi-agent extension.
+
+task_name: babyai
+train_file: AgentItemId/babyai_train.json
+eval_dir: AgentEval/babyai
+max_prompt_length: 1024
+max_response_length: 4096
+default_max_rounds: 20
+rollout_max_tokens: 200
+planner_max_tokens: 128
+executor_max_tokens: 200
+train_batch_size: 16
+rollout_n: 8
+ppo_mini_batch_size: 8
+ppo_micro_batch_size_per_gpu: 1
+critic_ppo_micro_batch_size_per_gpu: 1
+default_timeout: 600
+invalid_action_patterns:
+  - "Error: Only one 'Action' is allowed per response."
+executor_native_format_hint: "Use the BabyAI native format with Thought: followed by a single Action: line."
+eval_max_prompt_length: 512
+eval_max_response_length: 8192
+eval_batch_size: 32
+eval_max_rounds: 20
+total_epochs: 10

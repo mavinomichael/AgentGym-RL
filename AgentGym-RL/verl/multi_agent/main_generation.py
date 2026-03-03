@@ -13,6 +13,7 @@ import ray
 import verl.utils.torch_functional as verl_F
 
 from verl import DataProto
+from verl.multi_agent.envs import get_task_profile
 from verl.multi_agent.utils.agent_dataset import build_multi_agent_bootstrap
 from verl.multi_agent.workers.agent_fsdp_workers import ActorRolloutRefWorker
 from verl.single_controller.ray import RayClassWithInitArgs, RayResourcePool, RayWorkerGroup
@@ -65,6 +66,7 @@ def main(config):
     num_batch = (total_samples // config_batch_size) + 1
     output_lst = [[] for _ in range(config.data.n_samples)]
     env_client = init_env_client(config.agentgym)
+    task_profile = get_task_profile(config.agentgym.task_name)
 
     for batch_idx in range(num_batch):
         print(f"[{batch_idx + 1}/{num_batch}] Start to process.")
@@ -74,7 +76,7 @@ def main(config):
         messages = []
         prompts = []
         for _ in range(len(batch_item_ids)):
-            prompt_messages, prompt_with_chat_template = build_multi_agent_bootstrap(env_client)
+            prompt_messages, prompt_with_chat_template = build_multi_agent_bootstrap(env_client, task_profile)
             messages.append(prompt_messages)
             prompts.append(prompt_with_chat_template)
 
