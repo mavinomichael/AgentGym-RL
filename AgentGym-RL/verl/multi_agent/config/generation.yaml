@@ -1,0 +1,97 @@
+trainer:
+  nnodes: 1
+  n_gpus_per_node: 8
+
+data:
+  path: null
+  max_prompt_length: 1024
+  max_response_length: 15360
+  prompt_key: item_id
+  n_samples: 1
+  output_path: null
+  batch_size: 16
+
+multi_agent:
+  enabled: true
+  topology: planner_executor
+  shared_policy: true
+  centralized_critic: true
+  count_rounds_as: env_steps
+  reward_mode: delta_per_executor_step
+  roles:
+    planner:
+      max_tokens: 256
+      temperature: 1.0
+    executor:
+      max_tokens: 256
+      temperature: 1.0
+
+agentgym:
+  task_name: sciworld
+  env_addr: 'http://localhost:5000'
+  max_retries: 10
+  max_rounds: 10
+  timeout: 300
+
+model:
+  path: null
+  external_lib: null
+
+rollout:
+  name: vllm
+  temperature: 1.0
+  top_k: -1
+  top_p: 1
+  prompt_length: ${data.max_prompt_length}
+  response_length: ${data.max_response_length}
+  dtype: bfloat16
+  gpu_memory_utilization: 0.5
+  ignore_eos: False
+  enforce_eager: True
+  free_cache_engine: True
+  load_format: dummy_dtensor
+  tensor_model_parallel_size: 2
+  max_num_batched_tokens: 8192
+  max_model_len: 32768
+  max_num_seqs: 1024
+  log_prob_micro_batch_size: null
+  log_prob_micro_batch_size_per_gpu: 1
+  log_prob_use_dynamic_bsz: ${actor.use_dynamic_bsz}
+  log_prob_max_token_len_per_gpu: ${actor.ppo_max_token_len_per_gpu}
+  max_tokens: 1024
+  disable_log_stats: True
+  enable_chunked_prefill: True
+  do_sample: True
+  n: 1
+  send_interval: 1
+  rollout_log_dir: null
+
+actor:
+  strategy: fsdp
+  ppo_mini_batch_size: 16
+  ppo_micro_batch_size: null
+  ppo_micro_batch_size_per_gpu: 1
+  use_dynamic_bsz: False
+  ppo_max_token_len_per_gpu: 16384
+  grad_clip: 1.0
+  clip_ratio: 0.2
+  entropy_coeff: 0.001
+  use_kl_loss: null
+  kl_loss_coef: 0.001
+  kl_loss_type: low_var_kl
+  ppo_epochs: 1
+  shuffle: False
+  ulysses_sequence_parallel_size: 1
+  optim:
+    lr: 1e-6
+    lr_warmup_steps_ratio: 0.
+    min_lr_ratio: null
+    warmup_style: constant
+    total_training_steps: -1
+  fsdp_config:
+    wrap_policy:
+      min_num_params: 0
+    param_offload: False
+    grad_offload: False
+    optimizer_offload: False
+    fsdp_size: -1
