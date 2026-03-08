@@ -27,6 +27,9 @@ multi_agent:
   centralized_critic: true
   count_rounds_as: env_steps
   reward_mode: delta_per_executor_step
+  invalid_output:
+    policy: terminate_with_penalty
+    penalty: -0.2
   roles:
     planner:
       max_tokens: ${task.planner_max_tokens}

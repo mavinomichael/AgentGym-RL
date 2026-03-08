@@ -26,8 +26,8 @@ from verl.multi_agent.envs import (
     compute_reward_delta,
     detect_invalid_action,
     get_task_profile,
-    is_executor_payload_valid,
     normalize_executor_payload,
+    validate_executor_payload,
 )
 from verl.multi_agent.workers.rollout.schemas import Message, RolloutHandler, _pre_process_inputs
 from verl.utils.agentgym.client import init_env_client
@@ -68,6 +68,10 @@ class vLLMRollout(BaseVLLMRollout):
             },
         }
         self.reward_mode = self._multi_agent_get("reward_mode", "delta_per_executor_step")
+        self.invalid_output_policy = str(
+            self._multi_agent_get("invalid_output.policy", "terminate_with_penalty")
+        ).lower()
+        self.invalid_output_penalty = float(self._multi_agent_get("invalid_output.penalty", -0.2))
 
     def _multi_agent_get(self, dotted_key: str, default=None):
         config = self.multi_agent_config
@@ -247,11 +251,12 @@ class vLLMRollout(BaseVLLMRollout):
             executor_prompt_ids = []
             for local_i, idx in enumerate(active_indices):
                 planner_text = self.tokenizer.decode(planner_response_ids[local_i], skip_special_tokens=True).strip()
-                rollout_handler_ls[idx].latest_planner_message = planner_text
-                rollout_handler_ls[idx].add_assistant_message(self.tokenizer, planner_text, PLANNER_SPEAKER_ID)
+                planner_context_text = f"[PLANNER]\n{planner_text}"
+                rollout_handler_ls[idx].latest_planner_message = planner_context_text
+                rollout_handler_ls[idx].add_assistant_message(self.tokenizer, planner_context_text, PLANNER_SPEAKER_ID)
                 executor_turn_prompt = build_executor_turn_prompt(
                     rollout_handler_ls[idx].latest_observation,
-                    planner_text,
+                    planner_context_text,
                     self.task_profile,
                 )
                 rollout_handler_ls[idx].add_user_message(self.tokenizer, executor_turn_prompt)
@@ -271,10 +276,36 @@ class vLLMRollout(BaseVLLMRollout):
                 handler = rollout_handler_ls[idx]
                 raw_content = self.tokenizer.decode(executor_response_ids[local_i], skip_special_tokens=True)
                 content = normalize_executor_payload(raw_content, self.task_profile)
-                handler.add_assistant_message(self.tokenizer, content, EXECUTOR_SPEAKER_ID)
-                if not is_executor_payload_valid(content, self.task_profile):
+                validation = validate_executor_payload(content, handler.latest_observation, self.task_profile)
+                executor_context_text = f"[EXECUTOR]\n{content}"
+                handler.add_assistant_message(self.tokenizer, executor_context_text, EXECUTOR_SPEAKER_ID)
+                if not validation.valid and validation.reason == "invalid_format":
                     handler.executor_native_format_valid = 0.0
+                    handler.executor_action_valid = 0.0
+                elif not validation.valid and validation.reason == "action_not_in_available":
+                    handler.executor_action_valid = 0.0
                 handler.team_env_rounds += 1
+
+                terminate_for_invalid = (
+                    self.task_profile.task_name == "babyai"
+                    and not validation.valid
+                    and self.invalid_output_policy == "terminate_with_penalty"
+                )
+                if terminate_for_invalid:
+                    handler.mark_last_executor_reward(self.invalid_output_penalty)
+                    handler.done = True
+                    if validation.reason == "invalid_format":
+                        handler.invalid_format_terminated = 1.0
+                    else:
+                        handler.invalid_action_terminated = 1.0
+                    reason_msg = f"Terminated due to invalid executor output ({validation.reason})."
+                    handler.latest_observation = reason_msg
+                    try:
+                        handler.add_user_message(self.tokenizer, reason_msg)
+                    except Exception:
+                        pass
+                    return True
+
                 try:
                     step_output = env_clients[idx].step(content)
                     state = step_output.state
@@ -334,6 +365,8 @@ class vLLMRollout(BaseVLLMRollout):
         executor_native_format_valid = []
         env_step_failed = []
         timeout_occurred = []
+        invalid_format_terminated = []
+        invalid_action_terminated = []
         messages = []
 
         for handler in rollout_handler_ls:
@@ -351,6 +384,8 @@ class vLLMRollout(BaseVLLMRollout):
             executor_native_format_valid.append(handler.executor_native_format_valid)
             env_step_failed.append(handler.env_step_failed)
             timeout_occurred.append(handler.timeout_occurred)
+            invalid_format_terminated.append(handler.invalid_format_terminated)
+            invalid_action_terminated.append(handler.invalid_action_terminated)
             messages.append(handler.messages)
 
         response_ids = self._pad_tensor_list(response_ids, self.pad_token_id, self.config.response_length)
@@ -425,6 +460,8 @@ class vLLMRollout(BaseVLLMRollout):
                 "executor_native_format_valid": torch.tensor(executor_native_format_valid, dtype=torch.float32, device=cur_device),
                 "env_step_failed": torch.tensor(env_step_failed, dtype=torch.float32, device=cur_device),
                 "timeout_occurred": torch.tensor(timeout_occurred, dtype=torch.float32, device=cur_device),
+                "invalid_format_terminated": torch.tensor(invalid_format_terminated, dtype=torch.float32, device=cur_device),
+                "invalid_action_terminated": torch.tensor(invalid_action_terminated, dtype=torch.float32, device=cur_device),
             },
             batch_size=batch_size,
         )

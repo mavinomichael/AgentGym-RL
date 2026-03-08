@@ -118,6 +118,8 @@ class RolloutHandler:
         self.executor_native_format_valid = 1.0
         self.env_step_failed = 0.0
         self.timeout_occurred = 0.0
+        self.invalid_format_terminated = 0.0
+        self.invalid_action_terminated = 0.0
         self.last_executor_score_index = None
         self.latest_observation = ""
         self.latest_planner_message = ""

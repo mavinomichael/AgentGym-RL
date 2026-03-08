@@ -65,6 +65,9 @@ def main(config):
     dp_size = wg.world_size // config.rollout.tensor_model_parallel_size
     num_batch = (total_samples // config_batch_size) + 1
     output_lst = [[] for _ in range(config.data.n_samples)]
+    native_format_valid_lst = []
+    invalid_format_terminated_lst = []
+    invalid_action_terminated_lst = []
     env_client = init_env_client(config.agentgym)
     task_profile = get_task_profile(config.agentgym.task_name)
 
@@ -112,6 +115,12 @@ def main(config):
             output = wg.generate_sequences(data)
             output = output[:real_batch_size]
             output_lst[i].extend(output.batch["task_scores"].sum(dim=-1).tolist())
+            if "executor_native_format_valid" in output.batch:
+                native_format_valid_lst.extend(output.batch["executor_native_format_valid"].tolist())
+            if "invalid_format_terminated" in output.batch:
+                invalid_format_terminated_lst.extend(output.batch["invalid_format_terminated"].tolist())
+            if "invalid_action_terminated" in output.batch:
+                invalid_action_terminated_lst.extend(output.batch["invalid_action_terminated"].tolist())
 
     output_np = np.array(output_lst, dtype=object)
     output_np = np.transpose(output_np, axes=(1, 0))
@@ -120,6 +129,12 @@ def main(config):
     print("============Total Task Evaluation============")
     print(f"Avg@{config.data.n_samples}: {np.mean(output_np)}")
     print(f"Pass@{config.data.n_samples}: {np.mean(np.max(output_np, axis=-1) > 0)}")
+    if native_format_valid_lst:
+        print(f"ExecutorNativeFormatViolations: {1.0 - np.mean(np.array(native_format_valid_lst, dtype=float))}")
+    if invalid_format_terminated_lst:
+        print(f"InvalidFormatTerminationRate: {np.mean(np.array(invalid_format_terminated_lst, dtype=float))}")
+    if invalid_action_terminated_lst:
+        print(f"InvalidActionTerminationRate: {np.mean(np.array(invalid_action_terminated_lst, dtype=float))}")
     print("============Sub Task Evaluation============")
 
     category_success_bucket = defaultdict(list)

@@ -2,6 +2,8 @@
 # Derived from: /Users/mavinomichael/PycharmProjects/AgentGym-RL/AgentGym-RL/verl/utils/agent_dataset/rl_dataset.py
 # Original file left untouched for comparison.
 
+import ast
+from dataclasses import dataclass
 import re
 from typing import List, Optional, Tuple
 
@@ -11,6 +13,13 @@ CONTROL_SPEAKER_ID = 0
 PLANNER_SPEAKER_ID = 1
 EXECUTOR_SPEAKER_ID = 2
 QWEN_SYSTEM_PROMPT = "You are Qwen, created by Alibaba Cloud. You are a helpful assistant."
+
+
+@dataclass(frozen=True)
+class ExecutorPayloadValidation:
+    valid: bool
+    reason: str
+    action: Optional[str] = None
 
 
 def build_multi_agent_instruction(base_instruction: str) -> str:
@@ -64,6 +73,22 @@ def build_executor_turn_prompt(
         if task_profile is not None
         else "Use the original task-native format exactly."
     )
+    strict_executor_rules = ""
+    if task_profile is not None and task_profile.task_name == "babyai":
+        available_actions = extract_available_actions_from_observation(observation)
+        action_list = ", ".join(available_actions) if available_actions else "(read from observation)"
+        strict_executor_rules = (
+            "\nBabyAI strict rules:\n"
+            "- Your response must be exactly this structure:\n"
+            "Thought:\n"
+            "<one short sentence>\n\n"
+            "Action:\n"
+            "<exactly one action>\n"
+            f"- Action must be exactly one of: {action_list}\n"
+            "- Do not output bare words like Go, Up, Left, or Right.\n"
+            "- Do not output multiple Action lines.\n"
+        )
+
     return (
         "[Executor Turn]\n"
         "[Environment Observation]\n"
@@ -73,6 +98,7 @@ def build_executor_turn_prompt(
         "Produce exactly one next environment response in the original task-native format.\n"
         f"Format requirement: {format_hint}\n"
         "Do not prepend role labels like Planner: or Executor:."
+        f"{strict_executor_rules}"
     )
 
 
@@ -82,6 +108,38 @@ def normalize_executor_payload(raw_text: str, task_profile: TaskProfile) -> str:
         if text.endswith(suffix):
             text = text[: -len(suffix)].rstrip()
     return text
+
+
+def _normalize_action_text(action: str) -> str:
+    action = re.sub(r"[^A-Za-z0-9, ]+", "", action)
+    return " ".join(action.lower().split()).strip()
+
+
+def extract_available_actions_from_observation(observation: str) -> List[str]:
+    text = observation if isinstance(observation, str) else str(observation)
+    match = re.search(r"Available actions:\s*(\[[^\]]*\])", text, re.DOTALL)
+    if not match:
+        return []
+
+    payload = match.group(1)
+    actions: List[str] = []
+    try:
+        parsed = ast.literal_eval(payload)
+        if isinstance(parsed, list):
+            actions = [_normalize_action_text(str(item)) for item in parsed]
+    except Exception:
+        actions = [_normalize_action_text(item) for item in re.findall(r'"([^"]+)"', payload)]
+
+    return [item for item in actions if item]
+
+
+def extract_executor_action(raw_text: str, task_profile: TaskProfile) -> Optional[str]:
+    text = normalize_executor_payload(raw_text, task_profile)
+    action_matches = re.findall(r"Action:\s*(.*?)(?=\n|$)", text, re.DOTALL)
+    if len(action_matches) != 1:
+        return None
+    action = _normalize_action_text(action_matches[0])
+    return action or None
 
 
 def _format_validators(task_name: str):
@@ -98,6 +156,36 @@ def _format_validators(task_name: str):
 def is_executor_payload_valid(raw_text: str, task_profile: TaskProfile) -> bool:
     validator = _format_validators(task_profile.task_name)
     return validator(normalize_executor_payload(raw_text, task_profile))
+
+
+def validate_executor_payload(
+    raw_text: str,
+    observation: str,
+    task_profile: TaskProfile,
+) -> ExecutorPayloadValidation:
+    normalized = normalize_executor_payload(raw_text, task_profile)
+    valid_format = is_executor_payload_valid(normalized, task_profile)
+
+    if task_profile.task_name != "babyai":
+        if valid_format:
+            return ExecutorPayloadValidation(valid=True, reason="ok")
+        return ExecutorPayloadValidation(valid=False, reason="invalid_format")
+
+    if not valid_format:
+        return ExecutorPayloadValidation(valid=False, reason="invalid_format")
+
+    action = extract_executor_action(normalized, task_profile)
+    if not action:
+        return ExecutorPayloadValidation(valid=False, reason="invalid_format")
+
+    available_actions = extract_available_actions_from_observation(observation)
+    if available_actions and action not in available_actions:
+        return ExecutorPayloadValidation(
+            valid=False,
+            reason="action_not_in_available",
+            action=action,
+        )
+    return ExecutorPayloadValidation(valid=True, reason="ok", action=action)
 
 
 def detect_invalid_action(observation: str, task_profile: TaskProfile) -> bool:

@@ -48,6 +48,13 @@ def compute_data_metrics(batch, use_critic=True):
     valid_format = batch.batch.get("executor_native_format_valid", torch.ones_like(env_rounds, dtype=torch.float32)).float()
     env_step_failed = batch.batch.get("env_step_failed", torch.zeros_like(env_rounds, dtype=torch.float32)).float()
     timeout_occurred = batch.batch.get("timeout_occurred", torch.zeros_like(env_rounds, dtype=torch.float32)).float()
+    invalid_format_terminated = batch.batch.get(
+        "invalid_format_terminated", torch.zeros_like(env_rounds, dtype=torch.float32)
+    ).float()
+    invalid_action_terminated = batch.batch.get(
+        "invalid_action_terminated", torch.zeros_like(env_rounds, dtype=torch.float32)
+    ).float()
+    invalid_terminated = invalid_format_terminated + invalid_action_terminated
 
     metrics.update(
         {
@@ -63,6 +70,9 @@ def compute_data_metrics(batch, use_critic=True):
             f"env_step_failures/{task_name}": torch.mean(env_step_failed).detach().item(),
             f"timeout_rate/{task_name}": torch.mean(timeout_occurred).detach().item(),
             f"executor_native_format_violations/{task_name}": (1.0 - torch.mean(valid_format)).detach().item(),
+            f"invalid_format_termination_rate/{task_name}": torch.mean(invalid_format_terminated).detach().item(),
+            f"invalid_action_termination_rate/{task_name}": torch.mean(invalid_action_terminated).detach().item(),
+            f"invalid_termination_rate/{task_name}": torch.mean(invalid_terminated).detach().item(),
         }
     )
     return metrics

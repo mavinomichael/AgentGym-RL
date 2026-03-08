@@ -37,3 +37,21 @@ def test_max_rounds_counts_environment_actions_not_speaker_turns():
     assert len(env.actions) == 2
     assert rounds == 2
     assert env.actions[0].startswith("<search>")
+
+
+def test_invalid_babyai_executor_output_can_skip_env_step_under_terminate_policy():
+    env = FakeEnv()
+    profile = planner_executor.get_task_profile("babyai")
+    observation = 'obs\nAvailable actions: ["turn left", "turn right", "move forward"]'
+    invalid_executor_output = "Up"
+    policy = "terminate_with_penalty"
+
+    validation = planner_executor.validate_executor_payload(invalid_executor_output, observation, profile)
+    should_terminate = profile.task_name == "babyai" and not validation.valid and policy == "terminate_with_penalty"
+
+    if not should_terminate:
+        env.step(invalid_executor_output)
+
+    assert should_terminate
+    assert validation.reason == "invalid_format"
+    assert len(env.actions) == 0
