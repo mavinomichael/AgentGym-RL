@@ -4,9 +4,10 @@
 
 from concurrent.futures import ThreadPoolExecutor
 import json
+import logging
 import os
 import time
-from typing import List, Tuple
+from typing import Any, Dict, List, Tuple
 
 import torch
 import torch.distributed
@@ -21,10 +22,12 @@ from verl.multi_agent.envs import (
     CONTROL_SPEAKER_ID,
     EXECUTOR_SPEAKER_ID,
     PLANNER_SPEAKER_ID,
+    build_executor_retry_prompt,
     build_executor_turn_prompt,
     build_planner_turn_prompt,
     compute_reward_delta,
     detect_invalid_action,
+    extract_available_actions_from_observation,
     get_task_profile,
     normalize_executor_payload,
     validate_executor_payload,
@@ -34,6 +37,8 @@ from verl.utils.agentgym.client import init_env_client
 from verl.utils.model import compute_position_id_with_mask
 from verl.utils.torch_functional import pad_sequence_to_length
 from verl.workers.rollout.agent_vllm_rollout.vllm_rollout import vLLMRollout as BaseVLLMRollout
+
+logger = logging.getLogger(__name__)
 
 
 class vLLMRollout(BaseVLLMRollout):
@@ -72,6 +77,20 @@ class vLLMRollout(BaseVLLMRollout):
             self._multi_agent_get("invalid_output.policy", "terminate_with_penalty")
         ).lower()
         self.invalid_output_penalty = float(self._multi_agent_get("invalid_output.penalty", -0.2))
+        self.invalid_output_max_retries = max(0, int(self._multi_agent_get("invalid_output.max_retries", 2)))
+        self.invalid_output_retry_temperature = float(self._multi_agent_get("invalid_output.retry_temperature", 0.2))
+        self.invalid_output_retry_max_tokens = int(self._multi_agent_get("invalid_output.retry_max_tokens", 80))
+        self.trace_executor_payload = self._as_bool(self._multi_agent_get("debug.trace_executor_payload", False))
+        self.trace_dir = str(self._multi_agent_get("debug.trace_dir", "/mnt/data/logs"))
+        self.trace_max_chars = int(self._multi_agent_get("debug.trace_max_chars", 800))
+        self.rank = torch.distributed.get_rank() if torch.distributed.is_initialized() else 0
+        self.trace_file = (
+            os.path.join(self.trace_dir, f"executor_payload_trace_rank{self.rank}.jsonl")
+            if self.trace_executor_payload
+            else None
+        )
+        if self.trace_executor_payload:
+            os.makedirs(self.trace_dir, exist_ok=True)
 
     def _multi_agent_get(self, dotted_key: str, default=None):
         config = self.multi_agent_config
@@ -90,6 +109,30 @@ class vLLMRollout(BaseVLLMRollout):
                 return default
             current = getattr(current, key)
         return current
+
+    @staticmethod
+    def _as_bool(value: Any) -> bool:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+        return bool(value)
+
+    def _clip(self, value: Any) -> str:
+        text = "" if value is None else str(value)
+        if len(text) <= self.trace_max_chars:
+            return text
+        return text[: self.trace_max_chars] + "...[truncated]"
+
+    def _append_trace_events(self, events: List[Dict[str, Any]]) -> None:
+        if not self.trace_executor_payload or not events or self.trace_file is None:
+            return
+        try:
+            with open(self.trace_file, "a", encoding="utf-8") as file_obj:
+                for event in events:
+                    file_obj.write(json.dumps(event, ensure_ascii=True) + "\n")
+        except Exception:
+            pass
 
     def _parse_item_id(self, raw_item_id: str) -> Tuple[str, int]:
         task_name, item_id = raw_item_id.split("_", 1)
@@ -156,6 +199,26 @@ class vLLMRollout(BaseVLLMRollout):
         overrides = {
             "max_tokens": self.role_defaults[role]["max_tokens"],
             "temperature": self.role_defaults[role]["temperature"],
+        }
+        if not do_sample:
+            overrides.update(
+                {
+                    "best_of": 1,
+                    "top_p": 1.0,
+                    "top_k": -1,
+                    "min_p": 0.0,
+                    "temperature": 0.0,
+                    "n": 1,
+                }
+            )
+        overrides.update(extra_kwargs)
+        return overrides
+
+    def _retry_sampling_overrides(self, do_sample: bool, extra_kwargs: dict) -> dict:
+        overrides = {
+            "max_tokens": self.invalid_output_retry_max_tokens,
+            "temperature": self.invalid_output_retry_temperature,
+            "n": 1,
         }
         if not do_sample:
             overrides.update(
@@ -249,6 +312,7 @@ class vLLMRollout(BaseVLLMRollout):
             planner_response_ids = self._extract_response_token_ids(planner_output)
 
             executor_prompt_ids = []
+            executor_prompt_texts = []
             for local_i, idx in enumerate(active_indices):
                 planner_text = self.tokenizer.decode(planner_response_ids[local_i], skip_special_tokens=True).strip()
                 planner_context_text = f"[PLANNER]\n{planner_text}"
@@ -260,6 +324,7 @@ class vLLMRollout(BaseVLLMRollout):
                     self.task_profile,
                 )
                 rollout_handler_ls[idx].add_user_message(self.tokenizer, executor_turn_prompt)
+                executor_prompt_texts.append(executor_turn_prompt)
                 executor_prompt_ids.append(rollout_handler_ls[idx].get_generation_prompt(self.tokenizer))
 
             with self.update_sampling_params(**self._sampling_overrides("executor", do_sample, kwargs.copy())):
@@ -272,19 +337,111 @@ class vLLMRollout(BaseVLLMRollout):
             executor_response_ids = self._extract_response_token_ids(executor_output)
             time.sleep(self.config.send_interval)
 
-            def agent_step(local_i, idx):
+            executor_results: List[Dict[str, Any]] = []
+            for local_i, idx in enumerate(active_indices):
                 handler = rollout_handler_ls[idx]
                 raw_content = self.tokenizer.decode(executor_response_ids[local_i], skip_special_tokens=True)
                 content = normalize_executor_payload(raw_content, self.task_profile)
                 validation = validate_executor_payload(content, handler.latest_observation, self.task_profile)
+                available_actions = extract_available_actions_from_observation(handler.latest_observation)
+                initial_prompt_text = executor_prompt_texts[local_i]
+                last_retry_prompt = ""
+                retry_count_total = 0
+                resolved_after_retry = False
+
                 executor_context_text = f"[EXECUTOR]\n{content}"
                 handler.add_assistant_message(self.tokenizer, executor_context_text, EXECUTOR_SPEAKER_ID)
+
+                should_retry = (
+                    self.task_profile.task_name == "babyai"
+                    and not validation.valid
+                    and self.invalid_output_policy == "terminate_with_penalty"
+                    and self.invalid_output_max_retries > 0
+                )
+                while should_retry and retry_count_total < self.invalid_output_max_retries:
+                    retry_count_total += 1
+                    last_retry_prompt = build_executor_retry_prompt(
+                        observation=handler.latest_observation,
+                        planner_message=handler.latest_planner_message,
+                        invalid_executor_output=content,
+                        validation_reason=validation.reason,
+                        task_profile=self.task_profile,
+                    )
+                    handler.add_user_message(self.tokenizer, last_retry_prompt)
+                    retry_prompt_ids = [handler.get_generation_prompt(self.tokenizer)]
+                    with self.update_sampling_params(**self._retry_sampling_overrides(do_sample, kwargs.copy())):
+                        retry_output = self.inference_engine.generate(
+                            prompts=None,
+                            prompt_token_ids=retry_prompt_ids,
+                            sampling_params=self.sampling_params,
+                            use_tqdm=False,
+                        )
+                    retry_response_ids = self._extract_response_token_ids(retry_output)
+                    if len(retry_response_ids) == 0:
+                        raw_content = ""
+                    else:
+                        raw_content = self.tokenizer.decode(retry_response_ids[0], skip_special_tokens=True)
+                    content = normalize_executor_payload(raw_content, self.task_profile)
+                    validation = validate_executor_payload(content, handler.latest_observation, self.task_profile)
+                    available_actions = extract_available_actions_from_observation(handler.latest_observation)
+                    executor_context_text = f"[EXECUTOR]\n{content}"
+                    handler.add_assistant_message(self.tokenizer, executor_context_text, EXECUTOR_SPEAKER_ID)
+                    if validation.valid:
+                        resolved_after_retry = True
+                        break
+
                 if not validation.valid and validation.reason == "invalid_format":
                     handler.executor_native_format_valid = 0.0
                     handler.executor_action_valid = 0.0
                 elif not validation.valid and validation.reason == "action_not_in_available":
                     handler.executor_action_valid = 0.0
                 handler.team_env_rounds += 1
+
+                executor_results.append(
+                    {
+                        "idx": idx,
+                        "raw_content": raw_content,
+                        "content": content,
+                        "validation": validation,
+                        "available_actions": available_actions,
+                        "initial_prompt_text": initial_prompt_text,
+                        "last_retry_prompt": last_retry_prompt,
+                        "retry_count_total": retry_count_total,
+                        "resolved_after_retry": resolved_after_retry,
+                    }
+                )
+
+            def agent_step(executor_result: Dict[str, Any]):
+                idx = executor_result["idx"]
+                handler = rollout_handler_ls[idx]
+                raw_content = executor_result["raw_content"]
+                content = executor_result["content"]
+                validation = executor_result["validation"]
+                trace_event: Dict[str, Any] = {
+                    "item_id": handler.item_id,
+                    "task_name": handler.task_name,
+                    "round": rounds + 1,
+                    "rank": self.rank,
+                    "observation_excerpt": self._clip(handler.latest_observation),
+                    "planner_message": self._clip(handler.latest_planner_message),
+                    "executor_prompt": self._clip(executor_result["initial_prompt_text"]),
+                    "executor_retry_prompt": self._clip(executor_result["last_retry_prompt"]),
+                    "executor_raw_output": self._clip(raw_content),
+                    "executor_normalized_output": self._clip(content),
+                    "validation_valid": bool(validation.valid),
+                    "validation_reason": validation.reason,
+                    "extracted_action": validation.action,
+                    "available_actions": executor_result["available_actions"],
+                    "retry_attempt": executor_result["retry_count_total"],
+                    "resolved_after_retry": bool(executor_result["resolved_after_retry"]),
+                    "retry_count_total": executor_result["retry_count_total"],
+                    "env_step_called": False,
+                    "env_step_payload": "",
+                    "env_reward": None,
+                    "env_done": None,
+                    "env_state_excerpt": "",
+                    "exception": "",
+                }
 
                 terminate_for_invalid = (
                     self.task_profile.task_name == "babyai"
@@ -300,17 +457,34 @@ class vLLMRollout(BaseVLLMRollout):
                         handler.invalid_action_terminated = 1.0
                     reason_msg = f"Terminated due to invalid executor output ({validation.reason})."
                     handler.latest_observation = reason_msg
+                    trace_event["env_state_excerpt"] = self._clip(reason_msg)
                     try:
                         handler.add_user_message(self.tokenizer, reason_msg)
                     except Exception:
                         pass
-                    return True
+                    return True, trace_event
 
                 try:
+                    trace_event["env_step_called"] = True
+                    trace_event["env_step_payload"] = content
+                    if self.trace_executor_payload:
+                        logger.warning(
+                            "[EXECUTOR TRACE] item_id=%s round=%s retries=%s raw=%s normalized=%s payload=%s parsed_action=%s",
+                            handler.item_id,
+                            rounds + 1,
+                            executor_result["retry_count_total"],
+                            self._clip(raw_content),
+                            self._clip(content),
+                            content,
+                            validation.action,
+                        )
                     step_output = env_clients[idx].step(content)
                     state = step_output.state
                     reward = float(step_output.reward)
                     done = bool(step_output.done)
+                    trace_event["env_reward"] = reward
+                    trace_event["env_done"] = done
+                    trace_event["env_state_excerpt"] = self._clip(state)
                     if detect_invalid_action(state, self.task_profile):
                         handler.executor_action_valid = 0.0
                     delta_reward = 0.0
@@ -322,24 +496,30 @@ class vLLMRollout(BaseVLLMRollout):
                     handler.done = done
                     handler.latest_observation = state
                     handler.add_user_message(self.tokenizer, state)
-                    return done
+                    return done, trace_event
                 except TimeoutError:
                     self._mark_timeout(handler)
                     handler.done = True
-                    return True
+                    trace_event["exception"] = "TimeoutError"
+                    return True, trace_event
                 except Exception as exc:
                     handler.env_step_failed = 1.0
                     handler.executor_action_valid = 0.0
                     handler.done = True
                     handler.latest_observation = str(exc)
+                    trace_event["exception"] = self._clip(exc)
+                    trace_event["env_state_excerpt"] = self._clip(exc)
                     try:
                         handler.add_user_message(self.tokenizer, str(exc))
                     except Exception:
                         pass
-                    return True
+                    return True, trace_event
 
             with ThreadPoolExecutor(max_workers=len(active_indices)) as executor:
-                step_dones = list(executor.map(lambda args: agent_step(*args), [(i, idx) for i, idx in enumerate(active_indices)]))
+                step_results = list(executor.map(agent_step, executor_results))
+            step_dones = [result[0] for result in step_results]
+            step_trace_events = [result[1] for result in step_results]
+            self._append_trace_events(step_trace_events)
 
             rounds += 1
             rollout_bar.update(1)

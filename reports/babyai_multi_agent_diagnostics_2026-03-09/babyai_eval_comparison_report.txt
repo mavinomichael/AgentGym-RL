@@ -1,0 +1,25 @@
+BabyAI Multi-Agent Eval Comparison Report
+Date: 2026-03-09
+
+Runs:
+- 700-step failed eval: eval_babyai_multi_clean.log
+- Base model eval: eval_babyai_base_trace.log
+- Retrain step-100 eval: eval_stage100_retry.log
+
+Run	Avg@1	Pass@1	ExecutorNativeFormatViolations	InvalidFormatTerminationRate	InvalidActionTerminationRate
+700-step (failed eval)	0	0	NA	NA	NA
+Base model	0.672827065487703	0.733333333333333	0	0	0.0888888888888889
+Retrain step-100	0.52863177375661	0.633333333333333	0.366666666666667	0.366666666666667	0
+
+Delta vs Base Model
+
+700-step (failed eval)
+- Avg@1: -0.672827 (run=0.000000, base=0.672827)
+- Pass@1: -0.733333 (run=0.000000, base=0.733333)
+
+Retrain step-100
+- Avg@1: -0.144195 (run=0.528632, base=0.672827)
+- Pass@1: -0.100000 (run=0.633333, base=0.733333)
+- ExecutorNativeFormatViolations: +0.366667 (run=0.366667, base=0.000000)
+- InvalidFormatTerminationRate: +0.366667 (run=0.366667, base=0.000000)
+- InvalidActionTerminationRate: -0.088889 (run=0.000000, base=0.088889)

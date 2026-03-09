@@ -102,6 +102,59 @@ def build_executor_turn_prompt(
     )
 
 
+def build_executor_retry_prompt(
+    observation: str,
+    planner_message: str,
+    invalid_executor_output: str,
+    validation_reason: str,
+    task_profile: Optional[TaskProfile] = None,
+) -> str:
+    format_hint = (
+        task_profile.executor_native_format_hint
+        if task_profile is not None
+        else "Use the original task-native format exactly."
+    )
+    if task_profile is not None and task_profile.task_name == "babyai":
+        available_actions = extract_available_actions_from_observation(observation)
+        action_list = ", ".join(available_actions) if available_actions else "(read from observation)"
+        return (
+            "[Executor Retry]\n"
+            "Your previous response was invalid and was not sent to the environment.\n"
+            f"Failure reason: {validation_reason}\n\n"
+            "[Environment Observation]\n"
+            f"{observation}\n\n"
+            "[Latest Planner Message]\n"
+            f"{planner_message}\n\n"
+            "[Previous Invalid Executor Output]\n"
+            f"{invalid_executor_output}\n\n"
+            "Respond again with exactly one valid BabyAI response.\n"
+            "Your response must be exactly this structure:\n"
+            "Thought:\n"
+            "<one short sentence>\n\n"
+            "Action:\n"
+            "<exactly one action>\n"
+            f"Action must be exactly one of: {action_list}\n"
+            "Do not output bare words like Go, Up, Left, or Right.\n"
+            "Do not output multiple Action lines.\n"
+            "Do not include role labels."
+        )
+
+    return (
+        "[Executor Retry]\n"
+        "Your previous response was invalid and was not sent to the environment.\n"
+        f"Failure reason: {validation_reason}\n\n"
+        "[Environment Observation]\n"
+        f"{observation}\n\n"
+        "[Latest Planner Message]\n"
+        f"{planner_message}\n\n"
+        "[Previous Invalid Executor Output]\n"
+        f"{invalid_executor_output}\n\n"
+        "Respond again with exactly one valid environment response.\n"
+        f"Format requirement: {format_hint}\n"
+        "Do not include role labels."
+    )
+
+
 def normalize_executor_payload(raw_text: str, task_profile: TaskProfile) -> str:
     text = raw_text.strip()
     for suffix in ("</s>", "<|im_end|>", "<|endoftext|>"):

@@ -36,6 +36,24 @@ def test_babyai_executor_prompt_includes_strict_action_constraints():
     assert "Go, Up, Left, or Right" in executor_prompt
 
 
+def test_babyai_executor_retry_prompt_restates_schema_and_allowed_actions():
+    observation = 'obs\nAvailable actions: ["turn left", "turn right", "move forward"]'
+    profile = planner_executor.get_task_profile("babyai")
+    retry_prompt = planner_executor.build_executor_retry_prompt(
+        observation=observation,
+        planner_message="[PLANNER]\nAction:\nturn right",
+        invalid_executor_output="Go",
+        validation_reason="invalid_format",
+        task_profile=profile,
+    )
+    assert "[Executor Retry]" in retry_prompt
+    assert "Failure reason: invalid_format" in retry_prompt
+    assert "Thought:" in retry_prompt
+    assert "Action:" in retry_prompt
+    assert "Action must be exactly one of: turn left, turn right, move forward" in retry_prompt
+    assert "Do not output bare words like Go, Up, Left, or Right." in retry_prompt
+
+
 def test_executor_payload_passthrough_and_validation_are_environment_aware():
     searchqa_profile = planner_executor.get_task_profile("searchqa")
     webarena_profile = planner_executor.get_task_profile("webarena")
@@ -67,6 +85,7 @@ def test_babyai_bare_token_is_invalid_format_without_coercion():
     assert not result.valid
     assert result.reason == "invalid_format"
     assert result.action is None
+    assert planner_executor.normalize_executor_payload(payload, profile) == "Go"
 
 
 def test_babyai_action_not_in_available_list_is_invalid():

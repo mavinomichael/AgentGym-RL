@@ -30,6 +30,13 @@ multi_agent:
   invalid_output:
     policy: terminate_with_penalty
     penalty: -0.2
+    max_retries: 2
+    retry_temperature: 0.2
+    retry_max_tokens: 80
+  debug:
+    trace_executor_payload: false
+    trace_dir: /mnt/data/logs
+    trace_max_chars: 800
   roles:
     planner:
       max_tokens: ${task.planner_max_tokens}

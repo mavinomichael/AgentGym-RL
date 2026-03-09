@@ -139,13 +139,21 @@ def main(config):
 
     category_success_bucket = defaultdict(list)
     for item_id, score in zip(item_ids, output_lst):
-        category = category_map[item_id]
+        category = category_map.get(item_id)
+        if category is None:
+            continue
         category_success_bucket[category].append(score)
+    printed_any_category = False
     for category_file in category_files:
         category = category_file.split(".")[0]
+        if len(category_success_bucket[category]) == 0:
+            continue
+        printed_any_category = True
         print(f"Category: {category}")
         print(f"Avg@{config.data.n_samples}: {np.mean(np.array(category_success_bucket[category]))}")
         print(f"Pass@{config.data.n_samples}: {np.mean(np.max(np.array(category_success_bucket[category]), axis=-1) > 0)}")
+    if not printed_any_category:
+        print("No populated sub-task categories found for this evaluation path.")
 
 
 if __name__ == "__main__":

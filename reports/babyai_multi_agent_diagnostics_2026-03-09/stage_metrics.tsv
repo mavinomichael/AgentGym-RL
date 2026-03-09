@@ -1,0 +1,2 @@
+stage	avg_at_1	pass_at_1	executor_native_format_violations	invalid_format_termination_rate	invalid_action_termination_rate	trace_dir	eval_log	model_path
+100	0.52863177375661	0.6333333333333333	0.3666666666666667	0.36666666666666664	0.0	/mnt/data/logs/babyai_multi_retrain_v2c/trace_stage100_retry	/mnt/data/logs/babyai_multi_retrain_v2c/eval_stage100_retry.log	/mnt/data/saves/agentgym_multi_agent/babyai_multi_retrain_v2c/global_step_100/actor/huggingface
