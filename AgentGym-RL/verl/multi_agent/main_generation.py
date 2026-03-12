@@ -68,6 +68,9 @@ def main(config):
     native_format_valid_lst = []
     invalid_format_terminated_lst = []
     invalid_action_terminated_lst = []
+    planner_output_valid_lst = []
+    planner_fallback_used_lst = []
+    planner_tag_only_lst = []
     env_client = init_env_client(config.agentgym)
     task_profile = get_task_profile(config.agentgym.task_name)
 
@@ -121,6 +124,12 @@ def main(config):
                 invalid_format_terminated_lst.extend(output.batch["invalid_format_terminated"].tolist())
             if "invalid_action_terminated" in output.batch:
                 invalid_action_terminated_lst.extend(output.batch["invalid_action_terminated"].tolist())
+            if "planner_output_valid" in output.batch:
+                planner_output_valid_lst.extend(output.batch["planner_output_valid"].tolist())
+            if "planner_fallback_used" in output.batch:
+                planner_fallback_used_lst.extend(output.batch["planner_fallback_used"].tolist())
+            if "planner_tag_only" in output.batch:
+                planner_tag_only_lst.extend(output.batch["planner_tag_only"].tolist())
 
     output_np = np.array(output_lst, dtype=object)
     output_np = np.transpose(output_np, axes=(1, 0))
@@ -135,6 +144,12 @@ def main(config):
         print(f"InvalidFormatTerminationRate: {np.mean(np.array(invalid_format_terminated_lst, dtype=float))}")
     if invalid_action_terminated_lst:
         print(f"InvalidActionTerminationRate: {np.mean(np.array(invalid_action_terminated_lst, dtype=float))}")
+    if planner_output_valid_lst:
+        print(f"PlannerInvalidFormatRate: {1.0 - np.mean(np.array(planner_output_valid_lst, dtype=float))}")
+    if planner_fallback_used_lst:
+        print(f"PlannerFallbackRate: {np.mean(np.array(planner_fallback_used_lst, dtype=float))}")
+    if planner_tag_only_lst:
+        print(f"PlannerTagOnlyRate: {np.mean(np.array(planner_tag_only_lst, dtype=float))}")
     print("============Sub Task Evaluation============")
 
     category_success_bucket = defaultdict(list)

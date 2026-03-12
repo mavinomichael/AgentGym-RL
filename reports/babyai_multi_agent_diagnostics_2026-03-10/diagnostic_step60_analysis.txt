@@ -1,0 +1,42 @@
+BabyAI 100-Step Diagnostic Run Analysis (Stopped at Step 60)
+Train log: /Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-10/train_step100_diagnostic.log
+Trace dir: /Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-10/diagnostic_step60_trace_train/trace_train
+
+Run status
+- The run did not reach step 100. It stopped after saving global_step_60.
+- No eval was produced because the diagnostic launcher terminated before merge/eval.
+- The failure was operational/infrastructure-side after step 60, not a full policy collapse inside the traced window.
+
+First non-zero diagnostic signals
+- First executor_native_format_violations > 0: step 3
+- First invalid_action_rate > 0: step 3
+- First planner_invalid_format_rate > 0: step 45
+- First planner_fallback_rate > 0: step 45
+
+Interpretation
+- Executor issues appear earlier, but they are rare and transient.
+- Planner issues appear later, and when they appear they are overwhelmingly due to overlong planner outputs rather than role-tag collapse.
+- Within the traced window, the model does not show the step-236/350 style total collapse. The strongest new failure mode is planner verbosity drift.
+
+Invalid reason breakdown
+- Planner invalid reasons: {'too_long': 15}
+- Executor invalid reasons: {'invalid_format': 3, 'action_not_in_available': 8}
+
+Selected step metrics
+- step 3: planner_invalid=0.0, planner_fallback=0.0, executor_native_format_violations=0.062, invalid_action_rate=0.062
+- step 10: planner_invalid=0.0, planner_fallback=0.0, executor_native_format_violations=0.0, invalid_action_rate=0.031
+- step 40: planner_invalid=0.0, planner_fallback=0.0, executor_native_format_violations=0.0, invalid_action_rate=0.031
+- step 45: planner_invalid=0.094, planner_fallback=0.094, executor_native_format_violations=0.0, invalid_action_rate=0.0
+- step 46: planner_invalid=0.125, planner_fallback=0.125, executor_native_format_violations=0.0, invalid_action_rate=0.0
+- step 50: planner_invalid=0.094, planner_fallback=0.094, executor_native_format_violations=0.0, invalid_action_rate=0.0
+- step 55: planner_invalid=0.062, planner_fallback=0.062, executor_native_format_violations=0.0, invalid_action_rate=0.0
+- step 58: planner_invalid=0.031, planner_fallback=0.031, executor_native_format_violations=0.0, invalid_action_rate=0.0
+- step 59: planner_invalid=0.0, planner_fallback=0.0, executor_native_format_violations=0.0, invalid_action_rate=0.0
+
+Representative findings
+- Planner onset example at step 45: planner_reason=too_long, raw='Check if there is a red ball in the room or if you need to move to another part of the room.', fallback_context='Planner guidance unavailable. Infer the next step from the observation only.'
+- Executor onset example at step 3: executor_reason=invalid_format, raw='Thought:\nTurn right to face the purple key.\n\nAction:\nturn right\n\nAction:\npickup purple key 1'
+
+Preliminary conclusion
+- The data points more strongly to planner-length drift than to prompt misunderstanding.
+- A better next intervention is planner-specific regularization/length control, with tracing kept on until step 100, rather than broad prompt rewrites.

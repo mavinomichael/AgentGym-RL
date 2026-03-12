@@ -33,6 +33,9 @@ multi_agent:
     max_retries: 2
     retry_temperature: 0.2
     retry_max_tokens: 80
+    planner_max_retries: 2
+    planner_retry_temperature: 0.1
+    planner_retry_max_tokens: 24
   debug:
     trace_executor_payload: false
     trace_dir: /mnt/data/logs

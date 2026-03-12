@@ -1,25 +1,81 @@
-BabyAI Multi-Agent Eval Comparison Report
-Date: 2026-03-09
+BabyAI Multi-Agent Progress Report
+Date: 2026-03-11
 
-Runs:
-- 700-step failed eval: eval_babyai_multi_clean.log
-- Base model eval: eval_babyai_base_trace.log
-- Retrain step-100 eval: eval_stage100_retry.log
+Context
+- This report combines historical eval logs with the latest resumed checkpoints when available.
+- Later evals were run with the stabilized multi-agent runtime. Historical numbers are preserved from their original logs.
 
-Run	Avg@1	Pass@1	ExecutorNativeFormatViolations	InvalidFormatTerminationRate	InvalidActionTerminationRate
-700-step (failed eval)	0	0	NA	NA	NA
-Base model	0.672827065487703	0.733333333333333	0	0	0.0888888888888889
-Retrain step-100	0.52863177375661	0.633333333333333	0.366666666666667	0.366666666666667	0
+Key Takeaways
+- Base model reference: Avg@1=0.672827, Pass@1=0.733333.
+- Initial 700-step RL run failed completely: Avg@1=0.000000, Pass@1=0.000000.
+- Step-100 retrain partially recovered performance but still had executor format failures: Avg@1=0.528632, Pass@1=0.633333, ExecutorNativeFormatViolations=0.366667.
+- Step-50 sanity eval exposed the planner-side failure clearly: Avg@1=0.411854, Pass@1=0.433333, PlannerInvalidFormatRate=0.677778, PlannerFallbackRate=0.677778.
+- Diagnostic step-100 v2 completed cleanly with near-zero planner/executor failures, but performance remained below the base-model reference: Avg@1=0.657480, Pass@1=0.688889, PlannerInvalidFormatRate=0.011111, InvalidActionTerminationRate=0.011111.
+- Latest evaluated checkpoint (Resume step-350) reports Avg@1=-0.200000, Pass@1=0.000000, ExecutorNativeFormatViolations=1.000000, PlannerInvalidFormatRate=1.000000.
+
+Run Metrics
+Run	Avg@1	Pass@1	ExecutorNativeFormatViolations	InvalidFormatTerminationRate	InvalidActionTerminationRate	PlannerInvalidFormatRate	PlannerFallbackRate	PlannerTagOnlyRate
+700-step failed eval	0.000000	0.000000	NA	NA	NA	NA	NA	NA
+Base model eval	0.672827	0.733333	0.000000	0.000000	0.088889	NA	NA	NA
+Retrain step-100	0.528632	0.633333	0.366667	0.366667	0.000000	NA	NA	NA
+Sanity step-50	0.411854	0.433333	0.011111	0.011111	0.000000	0.677778	0.677778	0.000000
+Sanity step-15	0.722397	0.766667	0.000000	0.000000	0.000000	0.000000	0.000000	0.000000
+Diagnostic step-100 v2	0.657480	0.688889	0.000000	0.000000	0.011111	0.011111	0.011111	0.000000
+Resume step-236	0.431932	0.533333	0.033333	0.033333	0.422222	1.000000	1.000000	0.000000
+Resume step-350	-0.200000	0.000000	1.000000	1.000000	0.000000	1.000000	1.000000	0.000000
+
+Interpretation By Run
+- 700-step failed eval: Initial multi-agent training collapsed; executor outputs were not reaching BabyAI in valid form. (source: /Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-09/eval_babyai_multi_clean.log)
+- Base model eval: Reference checkpoint showing the task and runtime can work before RL drift. (source: /Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-09/eval_babyai_base_trace.log)
+- Retrain step-100: Early retrain improved over total collapse but still had major executor format failures. (source: /Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-09/eval_stage100_retry.log)
+- Sanity step-50: Checkpoint trained before planner-history cleanup; planner fallback remained the main failure mode. (source: /Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-09/eval_stage50_sanity.log)
+- Sanity step-15: Checkpoint trained after planner stabilization and prompt-history cleanup. (source: /Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-09/eval_stage15_sanity.log)
+- Diagnostic step-100 v2: Fresh 100-step diagnostic run after Ray temp fixes, planner retries, lower planner token budget, and planner-weighted KL anchoring. (source: /Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-11/eval_step100_diagnostic.log)
+- Resume step-236: Long resumed run from the stabilized step-15 checkpoint. Late in training, planner validation collapsed again, forcing fallback on nearly every turn. (source: /Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-09/eval_stage236_resume.log)
+- Resume step-350: Continuation run from the resumed checkpoint. By step 350, both planner and executor had collapsed again and the eval fell to the floor reward on every item. (source: /Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-09/eval_stage350_resume.log)
 
 Delta vs Base Model
 
-700-step (failed eval)
-- Avg@1: -0.672827 (run=0.000000, base=0.672827)
-- Pass@1: -0.733333 (run=0.000000, base=0.733333)
+700-step failed eval
+- Avg@1 delta: -0.672827
+- Pass@1 delta: -0.733333
 
 Retrain step-100
-- Avg@1: -0.144195 (run=0.528632, base=0.672827)
-- Pass@1: -0.100000 (run=0.633333, base=0.733333)
-- ExecutorNativeFormatViolations: +0.366667 (run=0.366667, base=0.000000)
-- InvalidFormatTerminationRate: +0.366667 (run=0.366667, base=0.000000)
-- InvalidActionTerminationRate: -0.088889 (run=0.000000, base=0.088889)
+- Avg@1 delta: -0.144195
+- Pass@1 delta: -0.100000
+- ExecutorNativeFormatViolations: 0.366667
+
+Sanity step-50
+- Avg@1 delta: -0.260973
+- Pass@1 delta: -0.300000
+- ExecutorNativeFormatViolations: 0.011111
+- PlannerInvalidFormatRate: 0.677778
+- PlannerFallbackRate: 0.677778
+
+Sanity step-15
+- Avg@1 delta: 0.049570
+- Pass@1 delta: 0.033333
+- ExecutorNativeFormatViolations: 0.000000
+- PlannerInvalidFormatRate: 0.000000
+- PlannerFallbackRate: 0.000000
+
+Diagnostic step-100 v2
+- Avg@1 delta: -0.015347
+- Pass@1 delta: -0.044444
+- ExecutorNativeFormatViolations: 0.000000
+- PlannerInvalidFormatRate: 0.011111
+- PlannerFallbackRate: 0.011111
+
+Resume step-236
+- Avg@1 delta: -0.240895
+- Pass@1 delta: -0.200000
+- ExecutorNativeFormatViolations: 0.033333
+- PlannerInvalidFormatRate: 1.000000
+- PlannerFallbackRate: 1.000000
+
+Resume step-350
+- Avg@1 delta: -0.872827
+- Pass@1 delta: -0.733333
+- ExecutorNativeFormatViolations: 1.000000
+- PlannerInvalidFormatRate: 1.000000
+- PlannerFallbackRate: 1.000000

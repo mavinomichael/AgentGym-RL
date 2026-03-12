@@ -54,6 +54,13 @@ def compute_data_metrics(batch, use_critic=True):
     invalid_action_terminated = batch.batch.get(
         "invalid_action_terminated", torch.zeros_like(env_rounds, dtype=torch.float32)
     ).float()
+    planner_output_valid = batch.batch.get(
+        "planner_output_valid", torch.ones_like(env_rounds, dtype=torch.float32)
+    ).float()
+    planner_fallback_used = batch.batch.get(
+        "planner_fallback_used", torch.zeros_like(env_rounds, dtype=torch.float32)
+    ).float()
+    planner_tag_only = batch.batch.get("planner_tag_only", torch.zeros_like(env_rounds, dtype=torch.float32)).float()
     invalid_terminated = invalid_format_terminated + invalid_action_terminated
 
     metrics.update(
@@ -70,6 +77,9 @@ def compute_data_metrics(batch, use_critic=True):
             f"env_step_failures/{task_name}": torch.mean(env_step_failed).detach().item(),
             f"timeout_rate/{task_name}": torch.mean(timeout_occurred).detach().item(),
             f"executor_native_format_violations/{task_name}": (1.0 - torch.mean(valid_format)).detach().item(),
+            f"planner_invalid_format_rate/{task_name}": (1.0 - torch.mean(planner_output_valid)).detach().item(),
+            f"planner_fallback_rate/{task_name}": torch.mean(planner_fallback_used).detach().item(),
+            f"planner_tag_only_rate/{task_name}": torch.mean(planner_tag_only).detach().item(),
             f"invalid_format_termination_rate/{task_name}": torch.mean(invalid_format_terminated).detach().item(),
             f"invalid_action_termination_rate/{task_name}": torch.mean(invalid_action_terminated).detach().item(),
             f"invalid_termination_rate/{task_name}": torch.mean(invalid_terminated).detach().item(),

@@ -24,12 +24,16 @@ from verl.multi_agent.envs import (
     PLANNER_SPEAKER_ID,
     build_executor_retry_prompt,
     build_executor_turn_prompt,
+    build_planner_retry_prompt,
     build_planner_turn_prompt,
     compute_reward_delta,
     detect_invalid_action,
     extract_available_actions_from_observation,
     get_task_profile,
+    normalize_planner_payload,
     normalize_executor_payload,
+    planner_fallback_message,
+    validate_planner_payload,
     validate_executor_payload,
 )
 from verl.multi_agent.workers.rollout.schemas import Message, RolloutHandler, _pre_process_inputs
@@ -80,9 +84,26 @@ class vLLMRollout(BaseVLLMRollout):
         self.invalid_output_max_retries = max(0, int(self._multi_agent_get("invalid_output.max_retries", 2)))
         self.invalid_output_retry_temperature = float(self._multi_agent_get("invalid_output.retry_temperature", 0.2))
         self.invalid_output_retry_max_tokens = int(self._multi_agent_get("invalid_output.retry_max_tokens", 80))
+        self.planner_max_retries = max(0, int(self._multi_agent_get("invalid_output.planner_max_retries", 2)))
+        self.planner_retry_temperature = float(self._multi_agent_get("invalid_output.planner_retry_temperature", 0.1))
+        self.planner_retry_max_tokens = int(self._multi_agent_get("invalid_output.planner_retry_max_tokens", 24))
         self.trace_executor_payload = self._as_bool(self._multi_agent_get("debug.trace_executor_payload", False))
         self.trace_dir = str(self._multi_agent_get("debug.trace_dir", "/mnt/data/logs"))
         self.trace_max_chars = int(self._multi_agent_get("debug.trace_max_chars", 800))
+        self.trace_first_training_steps = max(0, int(self._multi_agent_get("debug.trace_first_training_steps", 0)))
+        self.trace_every_training_steps = max(0, int(self._multi_agent_get("debug.trace_every_training_steps", 0)))
+        self.trace_on_planner_invalid = self._as_bool(
+            self._multi_agent_get("debug.trace_on_planner_invalid", True)
+        )
+        self.trace_on_planner_fallback = self._as_bool(
+            self._multi_agent_get("debug.trace_on_planner_fallback", True)
+        )
+        self.trace_on_executor_invalid_format = self._as_bool(
+            self._multi_agent_get("debug.trace_on_executor_invalid_format", True)
+        )
+        self.trace_on_invalid_action = self._as_bool(
+            self._multi_agent_get("debug.trace_on_invalid_action", True)
+        )
         self.rank = torch.distributed.get_rank() if torch.distributed.is_initialized() else 0
         self.trace_file = (
             os.path.join(self.trace_dir, f"executor_payload_trace_rank{self.rank}.jsonl")
@@ -124,6 +145,10 @@ class vLLMRollout(BaseVLLMRollout):
             return text
         return text[: self.trace_max_chars] + "...[truncated]"
 
+    @staticmethod
+    def _assistant_prompt_content(speaker_id: int, content: str) -> str:
+        return content or ""
+
     def _append_trace_events(self, events: List[Dict[str, Any]]) -> None:
         if not self.trace_executor_payload or not events or self.trace_file is None:
             return
@@ -133,6 +158,31 @@ class vLLMRollout(BaseVLLMRollout):
                     file_obj.write(json.dumps(event, ensure_ascii=True) + "\n")
         except Exception:
             pass
+
+    def _trace_reasons_for_step(self, events: List[Dict[str, Any]], global_steps: Any) -> List[str]:
+        reasons: List[str] = []
+        step_num = None
+        try:
+            if global_steps is not None:
+                step_num = int(global_steps)
+        except (TypeError, ValueError):
+            step_num = None
+
+        if step_num is not None and self.trace_first_training_steps > 0 and step_num <= self.trace_first_training_steps:
+            reasons.append("first_training_steps")
+        if step_num is not None and self.trace_every_training_steps > 0 and step_num % self.trace_every_training_steps == 0:
+            reasons.append("every_k_training_steps")
+        if self.trace_on_planner_invalid and any(not bool(event.get("planner_validation_valid", True)) for event in events):
+            reasons.append("planner_invalid_format_rate>0")
+        if self.trace_on_planner_fallback and any(bool(event.get("planner_fallback_used", False)) for event in events):
+            reasons.append("planner_fallback_rate>0")
+        if self.trace_on_executor_invalid_format and any(
+            not bool(event.get("executor_native_format_valid", True)) for event in events
+        ):
+            reasons.append("executor_native_format_violations>0")
+        if self.trace_on_invalid_action and any(not bool(event.get("executor_action_valid", True)) for event in events):
+            reasons.append("invalid_action_rate>0")
+        return reasons
 
     def _parse_item_id(self, raw_item_id: str) -> Tuple[str, int]:
         task_name, item_id = raw_item_id.split("_", 1)
@@ -234,6 +284,26 @@ class vLLMRollout(BaseVLLMRollout):
         overrides.update(extra_kwargs)
         return overrides
 
+    def _planner_retry_sampling_overrides(self, do_sample: bool, extra_kwargs: dict) -> dict:
+        overrides = {
+            "max_tokens": self.planner_retry_max_tokens,
+            "temperature": self.planner_retry_temperature,
+            "n": 1,
+        }
+        if not do_sample:
+            overrides.update(
+                {
+                    "best_of": 1,
+                    "top_p": 1.0,
+                    "top_k": -1,
+                    "min_p": 0.0,
+                    "temperature": 0.0,
+                    "n": 1,
+                }
+            )
+        overrides.update(extra_kwargs)
+        return overrides
+
     def _pad_tensor_list(self, tensors, pad_value, total_length, dtype=None):
         padded = pad_sequence(tensors, batch_first=True, padding_value=pad_value)
         if padded.shape[1] < total_length:
@@ -291,12 +361,15 @@ class vLLMRollout(BaseVLLMRollout):
                 break
 
             planner_prompt_ids = []
+            planner_prompt_texts = []
             for idx in active_indices:
                 planner_turn_prompt = build_planner_turn_prompt(
                     rollout_handler_ls[idx].latest_observation,
                     self.task_profile,
                 )
+                rollout_handler_ls[idx].latest_planner_prompt = planner_turn_prompt
                 rollout_handler_ls[idx].add_user_message(self.tokenizer, planner_turn_prompt)
+                planner_prompt_texts.append(planner_turn_prompt)
                 planner_prompt_ids.append(rollout_handler_ls[idx].get_generation_prompt(self.tokenizer))
 
             rollout_bar.set_description(
@@ -313,19 +386,91 @@ class vLLMRollout(BaseVLLMRollout):
 
             executor_prompt_ids = []
             executor_prompt_texts = []
+            planner_results: List[Dict[str, Any]] = []
             for local_i, idx in enumerate(active_indices):
-                planner_text = self.tokenizer.decode(planner_response_ids[local_i], skip_special_tokens=True).strip()
-                planner_context_text = f"[PLANNER]\n{planner_text}"
-                rollout_handler_ls[idx].latest_planner_message = planner_context_text
-                rollout_handler_ls[idx].add_assistant_message(self.tokenizer, planner_context_text, PLANNER_SPEAKER_ID)
+                handler = rollout_handler_ls[idx]
+                planner_raw_text = self.tokenizer.decode(planner_response_ids[local_i], skip_special_tokens=True)
+                planner_normalized = normalize_planner_payload(planner_raw_text)
+                planner_validation = validate_planner_payload(planner_normalized)
+                planner_retry_prompt = ""
+                planner_retry_count_total = 0
+                planner_resolved_after_retry = False
+                while (
+                    not planner_validation.valid
+                    and self.planner_max_retries > 0
+                    and planner_retry_count_total < self.planner_max_retries
+                ):
+                    planner_retry_count_total += 1
+                    planner_retry_prompt = build_planner_retry_prompt(
+                        observation=handler.latest_observation,
+                        invalid_planner_output=planner_normalized,
+                        validation_reason=planner_validation.reason,
+                        task_profile=self.task_profile,
+                    )
+                    handler.add_user_message(self.tokenizer, planner_retry_prompt)
+                    retry_prompt_ids = [handler.get_generation_prompt(self.tokenizer)]
+                    with self.update_sampling_params(
+                        **self._planner_retry_sampling_overrides(do_sample, kwargs.copy())
+                    ):
+                        planner_retry_output = self.inference_engine.generate(
+                            prompts=None,
+                            prompt_token_ids=retry_prompt_ids,
+                            sampling_params=self.sampling_params,
+                            use_tqdm=False,
+                        )
+                    planner_retry_ids = self._extract_response_token_ids(planner_retry_output)
+                    planner_raw_text = (
+                        self.tokenizer.decode(planner_retry_ids[0], skip_special_tokens=True)
+                        if planner_retry_ids
+                        else ""
+                    )
+                    planner_normalized = normalize_planner_payload(planner_raw_text)
+                    planner_validation = validate_planner_payload(planner_normalized)
+                    if planner_validation.valid:
+                        planner_resolved_after_retry = True
+                        break
+
+                planner_context_text = planner_validation.message if planner_validation.valid else planner_fallback_message()
+                handler.latest_planner_raw_output = planner_raw_text
+                handler.latest_planner_normalized_output = planner_normalized
+                handler.latest_planner_message = planner_context_text
+                handler.latest_planner_context_used = planner_context_text
+                handler.latest_planner_validation_reason = planner_validation.reason
+                if not planner_validation.valid:
+                    handler.planner_output_valid = 0.0
+                    handler.planner_fallback_used = 1.0
+                    if planner_validation.reason == "tag_only":
+                        handler.planner_tag_only = 1.0
+                planner_message_for_history = planner_validation.message if planner_validation.valid else planner_context_text
+                handler.add_assistant_message(
+                    self.tokenizer,
+                    planner_message_for_history,
+                    PLANNER_SPEAKER_ID,
+                    prompt_content=self._assistant_prompt_content(PLANNER_SPEAKER_ID, planner_message_for_history),
+                    trainable=planner_validation.valid,
+                )
+                planner_results.append(
+                    {
+                        "planner_prompt": planner_prompt_texts[local_i],
+                        "raw_output": planner_raw_text,
+                        "normalized_output": planner_normalized,
+                        "validation_valid": planner_validation.valid,
+                        "validation_reason": planner_validation.reason,
+                        "context_used_by_executor": planner_context_text,
+                        "fallback_used": not planner_validation.valid,
+                        "retry_prompt": planner_retry_prompt,
+                        "retry_count_total": planner_retry_count_total,
+                        "resolved_after_retry": planner_resolved_after_retry,
+                    }
+                )
                 executor_turn_prompt = build_executor_turn_prompt(
-                    rollout_handler_ls[idx].latest_observation,
+                    handler.latest_observation,
                     planner_context_text,
                     self.task_profile,
                 )
-                rollout_handler_ls[idx].add_user_message(self.tokenizer, executor_turn_prompt)
+                handler.add_user_message(self.tokenizer, executor_turn_prompt)
                 executor_prompt_texts.append(executor_turn_prompt)
-                executor_prompt_ids.append(rollout_handler_ls[idx].get_generation_prompt(self.tokenizer))
+                executor_prompt_ids.append(handler.get_generation_prompt(self.tokenizer))
 
             with self.update_sampling_params(**self._sampling_overrides("executor", do_sample, kwargs.copy())):
                 executor_output = self.inference_engine.generate(
@@ -349,8 +494,12 @@ class vLLMRollout(BaseVLLMRollout):
                 retry_count_total = 0
                 resolved_after_retry = False
 
-                executor_context_text = f"[EXECUTOR]\n{content}"
-                handler.add_assistant_message(self.tokenizer, executor_context_text, EXECUTOR_SPEAKER_ID)
+                handler.add_assistant_message(
+                    self.tokenizer,
+                    content,
+                    EXECUTOR_SPEAKER_ID,
+                    prompt_content=self._assistant_prompt_content(EXECUTOR_SPEAKER_ID, content),
+                )
 
                 should_retry = (
                     self.task_profile.task_name == "babyai"
@@ -362,7 +511,7 @@ class vLLMRollout(BaseVLLMRollout):
                     retry_count_total += 1
                     last_retry_prompt = build_executor_retry_prompt(
                         observation=handler.latest_observation,
-                        planner_message=handler.latest_planner_message,
+                        planner_message=handler.latest_planner_context_used,
                         invalid_executor_output=content,
                         validation_reason=validation.reason,
                         task_profile=self.task_profile,
@@ -384,8 +533,12 @@ class vLLMRollout(BaseVLLMRollout):
                     content = normalize_executor_payload(raw_content, self.task_profile)
                     validation = validate_executor_payload(content, handler.latest_observation, self.task_profile)
                     available_actions = extract_available_actions_from_observation(handler.latest_observation)
-                    executor_context_text = f"[EXECUTOR]\n{content}"
-                    handler.add_assistant_message(self.tokenizer, executor_context_text, EXECUTOR_SPEAKER_ID)
+                    handler.add_assistant_message(
+                        self.tokenizer,
+                        content,
+                        EXECUTOR_SPEAKER_ID,
+                        prompt_content=self._assistant_prompt_content(EXECUTOR_SPEAKER_ID, content),
+                    )
                     if validation.valid:
                         resolved_after_retry = True
                         break
@@ -408,6 +561,7 @@ class vLLMRollout(BaseVLLMRollout):
                         "last_retry_prompt": last_retry_prompt,
                         "retry_count_total": retry_count_total,
                         "resolved_after_retry": resolved_after_retry,
+                        "planner_result": planner_results[local_i],
                     }
                 )
 
@@ -418,12 +572,25 @@ class vLLMRollout(BaseVLLMRollout):
                 content = executor_result["content"]
                 validation = executor_result["validation"]
                 trace_event: Dict[str, Any] = {
+                    "training_step": global_steps,
                     "item_id": handler.item_id,
                     "task_name": handler.task_name,
                     "round": rounds + 1,
                     "rank": self.rank,
                     "observation_excerpt": self._clip(handler.latest_observation),
+                    "planner_prompt": self._clip(executor_result["planner_result"]["planner_prompt"]),
                     "planner_message": self._clip(handler.latest_planner_message),
+                    "planner_raw_output": self._clip(executor_result["planner_result"]["raw_output"]),
+                    "planner_normalized_output": self._clip(executor_result["planner_result"]["normalized_output"]),
+                    "planner_retry_prompt": self._clip(executor_result["planner_result"]["retry_prompt"]),
+                    "planner_retry_count_total": executor_result["planner_result"]["retry_count_total"],
+                    "planner_resolved_after_retry": bool(executor_result["planner_result"]["resolved_after_retry"]),
+                    "planner_validation_valid": bool(executor_result["planner_result"]["validation_valid"]),
+                    "planner_validation_reason": executor_result["planner_result"]["validation_reason"],
+                    "planner_context_used_by_executor": self._clip(
+                        executor_result["planner_result"]["context_used_by_executor"]
+                    ),
+                    "planner_fallback_used": bool(executor_result["planner_result"]["fallback_used"]),
                     "executor_prompt": self._clip(executor_result["initial_prompt_text"]),
                     "executor_retry_prompt": self._clip(executor_result["last_retry_prompt"]),
                     "executor_raw_output": self._clip(raw_content),
@@ -435,6 +602,8 @@ class vLLMRollout(BaseVLLMRollout):
                     "retry_attempt": executor_result["retry_count_total"],
                     "resolved_after_retry": bool(executor_result["resolved_after_retry"]),
                     "retry_count_total": executor_result["retry_count_total"],
+                    "executor_native_format_valid": bool(handler.executor_native_format_valid),
+                    "executor_action_valid": bool(handler.executor_action_valid),
                     "env_step_called": False,
                     "env_step_payload": "",
                     "env_reward": None,
@@ -455,6 +624,8 @@ class vLLMRollout(BaseVLLMRollout):
                         handler.invalid_format_terminated = 1.0
                     else:
                         handler.invalid_action_terminated = 1.0
+                    trace_event["executor_native_format_valid"] = bool(handler.executor_native_format_valid)
+                    trace_event["executor_action_valid"] = bool(handler.executor_action_valid)
                     reason_msg = f"Terminated due to invalid executor output ({validation.reason})."
                     handler.latest_observation = reason_msg
                     trace_event["env_state_excerpt"] = self._clip(reason_msg)
@@ -487,6 +658,8 @@ class vLLMRollout(BaseVLLMRollout):
                     trace_event["env_state_excerpt"] = self._clip(state)
                     if detect_invalid_action(state, self.task_profile):
                         handler.executor_action_valid = 0.0
+                    trace_event["executor_native_format_valid"] = bool(handler.executor_native_format_valid)
+                    trace_event["executor_action_valid"] = bool(handler.executor_action_valid)
                     delta_reward = 0.0
                     if self.reward_mode == "delta_per_executor_step":
                         delta_reward = compute_reward_delta(previous_scores[idx], reward)
@@ -500,6 +673,8 @@ class vLLMRollout(BaseVLLMRollout):
                 except TimeoutError:
                     self._mark_timeout(handler)
                     handler.done = True
+                    trace_event["executor_native_format_valid"] = bool(handler.executor_native_format_valid)
+                    trace_event["executor_action_valid"] = bool(handler.executor_action_valid)
                     trace_event["exception"] = "TimeoutError"
                     return True, trace_event
                 except Exception as exc:
@@ -507,6 +682,8 @@ class vLLMRollout(BaseVLLMRollout):
                     handler.executor_action_valid = 0.0
                     handler.done = True
                     handler.latest_observation = str(exc)
+                    trace_event["executor_native_format_valid"] = bool(handler.executor_native_format_valid)
+                    trace_event["executor_action_valid"] = bool(handler.executor_action_valid)
                     trace_event["exception"] = self._clip(exc)
                     trace_event["env_state_excerpt"] = self._clip(exc)
                     try:
@@ -519,7 +696,11 @@ class vLLMRollout(BaseVLLMRollout):
                 step_results = list(executor.map(agent_step, executor_results))
             step_dones = [result[0] for result in step_results]
             step_trace_events = [result[1] for result in step_results]
-            self._append_trace_events(step_trace_events)
+            trace_reasons = self._trace_reasons_for_step(step_trace_events, global_steps)
+            if trace_reasons:
+                for event in step_trace_events:
+                    event["trace_reasons"] = trace_reasons
+                self._append_trace_events(step_trace_events)
 
             rounds += 1
             rollout_bar.update(1)
@@ -547,6 +728,9 @@ class vLLMRollout(BaseVLLMRollout):
         timeout_occurred = []
         invalid_format_terminated = []
         invalid_action_terminated = []
+        planner_output_valid = []
+        planner_fallback_used = []
+        planner_tag_only = []
         messages = []
 
         for handler in rollout_handler_ls:
@@ -566,6 +750,9 @@ class vLLMRollout(BaseVLLMRollout):
             timeout_occurred.append(handler.timeout_occurred)
             invalid_format_terminated.append(handler.invalid_format_terminated)
             invalid_action_terminated.append(handler.invalid_action_terminated)
+            planner_output_valid.append(handler.planner_output_valid)
+            planner_fallback_used.append(handler.planner_fallback_used)
+            planner_tag_only.append(handler.planner_tag_only)
             messages.append(handler.messages)
 
         response_ids = self._pad_tensor_list(response_ids, self.pad_token_id, self.config.response_length)
@@ -642,6 +829,9 @@ class vLLMRollout(BaseVLLMRollout):
                 "timeout_occurred": torch.tensor(timeout_occurred, dtype=torch.float32, device=cur_device),
                 "invalid_format_terminated": torch.tensor(invalid_format_terminated, dtype=torch.float32, device=cur_device),
                 "invalid_action_terminated": torch.tensor(invalid_action_terminated, dtype=torch.float32, device=cur_device),
+                "planner_output_valid": torch.tensor(planner_output_valid, dtype=torch.float32, device=cur_device),
+                "planner_fallback_used": torch.tensor(planner_fallback_used, dtype=torch.float32, device=cur_device),
+                "planner_tag_only": torch.tensor(planner_tag_only, dtype=torch.float32, device=cur_device),
             },
             batch_size=batch_size,
         )

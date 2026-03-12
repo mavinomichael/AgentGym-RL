@@ -209,6 +209,8 @@ class DataParallelPPOActor(BasePPOActor):
         select_keys = ['input_ids', 'attention_mask', 'position_ids', 'old_log_probs', 'advantages', 'responses', 'response_mask']
         if self.config.use_kl_loss:
             select_keys.append('ref_log_prob')
+            if 'planner_response_mask' in data.batch.keys():
+                select_keys.append('planner_response_mask')
         batch = data.select(batch_keys=select_keys).batch
 
         # Split to make minibatch iterator for updating the actor
@@ -258,7 +260,15 @@ class DataParallelPPOActor(BasePPOActor):
                     kld = core_algos.kl_penalty(logprob=log_prob,
                                                 ref_logprob=ref_log_prob,
                                                 kl_penalty=self.config.kl_loss_type)
-                    kl_loss = masked_mean(kld, response_mask)
+                    planner_kl_weight = float(getattr(self.config, 'planner_kl_weight', 1.0))
+                    if planner_kl_weight != 1.0 and 'planner_response_mask' in data.keys():
+                        planner_mask = data['planner_response_mask'].float()
+                        kl_weights = response_mask.float() + planner_mask * (planner_kl_weight - 1.0)
+                        denom = torch.clamp_min(kl_weights.sum(), 1.0)
+                        kl_loss = (kld * kl_weights).sum() / denom
+                        metrics['actor/planner_kl_weight'] = planner_kl_weight
+                    else:
+                        kl_loss = masked_mean(kld, response_mask)
 
                     policy_loss = policy_loss + kl_loss * self.config.kl_loss_coef
                     metrics['actor/kl_loss'] = kl_loss.detach().item()

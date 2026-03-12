@@ -25,16 +25,26 @@ def _pre_process_inputs(pad_token_id, prompt_token_ids: Any) -> List[int]:
 
 
 class Message:
-    def __init__(self, role: str, content: str, speaker: Optional[str] = None):
+    def __init__(
+        self,
+        role: str,
+        content: str,
+        speaker: Optional[str] = None,
+        prompt_content: Optional[str] = None,
+    ):
         self.role = role
         self.content = content
         self.speaker = speaker
+        self.prompt_content = prompt_content if prompt_content is not None else content
 
     def to_dict(self):
         data = {"role": self.role, "content": self.content}
         if self.speaker is not None:
             data["speaker"] = self.speaker
         return data
+
+    def to_prompt_dict(self):
+        return {"role": self.role, "content": self.prompt_content}
 
     def __repr__(self):
         return str(self.to_dict())
@@ -116,13 +126,22 @@ class RolloutHandler:
         self.team_env_rounds = 0
         self.executor_action_valid = 1.0
         self.executor_native_format_valid = 1.0
+        self.planner_output_valid = 1.0
+        self.planner_fallback_used = 0.0
+        self.planner_tag_only = 0.0
         self.env_step_failed = 0.0
         self.timeout_occurred = 0.0
         self.invalid_format_terminated = 0.0
         self.invalid_action_terminated = 0.0
         self.last_executor_score_index = None
+        self.last_planner_score_index = None
         self.latest_observation = ""
         self.latest_planner_message = ""
+        self.latest_planner_context_used = ""
+        self.latest_planner_validation_reason = "ok"
+        self.latest_planner_raw_output = ""
+        self.latest_planner_normalized_output = ""
+        self.latest_planner_prompt = ""
         self.format_config = {
             "qwen": {
                 "assistant_prefix_msg": "\n<|im_start|>assistant\n",
@@ -133,9 +152,8 @@ class RolloutHandler:
         }
 
     def get_generation_prompt(self, tokenizer: PreTrainedTokenizer) -> List[int]:
-        conversations = [message.to_dict() for message in self.messages]
-        cleaned = [{"role": item["role"], "content": item["content"]} for item in conversations]
-        return tokenizer.apply_chat_template(cleaned, add_generation_prompt=True, tokenize=True)
+        conversations = [message.to_prompt_dict() for message in self.messages]
+        return tokenizer.apply_chat_template(conversations, add_generation_prompt=True, tokenize=True)
 
     def _append_segment(
         self,
@@ -160,14 +178,16 @@ class RolloutHandler:
         self,
         tokenizer: PreTrainedTokenizer,
         content: str,
+        prompt_content: Optional[str] = None,
         format: Literal["qwen"] = "qwen",
     ) -> None:
-        self.messages.append(Message(role="user", content=content))
+        prompt_content = prompt_content if prompt_content is not None else content
+        self.messages.append(Message(role="user", content=content, prompt_content=prompt_content))
         prefix_msg = self.format_config[format]["user_prefix_msg"]
         suffix_msg = self.format_config[format]["user_suffix_msg"]
         prefix_token_ids = tokenizer.encode(prefix_msg, add_special_tokens=False)
         suffix_token_ids = tokenizer.encode(suffix_msg, add_special_tokens=False)
-        content_token_ids = tokenizer.encode(content, add_special_tokens=False)
+        content_token_ids = tokenizer.encode(prompt_content, add_special_tokens=False)
         if self.input_ids[-len(prefix_token_ids):] == prefix_token_ids:
             append_token_ids = content_token_ids
             local_loss_mask = [0] * len(content_token_ids)
@@ -192,29 +212,45 @@ class RolloutHandler:
         tokenizer: PreTrainedTokenizer,
         content: str,
         speaker_id: int,
+        prompt_content: Optional[str] = None,
+        trainable: bool = True,
         format: Literal["qwen"] = "qwen",
     ) -> None:
         speaker = "planner" if speaker_id == PLANNER_SPEAKER_ID else "executor"
-        self.messages.append(Message(role="assistant", content=content, speaker=speaker))
+        prompt_content = prompt_content if prompt_content is not None else content
+        self.messages.append(
+            Message(role="assistant", content=content, speaker=speaker, prompt_content=prompt_content)
+        )
         prefix_msg = self.format_config[format]["assistant_prefix_msg"]
         suffix_msg = self.format_config[format]["assistant_suffix_msg"]
         prefix_token_ids = tokenizer.encode(prefix_msg, add_special_tokens=False)
         suffix_token_ids = tokenizer.encode(suffix_msg, add_special_tokens=False)
-        content_token_ids = tokenizer.encode(content, add_special_tokens=False)
+        content_token_ids = tokenizer.encode(prompt_content, add_special_tokens=False)
+        raw_content_token_ids = tokenizer.encode(content, add_special_tokens=False)
+        prompt_prefix_token_len = 0
+        if prompt_content != content:
+            if content and prompt_content.endswith(content):
+                prompt_prefix_token_len = max(0, len(content_token_ids) - len(raw_content_token_ids))
+            elif not content:
+                prompt_prefix_token_len = len(content_token_ids)
         if self.input_ids[-len(prefix_token_ids):] == prefix_token_ids:
             append_token_ids = content_token_ids
-            local_loss_mask = [1] * len(content_token_ids)
-            role_mask = [1] * len(content_token_ids)
+            target_mask = [0] * prompt_prefix_token_len + [1] * (len(content_token_ids) - prompt_prefix_token_len)
+            local_loss_mask = target_mask if trainable else [0] * len(content_token_ids)
+            role_mask = target_mask if trainable else [0] * len(content_token_ids)
         elif self.input_ids[-len(suffix_token_ids):] == suffix_token_ids:
             append_token_ids = prefix_token_ids + content_token_ids
-            local_loss_mask = [0] * len(prefix_token_ids) + [1] * len(content_token_ids)
-            role_mask = [0] * len(prefix_token_ids) + [1] * len(content_token_ids)
+            prefix_zeroes = [0] * (len(prefix_token_ids) + prompt_prefix_token_len)
+            target_mask = prefix_zeroes + [1] * (len(content_token_ids) - prompt_prefix_token_len)
+            local_loss_mask = target_mask if trainable else [0] * len(append_token_ids)
+            role_mask = target_mask if trainable else [0] * len(append_token_ids)
         else:
             max_len = max(len(prefix_token_ids), len(suffix_token_ids))
             raise ValueError(f"Unsupported end of message format: {tokenizer.decode(self.input_ids[-max_len:])}")
         append_token_ids += suffix_token_ids
-        local_loss_mask += [1] * len(suffix_token_ids)
-        role_mask += [1] * len(suffix_token_ids)
+        suffix_mask = [1] * len(suffix_token_ids) if trainable else [0] * len(suffix_token_ids)
+        local_loss_mask += suffix_mask
+        role_mask += suffix_mask
         planner_mask = role_mask if speaker_id == PLANNER_SPEAKER_ID else [0] * len(role_mask)
         executor_mask = role_mask if speaker_id == EXECUTOR_SPEAKER_ID else [0] * len(role_mask)
         self._append_segment(
@@ -224,7 +260,9 @@ class RolloutHandler:
             planner_mask=planner_mask,
             executor_mask=executor_mask,
         )
-        if speaker_id == EXECUTOR_SPEAKER_ID:
+        if speaker_id == PLANNER_SPEAKER_ID and trainable:
+            self.last_planner_score_index = len(self.input_ids) - 1
+        if speaker_id == EXECUTOR_SPEAKER_ID and trainable:
             self.last_executor_score_index = len(self.input_ids) - 1
 
     def mark_last_executor_reward(self, reward: float) -> None:
@@ -232,6 +270,12 @@ class RolloutHandler:
             return
         self.score_values[self.last_executor_score_index] += float(reward)
         self.reward_event_mask[self.last_executor_score_index] = 1
+
+    def mark_last_planner_reward(self, reward: float) -> None:
+        if self.last_planner_score_index is None:
+            return
+        self.score_values[self.last_planner_score_index] += float(reward)
+        self.reward_event_mask[self.last_planner_score_index] = 1
 
     def truncate_output_ids(self) -> None:
         self.input_ids = self.input_ids[: self.max_model_len]

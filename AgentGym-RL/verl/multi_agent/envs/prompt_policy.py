@@ -13,6 +13,8 @@ CONTROL_SPEAKER_ID = 0
 PLANNER_SPEAKER_ID = 1
 EXECUTOR_SPEAKER_ID = 2
 QWEN_SYSTEM_PROMPT = "You are Qwen, created by Alibaba Cloud. You are a helpful assistant."
+PLANNER_MAX_WORDS = 12
+PLANNER_MAX_CHARS = 96
 
 
 @dataclass(frozen=True)
@@ -20,6 +22,13 @@ class ExecutorPayloadValidation:
     valid: bool
     reason: str
     action: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class PlannerPayloadValidation:
+    valid: bool
+    reason: str
+    message: Optional[str] = None
 
 
 def build_multi_agent_instruction(base_instruction: str) -> str:
@@ -59,9 +68,35 @@ def build_planner_turn_prompt(observation: str, task_profile: Optional[TaskProfi
         "[Planner Turn]\n"
         "[Environment Observation]\n"
         f"{observation}\n\n"
-        "Planner: provide concise strategic guidance for the next environment interaction.\n"
+        "Planner: provide exactly one short guidance sentence for the Executor.\n"
         "Do not emit an environment action.\n"
-        "Focus on the next step while preserving long-horizon progress."
+        "Do not output role labels or sections such as [PLANNER], [EXECUTOR], Planner:, Executor:, Thought:, or Action:.\n"
+        "Output only the guidance sentence.\n"
+        f"Keep it under {PLANNER_MAX_WORDS} words.\n"
+        "Use an imperative sentence such as 'Turn left toward the red ball.'\n"
+        "Focus only on the next step while preserving long-horizon progress."
+    )
+
+
+def build_planner_retry_prompt(
+    observation: str,
+    invalid_planner_output: str,
+    validation_reason: str,
+    task_profile: Optional[TaskProfile] = None,
+) -> str:
+    return (
+        "[Planner Retry]\n"
+        "Your previous planner message was invalid and will not be shown to the Executor.\n"
+        f"Failure reason: {validation_reason}\n\n"
+        "[Environment Observation]\n"
+        f"{observation}\n\n"
+        "[Previous Invalid Planner Output]\n"
+        f"{invalid_planner_output}\n\n"
+        "Respond again with exactly one short guidance sentence.\n"
+        "Do not emit an environment action.\n"
+        "Do not output role labels or sections such as [PLANNER], [EXECUTOR], Planner:, Executor:, Thought:, or Action:.\n"
+        f"Keep it under {PLANNER_MAX_WORDS} words.\n"
+        "Output only the guidance sentence."
     )
 
 
@@ -87,6 +122,7 @@ def build_executor_turn_prompt(
             f"- Action must be exactly one of: {action_list}\n"
             "- Do not output bare words like Go, Up, Left, or Right.\n"
             "- Do not output multiple Action lines.\n"
+            "- Do not copy prompt headers such as [Executor Response] or [Planner Message].\n"
         )
 
     return (
@@ -136,7 +172,8 @@ def build_executor_retry_prompt(
             f"Action must be exactly one of: {action_list}\n"
             "Do not output bare words like Go, Up, Left, or Right.\n"
             "Do not output multiple Action lines.\n"
-            "Do not include role labels."
+            "Do not include role labels.\n"
+            "Do not copy prompt headers such as [Executor Response] or [Planner Message]."
         )
 
     return (
@@ -155,17 +192,72 @@ def build_executor_retry_prompt(
     )
 
 
+def planner_fallback_message() -> str:
+    return "Planner guidance unavailable. Infer the next step from the observation only."
+
+
 def normalize_executor_payload(raw_text: str, task_profile: TaskProfile) -> str:
     text = raw_text.strip()
     for suffix in ("</s>", "<|im_end|>", "<|endoftext|>"):
         if text.endswith(suffix):
             text = text[: -len(suffix)].rstrip()
+    return _strip_control_headers(text)
+
+
+def normalize_planner_payload(raw_text: str) -> str:
+    text = raw_text.strip()
+    for suffix in ("</s>", "<|im_end|>", "<|endoftext|>"):
+        if text.endswith(suffix):
+            text = text[: -len(suffix)].rstrip()
+    return _strip_control_headers(text)
+
+
+def _strip_control_headers(text: str) -> str:
+    header_pattern = re.compile(
+        r"^(?:\[(?:executor response|planner message|executor|planner)\]\s*)+",
+        re.IGNORECASE,
+    )
+    while True:
+        updated = header_pattern.sub("", text).lstrip()
+        if updated == text:
+            break
+        text = updated
     return text
 
 
 def _normalize_action_text(action: str) -> str:
     action = re.sub(r"[^A-Za-z0-9, ]+", "", action)
     return " ".join(action.lower().split()).strip()
+
+
+def _contains_disallowed_planner_tokens(text: str) -> bool:
+    return bool(
+        re.search(
+            r"\[(planner|executor|pl|ex)\]|(?:^|\s)(planner|executor)\s*:|Thought:|Action:",
+            text,
+            re.IGNORECASE,
+        )
+    )
+
+
+def _is_tag_only_planner_text(text: str) -> bool:
+    stripped = re.sub(r"\[(planner|executor|pl|ex)\]", " ", text, flags=re.IGNORECASE)
+    stripped = re.sub(r"[\s\W_]+", "", stripped)
+    return stripped == ""
+
+
+def validate_planner_payload(raw_text: str) -> PlannerPayloadValidation:
+    normalized = normalize_planner_payload(raw_text)
+    if not normalized:
+        return PlannerPayloadValidation(valid=False, reason="empty", message=None)
+    if _is_tag_only_planner_text(normalized):
+        return PlannerPayloadValidation(valid=False, reason="tag_only", message=None)
+    if _contains_disallowed_planner_tokens(normalized):
+        return PlannerPayloadValidation(valid=False, reason="contains_role_or_schema_tokens", message=None)
+    collapsed = " ".join(normalized.split())
+    if len(collapsed) > PLANNER_MAX_CHARS or len(collapsed.split()) > PLANNER_MAX_WORDS:
+        return PlannerPayloadValidation(valid=False, reason="too_long", message=None)
+    return PlannerPayloadValidation(valid=True, reason="ok", message=collapsed)
 
 
 def extract_available_actions_from_observation(observation: str) -> List[str]:

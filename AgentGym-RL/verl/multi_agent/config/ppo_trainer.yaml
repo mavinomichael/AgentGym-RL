@@ -34,6 +34,19 @@ multi_agent:
     max_retries: 2
     retry_temperature: 0.2
     retry_max_tokens: 80
+    planner_max_retries: 2
+    planner_retry_temperature: 0.1
+    planner_retry_max_tokens: 24
+  debug:
+    trace_executor_payload: false
+    trace_dir: /mnt/data/logs
+    trace_max_chars: 800
+    trace_first_training_steps: 0
+    trace_every_training_steps: 0
+    trace_on_planner_invalid: true
+    trace_on_planner_fallback: true
+    trace_on_executor_invalid_format: true
+    trace_on_invalid_action: true
   roles:
     planner:
       max_tokens: ${task.planner_max_tokens}
@@ -63,6 +76,7 @@ actor_rollout_ref:
     use_kl_loss: ${algo.use_kl_loss}
     kl_loss_coef: ${algo.kl_coef}
     kl_loss_type: low_var_kl
+    planner_kl_weight: 1.0
     ppo_epochs: ${algo.ppo_epochs}
     shuffle: False
     ulysses_sequence_parallel_size: 1

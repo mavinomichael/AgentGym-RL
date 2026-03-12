@@ -1,0 +1,1575 @@
+BabyAI 100-Step Diagnostic Trace Summary
+Trace dir: /dev/shm/agentgym_logs/babyai_diagnostic_100_8gpu_v2/trace_train
+Total traced events: 5328
+Traced training steps: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 20, 22, 25, 30, 33, 34, 35, 36, 39, 40, 41, 42, 45, 46, 49, 50, 51, 52, 53, 54, 55, 58, 60, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 77, 79, 80, 81, 85, 90, 95, 98, 100
+First planner_invalid_format step: None
+First planner_fallback step: None
+First executor_invalid_format step: 39
+First invalid_action step: 22
+
+====================================================================================================
+training_step: 1
+trace_reasons: first_training_steps
+events: 180
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 0
+planner_retry_count: 0
+
+====================================================================================================
+training_step: 2
+trace_reasons: first_training_steps
+events: 104
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 0
+planner_retry_count: 0
+
+====================================================================================================
+training_step: 3
+trace_reasons: first_training_steps
+events: 266
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 0
+planner_retry_count: 0
+
+====================================================================================================
+training_step: 4
+trace_reasons: first_training_steps
+events: 235
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 0
+planner_retry_count: 0
+
+====================================================================================================
+training_step: 5
+trace_reasons: every_k_training_steps, first_training_steps
+events: 174
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 0
+planner_retry_count: 0
+
+====================================================================================================
+training_step: 6
+trace_reasons: first_training_steps
+events: 158
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 0
+planner_retry_count: 0
+
+====================================================================================================
+training_step: 7
+trace_reasons: first_training_steps
+events: 198
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 0
+planner_retry_count: 0
+
+====================================================================================================
+training_step: 8
+trace_reasons: first_training_steps
+events: 181
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 0
+planner_retry_count: 0
+
+====================================================================================================
+training_step: 9
+trace_reasons: first_training_steps
+events: 174
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 0
+planner_retry_count: 2
+
+====================================================================================================
+training_step: 10
+trace_reasons: every_k_training_steps, first_training_steps
+events: 189
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 0
+planner_retry_count: 0
+
+====================================================================================================
+training_step: 11
+trace_reasons: first_training_steps
+events: 186
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 0
+planner_retry_count: 1
+
+====================================================================================================
+training_step: 12
+trace_reasons: first_training_steps
+events: 121
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 0
+planner_retry_count: 0
+
+====================================================================================================
+training_step: 13
+trace_reasons: first_training_steps
+events: 144
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 0
+planner_retry_count: 0
+
+====================================================================================================
+training_step: 14
+trace_reasons: first_training_steps
+events: 209
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 0
+planner_retry_count: 0
+
+====================================================================================================
+training_step: 15
+trace_reasons: every_k_training_steps, first_training_steps
+events: 147
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 0
+planner_retry_count: 0
+
+====================================================================================================
+training_step: 20
+trace_reasons: every_k_training_steps
+events: 156
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 0
+planner_retry_count: 0
+
+====================================================================================================
+training_step: 22
+trace_reasons: invalid_action_rate>0
+events: 2
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 1
+planner_retry_count: 0
+top_invalid_executor_outputs:
+  [1] Thought:
+Pick up the grey ball.
+
+Action:
+pickup grey ball 1
+examples:
+- item_id=124 round=5 rank=3 planner_reason=ok executor_reason=action_not_in_available trace_reasons=invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Pick up the grey ball.
+  planner_context_used: Pick up the grey ball.
+  executor_raw: Thought:
+Pick up the grey ball.
+
+Action:
+pickup grey ball 1
+  executor_normalized: Thought:
+Pick up the grey ball.
+
+Action:
+pickup grey ball 1
+  env_payload: 
+
+====================================================================================================
+training_step: 25
+trace_reasons: every_k_training_steps
+events: 180
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 0
+planner_retry_count: 0
+
+====================================================================================================
+training_step: 30
+trace_reasons: every_k_training_steps
+events: 116
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 0
+planner_retry_count: 0
+
+====================================================================================================
+training_step: 33
+trace_reasons: invalid_action_rate>0
+events: 2
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 1
+planner_retry_count: 0
+top_invalid_executor_outputs:
+  [1] Thought:
+go to green ball 1
+
+Action:
+pickup green ball 1
+examples:
+- item_id=526 round=8 rank=5 planner_reason=ok executor_reason=action_not_in_available trace_reasons=invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Move forward to pick up the green ball.
+  planner_context_used: Move forward to pick up the green ball.
+  executor_raw: Thought:
+go to green ball 1
+
+Action:
+pickup green ball 1
+  executor_normalized: Thought:
+go to green ball 1
+
+Action:
+pickup green ball 1
+  env_payload: 
+
+====================================================================================================
+training_step: 34
+trace_reasons: invalid_action_rate>0
+events: 4
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 3
+planner_retry_count: 0
+top_invalid_executor_outputs:
+  [2] Thought:
+pickup purple key
+
+Action:
+pickup purple key
+  [1] Thought:
+turn_right
+
+Action:
+turn_right
+examples:
+- item_id=762 round=1 rank=1 planner_reason=ok executor_reason=action_not_in_available trace_reasons=invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Turn right to face the opposite direction.
+  planner_context_used: Turn right to face the opposite direction.
+  executor_raw: Thought:
+turn_right
+
+Action:
+turn_right
+  executor_normalized: Thought:
+turn_right
+
+Action:
+turn_right
+  env_payload: 
+- item_id=2298 round=2 rank=0 planner_reason=ok executor_reason=action_not_in_available trace_reasons=invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Pick up the purple key.
+  planner_context_used: Pick up the purple key.
+  executor_raw: Thought:
+pickup purple key
+
+Action:
+pickup purple key
+  executor_normalized: Thought:
+pickup purple key
+
+Action:
+pickup purple key
+  env_payload: 
+
+====================================================================================================
+training_step: 35
+trace_reasons: every_k_training_steps
+events: 243
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 0
+planner_retry_count: 0
+
+====================================================================================================
+training_step: 36
+trace_reasons: invalid_action_rate>0
+events: 2
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 2
+planner_retry_count: 0
+top_invalid_executor_outputs:
+  [1] Thought:
+go to purple key 1
+
+Action:
+pickup purple key 1
+  [1] Thought:
+pickup purple key 1
+
+Action:
+pickup purple key 1
+examples:
+- item_id=450 round=4 rank=5 planner_reason=ok executor_reason=action_not_in_available trace_reasons=invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Pick up the purple key.
+  planner_context_used: Pick up the purple key.
+  executor_raw: Thought:
+go to purple key 1
+
+Action:
+pickup purple key 1
+  executor_normalized: Thought:
+go to purple key 1
+
+Action:
+pickup purple key 1
+  env_payload: 
+
+====================================================================================================
+training_step: 39
+trace_reasons: executor_native_format_violations>0, invalid_action_rate>0
+events: 2
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 1
+invalid_action_count: 1
+planner_retry_count: 0
+top_invalid_executor_outputs:
+  [1] Thought:
+go to grey box 1
+examples:
+- item_id=1709 round=1 rank=4 planner_reason=ok executor_reason=invalid_format trace_reasons=executor_native_format_violations>0,invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Go to grey box 1.
+  planner_context_used: Go to grey box 1.
+  executor_raw: Thought:
+go to grey box 1
+  executor_normalized: Thought:
+go to grey box 1
+  env_payload: 
+
+====================================================================================================
+training_step: 40
+trace_reasons: every_k_training_steps, invalid_action_rate>0
+events: 116
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 1
+planner_retry_count: 0
+top_invalid_executor_outputs:
+  [1] Thought:
+go to grey_box_1
+
+Action:
+pickup grey_box_1
+examples:
+- item_id=2406 round=2 rank=5 planner_reason=ok executor_reason=action_not_in_available trace_reasons=every_k_training_steps,invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Turn right toward the grey box.
+  planner_context_used: Turn right toward the grey box.
+  executor_raw: Thought:
+go to grey_box_1
+
+Action:
+pickup grey_box_1
+  executor_normalized: Thought:
+go to grey_box_1
+
+Action:
+pickup grey_box_1
+  env_payload: 
+
+====================================================================================================
+training_step: 41
+trace_reasons: invalid_action_rate>0
+events: 2
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 1
+planner_retry_count: 0
+top_invalid_executor_outputs:
+  [1] Thought:
+toggle and go through purple_closed_door_1
+
+Action:
+toggle and go through purple_closed_door_1
+examples:
+- item_id=2045 round=2 rank=2 planner_reason=ok executor_reason=action_not_in_available trace_reasons=invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Turn right toward the purple closed door.
+  planner_context_used: Turn right toward the purple closed door.
+  executor_raw: Thought:
+toggle and go through purple_closed_door_1
+
+Action:
+toggle and go through purple_closed_door_1
+  executor_normalized: Thought:
+toggle and go through purple_closed_door_1
+
+Action:
+toggle and go through purple_closed_door_1
+  env_payload: 
+
+====================================================================================================
+training_step: 42
+trace_reasons: invalid_action_rate>0
+events: 2
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 2
+planner_retry_count: 0
+top_invalid_executor_outputs:
+  [1] Thought:
+go to red box 1
+
+Action:
+go to red ball 1
+  [1] Thought:
+turn right
+
+Action:
+go to red ball 1
+examples:
+- item_id=1481 round=1 rank=5 planner_reason=ok executor_reason=action_not_in_available trace_reasons=invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Turn right toward the red ball.
+  planner_context_used: Turn right toward the red ball.
+  executor_raw: Thought:
+go to red box 1
+
+Action:
+go to red ball 1
+  executor_normalized: Thought:
+go to red box 1
+
+Action:
+go to red ball 1
+  env_payload: 
+
+====================================================================================================
+training_step: 45
+trace_reasons: every_k_training_steps, invalid_action_rate>0
+events: 115
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 1
+planner_retry_count: 0
+top_invalid_executor_outputs:
+  [1] Thought:
+go to purple locked door 1
+
+Action:
+toggle and go through purple locked door 1
+examples:
+- item_id=1970 round=1 rank=3 planner_reason=ok executor_reason=action_not_in_available trace_reasons=every_k_training_steps,invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Turn left toward the purple locked door.
+  planner_context_used: Turn left toward the purple locked door.
+  executor_raw: Thought:
+go to purple locked door 1
+
+Action:
+toggle and go through purple locked door 1
+  executor_normalized: Thought:
+go to purple locked door 1
+
+Action:
+toggle and go through purple locked door 1
+  env_payload: 
+
+====================================================================================================
+training_step: 46
+trace_reasons: invalid_action_rate>0
+events: 2
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 1
+planner_retry_count: 0
+top_invalid_executor_outputs:
+  [1] Thought:
+go to purple ball 1
+
+Action:
+pickup purple ball 1
+examples:
+- item_id=2607 round=5 rank=7 planner_reason=ok executor_reason=action_not_in_available trace_reasons=invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Go to purple ball 1.
+  planner_context_used: Go to purple ball 1.
+  executor_raw: Thought:
+go to purple ball 1
+
+Action:
+pickup purple ball 1
+  executor_normalized: Thought:
+go to purple ball 1
+
+Action:
+pickup purple ball 1
+  env_payload: 
+
+====================================================================================================
+training_step: 49
+trace_reasons: invalid_action_rate>0
+events: 4
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 2
+planner_retry_count: 0
+top_invalid_executor_outputs:
+  [1] Thought:
+go to red ball 1
+
+Action:
+pickup
+  [1] Thought:
+go to red ball 1
+
+Action:
+pickup red ball 1
+examples:
+- item_id=1080 round=2 rank=2 planner_reason=ok executor_reason=action_not_in_available trace_reasons=invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Turn right toward the red ball.
+  planner_context_used: Turn right toward the red ball.
+  executor_raw: Thought:
+go to red ball 1
+
+Action:
+pickup
+  executor_normalized: Thought:
+go to red ball 1
+
+Action:
+pickup
+  env_payload: 
+- item_id=286 round=6 rank=0 planner_reason=ok executor_reason=action_not_in_available trace_reasons=invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Move forward to pick up the red ball.
+  planner_context_used: Move forward to pick up the red ball.
+  executor_raw: Thought:
+go to red ball 1
+
+Action:
+pickup red ball 1
+  executor_normalized: Thought:
+go to red ball 1
+
+Action:
+pickup red ball 1
+  env_payload: 
+
+====================================================================================================
+training_step: 50
+trace_reasons: every_k_training_steps
+events: 157
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 0
+planner_retry_count: 0
+
+====================================================================================================
+training_step: 51
+trace_reasons: invalid_action_rate>0
+events: 2
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 1
+planner_retry_count: 0
+top_invalid_executor_outputs:
+  [1] Thought:
+pickup green key 1
+
+Action:
+pickup green key 1
+examples:
+- item_id=930 round=3 rank=1 planner_reason=ok executor_reason=action_not_in_available trace_reasons=invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Pick up the green key 1.
+  planner_context_used: Pick up the green key 1.
+  executor_raw: Thought:
+pickup green key 1
+
+Action:
+pickup green key 1
+  executor_normalized: Thought:
+pickup green key 1
+
+Action:
+pickup green key 1
+  env_payload: 
+
+====================================================================================================
+training_step: 52
+trace_reasons: invalid_action_rate>0
+events: 2
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 1
+planner_retry_count: 0
+top_invalid_executor_outputs:
+  [1] Thought:
+turn left
+
+Action:
+go to red key 1 2
+examples:
+- item_id=3589 round=1 rank=5 planner_reason=ok executor_reason=action_not_in_available trace_reasons=invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Turn left toward the red key.
+  planner_context_used: Turn left toward the red key.
+  executor_raw: Thought:
+turn left
+
+Action:
+go to red key 1 2
+  executor_normalized: Thought:
+turn left
+
+Action:
+go to red key 1 2
+  env_payload: 
+
+====================================================================================================
+training_step: 53
+trace_reasons: invalid_action_rate>0
+events: 2
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 1
+planner_retry_count: 0
+top_invalid_executor_outputs:
+  [1] Thought:
+go to green key 1
+
+Action:
+pickup green key 1
+examples:
+- item_id=1606 round=7 rank=2 planner_reason=ok executor_reason=action_not_in_available trace_reasons=invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Pick up the green key.
+  planner_context_used: Pick up the green key.
+  executor_raw: Thought:
+go to green key 1
+
+Action:
+pickup green key 1
+  executor_normalized: Thought:
+go to green key 1
+
+Action:
+pickup green key 1
+  env_payload: 
+
+====================================================================================================
+training_step: 54
+trace_reasons: invalid_action_rate>0
+events: 2
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 2
+planner_retry_count: 0
+top_invalid_executor_outputs:
+  [2] Thought:
+pickup grey key 1
+
+Action:
+go to red ball
+examples:
+- item_id=1280 round=2 rank=0 planner_reason=ok executor_reason=action_not_in_available trace_reasons=invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Turn right to face the grey key 1.
+  planner_context_used: Turn right to face the grey key 1.
+  executor_raw: Thought:
+pickup grey key 1
+
+Action:
+go to red ball
+  executor_normalized: Thought:
+pickup grey key 1
+
+Action:
+go to red ball
+  env_payload: 
+
+====================================================================================================
+training_step: 55
+trace_reasons: every_k_training_steps, invalid_action_rate>0
+events: 191
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 1
+planner_retry_count: 0
+top_invalid_executor_outputs:
+  [1] Thought:
+go to grey ball 1
+
+Action:
+pickup grey ball 1
+examples:
+- item_id=681 round=5 rank=5 planner_reason=ok executor_reason=action_not_in_available trace_reasons=every_k_training_steps,invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Move forward to pick up the grey ball.
+  planner_context_used: Move forward to pick up the grey ball.
+  executor_raw: Thought:
+go to grey ball 1
+
+Action:
+pickup grey ball 1
+  executor_normalized: Thought:
+go to grey ball 1
+
+Action:
+pickup grey ball 1
+  env_payload: 
+
+====================================================================================================
+training_step: 58
+trace_reasons: invalid_action_rate>0
+events: 2
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 1
+planner_retry_count: 0
+top_invalid_executor_outputs:
+  [1] Thought:
+go to purple key 1
+
+Action:
+pickup purple key 1
+examples:
+- item_id=408 round=4 rank=0 planner_reason=ok executor_reason=action_not_in_available trace_reasons=invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Pick up the purple key 1.
+  planner_context_used: Pick up the purple key 1.
+  executor_raw: Thought:
+go to purple key 1
+
+Action:
+pickup purple key 1
+  executor_normalized: Thought:
+go to purple key 1
+
+Action:
+pickup purple key 1
+  env_payload: 
+
+====================================================================================================
+training_step: 60
+trace_reasons: every_k_training_steps, invalid_action_rate>0
+events: 159
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 2
+planner_retry_count: 0
+top_invalid_executor_outputs:
+  [1] Thought:
+pickup grey ball 1
+
+Action:
+pickup grey ball 1
+  [1] Thought:
+go to yellow key 1
+
+Action:
+pickup yellow key 1
+examples:
+- item_id=709 round=3 rank=6 planner_reason=ok executor_reason=action_not_in_available trace_reasons=every_k_training_steps,invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Pick up the grey ball.
+  planner_context_used: Pick up the grey ball.
+  executor_raw: Thought:
+pickup grey ball 1
+
+Action:
+pickup grey ball 1
+  executor_normalized: Thought:
+pickup grey ball 1
+
+Action:
+pickup grey ball 1
+  env_payload: 
+- item_id=608 round=4 rank=0 planner_reason=ok executor_reason=action_not_in_available trace_reasons=every_k_training_steps,invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Pick up the yellow key.
+  planner_context_used: Pick up the yellow key.
+  executor_raw: Thought:
+go to yellow key 1
+
+Action:
+pickup yellow key 1
+  executor_normalized: Thought:
+go to yellow key 1
+
+Action:
+pickup yellow key 1
+  env_payload: 
+
+====================================================================================================
+training_step: 64
+trace_reasons: invalid_action_rate>0
+events: 2
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 1
+planner_retry_count: 0
+top_invalid_executor_outputs:
+  [1] Thought:
+turn right
+
+Action:
+pickup yellow key 1
+examples:
+- item_id=1099 round=2 rank=0 planner_reason=ok executor_reason=action_not_in_available trace_reasons=invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Turn right toward the yellow key.
+  planner_context_used: Turn right toward the yellow key.
+  executor_raw: Thought:
+turn right
+
+Action:
+pickup yellow key 1
+  executor_normalized: Thought:
+turn right
+
+Action:
+pickup yellow key 1
+  env_payload: 
+
+====================================================================================================
+training_step: 65
+trace_reasons: every_k_training_steps
+events: 168
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 0
+planner_retry_count: 0
+
+====================================================================================================
+training_step: 66
+trace_reasons: invalid_action_rate>0
+events: 2
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 1
+planner_retry_count: 0
+top_invalid_executor_outputs:
+  [1] Thought:
+go to yellow box 1
+
+Action:
+pickup yellow box 1
+examples:
+- item_id=2886 round=10 rank=1 planner_reason=ok executor_reason=action_not_in_available trace_reasons=invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Pick up the yellow box.
+  planner_context_used: Pick up the yellow box.
+  executor_raw: Thought:
+go to yellow box 1
+
+Action:
+pickup yellow box 1
+  executor_normalized: Thought:
+go to yellow box 1
+
+Action:
+pickup yellow box 1
+  env_payload: 
+
+====================================================================================================
+training_step: 67
+trace_reasons: invalid_action_rate>0
+events: 2
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 2
+planner_retry_count: 0
+top_invalid_executor_outputs:
+  [2] Thought:
+go to grey ball 1
+
+Action:
+pickup grey ball 1
+examples:
+- item_id=1200 round=5 rank=2 planner_reason=ok executor_reason=action_not_in_available trace_reasons=invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Pick up the grey ball.
+  planner_context_used: Pick up the grey ball.
+  executor_raw: Thought:
+go to grey ball 1
+
+Action:
+pickup grey ball 1
+  executor_normalized: Thought:
+go to grey ball 1
+
+Action:
+pickup grey ball 1
+  env_payload: 
+
+====================================================================================================
+training_step: 68
+trace_reasons: invalid_action_rate>0
+events: 4
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 2
+planner_retry_count: 0
+top_invalid_executor_outputs:
+  [1] Thought:
+turn left
+
+Action:
+pickup yellow ball 1
+  [1] Thought:
+go to purple ball 1
+
+Action:
+pickup purple ball 1
+examples:
+- item_id=410 round=2 rank=7 planner_reason=ok executor_reason=action_not_in_available trace_reasons=invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Turn left toward the yellow ball.
+  planner_context_used: Turn left toward the yellow ball.
+  executor_raw: Thought:
+turn left
+
+Action:
+pickup yellow ball 1
+  executor_normalized: Thought:
+turn left
+
+Action:
+pickup yellow ball 1
+  env_payload: 
+- item_id=6206 round=3 rank=5 planner_reason=ok executor_reason=action_not_in_available trace_reasons=invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Pick up the purple ball.
+  planner_context_used: Pick up the purple ball.
+  executor_raw: Thought:
+go to purple ball 1
+
+Action:
+pickup purple ball 1
+  executor_normalized: Thought:
+go to purple ball 1
+
+Action:
+pickup purple ball 1
+  env_payload: 
+
+====================================================================================================
+training_step: 69
+trace_reasons: invalid_action_rate>0
+events: 2
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 2
+planner_retry_count: 0
+top_invalid_executor_outputs:
+  [1] Thought:
+go to purple key 1
+
+Action:
+pickup purple key 1
+  [1] Thought:
+go to blue ball 1
+
+Action:
+pickup blue ball 1
+examples:
+- item_id=8 round=3 rank=3 planner_reason=ok executor_reason=action_not_in_available trace_reasons=invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Pick up the purple key.
+  planner_context_used: Pick up the purple key.
+  executor_raw: Thought:
+go to purple key 1
+
+Action:
+pickup purple key 1
+  executor_normalized: Thought:
+go to purple key 1
+
+Action:
+pickup purple key 1
+  env_payload: 
+- item_id=1721 round=6 rank=4 planner_reason=ok executor_reason=action_not_in_available trace_reasons=invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Pick up the blue ball.
+  planner_context_used: Pick up the blue ball.
+  executor_raw: Thought:
+go to blue ball 1
+
+Action:
+pickup blue ball 1
+  executor_normalized: Thought:
+go to blue ball 1
+
+Action:
+pickup blue ball 1
+  env_payload: 
+
+====================================================================================================
+training_step: 70
+trace_reasons: every_k_training_steps, invalid_action_rate>0
+events: 82
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 3
+planner_retry_count: 0
+top_invalid_executor_outputs:
+  [1] Thought:
+turn right
+
+Action:
+pickup grey key
+  [1] Thought:
+go to purple box 1
+
+Action:
+pickup purple box 1
+  [1] Thought:
+pickup grey key
+
+Action:
+pickup grey key
+examples:
+- item_id=1029 round=2 rank=3 planner_reason=ok executor_reason=action_not_in_available trace_reasons=every_k_training_steps,invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Pick up the grey key.
+  planner_context_used: Pick up the grey key.
+  executor_raw: Thought:
+turn right
+
+Action:
+pickup grey key
+  executor_normalized: Thought:
+turn right
+
+Action:
+pickup grey key
+  env_payload: 
+- item_id=1644 round=3 rank=2 planner_reason=ok executor_reason=action_not_in_available trace_reasons=every_k_training_steps,invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Pick up the purple box.
+  planner_context_used: Pick up the purple box.
+  executor_raw: Thought:
+go to purple box 1
+
+Action:
+pickup purple box 1
+  executor_normalized: Thought:
+go to purple box 1
+
+Action:
+pickup purple box 1
+  env_payload: 
+
+====================================================================================================
+training_step: 71
+trace_reasons: invalid_action_rate>0
+events: 1
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 1
+planner_retry_count: 0
+top_invalid_executor_outputs:
+  [1] Thought:
+pickup red ball
+
+Action:
+pickup red ball 1
+examples:
+- item_id=1081 round=3 rank=7 planner_reason=ok executor_reason=action_not_in_available trace_reasons=invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Pick up the red ball.
+  planner_context_used: Pick up the red ball.
+  executor_raw: Thought:
+pickup red ball
+
+Action:
+pickup red ball 1
+  executor_normalized: Thought:
+pickup red ball
+
+Action:
+pickup red ball 1
+  env_payload: 
+
+====================================================================================================
+training_step: 72
+trace_reasons: invalid_action_rate>0
+events: 2
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 1
+planner_retry_count: 0
+top_invalid_executor_outputs:
+  [1] Thought:
+turn left
+
+Action:
+pickup blue key 1
+examples:
+- item_id=1789 round=2 rank=6 planner_reason=ok executor_reason=action_not_in_available trace_reasons=invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Turn left toward the blue key.
+  planner_context_used: Turn left toward the blue key.
+  executor_raw: Thought:
+turn left
+
+Action:
+pickup blue key 1
+  executor_normalized: Thought:
+turn left
+
+Action:
+pickup blue key 1
+  env_payload: 
+
+====================================================================================================
+training_step: 73
+trace_reasons: invalid_action_rate>0
+events: 2
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 2
+planner_retry_count: 0
+top_invalid_executor_outputs:
+  [2] Thought:
+turn left
+
+Action:
+pickup blue key
+examples:
+- item_id=130 round=1 rank=7 planner_reason=ok executor_reason=action_not_in_available trace_reasons=invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Pick up the blue key.
+  planner_context_used: Pick up the blue key.
+  executor_raw: Thought:
+turn left
+
+Action:
+pickup blue key
+  executor_normalized: Thought:
+turn left
+
+Action:
+pickup blue key
+  env_payload: 
+
+====================================================================================================
+training_step: 74
+trace_reasons: invalid_action_rate>0
+events: 10
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 6
+planner_retry_count: 0
+top_invalid_executor_outputs:
+  [1] Thought:
+turn right
+
+Action:
+pickup grey key 3
+  [1] Thought:
+turn left
+
+Action:
+pickup grey key 2
+  [1] Thought:
+turn left
+
+Action:
+pickup grey key 1
+  [1] Thought:
+pickup purple ball 1
+
+Action:
+pickup purple ball 1
+  [1] Thought:
+go to purple ball 1
+
+Action:
+pickup purple ball 1
+examples:
+- item_id=920 round=2 rank=1 planner_reason=ok executor_reason=action_not_in_available trace_reasons=invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Turn right toward the keys.
+  planner_context_used: Turn right toward the keys.
+  executor_raw: Thought:
+turn right
+
+Action:
+pickup grey key 3
+  executor_normalized: Thought:
+turn right
+
+Action:
+pickup grey key 3
+  env_payload: 
+- item_id=1001 round=2 rank=7 planner_reason=ok executor_reason=action_not_in_available trace_reasons=invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Turn left toward the grey key.
+  planner_context_used: Turn left toward the grey key.
+  executor_raw: Thought:
+turn left
+
+Action:
+pickup grey key 2
+  executor_normalized: Thought:
+turn left
+
+Action:
+pickup grey key 2
+  env_payload: 
+
+====================================================================================================
+training_step: 75
+trace_reasons: every_k_training_steps, invalid_action_rate>0
+events: 116
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 1
+planner_retry_count: 0
+top_invalid_executor_outputs:
+  [1] Thought:
+turn left
+
+Action:
+pickup green key 1
+examples:
+- item_id=4875 round=2 rank=7 planner_reason=ok executor_reason=action_not_in_available trace_reasons=every_k_training_steps,invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Pick up the green key.
+  planner_context_used: Pick up the green key.
+  executor_raw: Thought:
+turn left
+
+Action:
+pickup green key 1
+  executor_normalized: Thought:
+turn left
+
+Action:
+pickup green key 1
+  env_payload: 
+
+====================================================================================================
+training_step: 77
+trace_reasons: invalid_action_rate>0
+events: 2
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 1
+planner_retry_count: 0
+top_invalid_executor_outputs:
+  [1] Thought:
+go to blue key 1
+
+Action:
+pickup blue key 1
+examples:
+- item_id=3658 round=5 rank=6 planner_reason=ok executor_reason=action_not_in_available trace_reasons=invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Pick up the blue key.
+  planner_context_used: Pick up the blue key.
+  executor_raw: Thought:
+go to blue key 1
+
+Action:
+pickup blue key 1
+  executor_normalized: Thought:
+go to blue key 1
+
+Action:
+pickup blue key 1
+  env_payload: 
+
+====================================================================================================
+training_step: 79
+trace_reasons: invalid_action_rate>0
+events: 3
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 2
+planner_retry_count: 0
+top_invalid_executor_outputs:
+  [1] Thought:
+turn left
+
+Action:
+pickup yellow key 1
+  [1] Thought:
+go to yellow key 1
+
+Action:
+pickup yellow key 1
+examples:
+- item_id=3458 round=2 rank=5 planner_reason=ok executor_reason=action_not_in_available trace_reasons=invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Pick up the yellow key.
+  planner_context_used: Pick up the yellow key.
+  executor_raw: Thought:
+turn left
+
+Action:
+pickup yellow key 1
+  executor_normalized: Thought:
+turn left
+
+Action:
+pickup yellow key 1
+  env_payload: 
+- item_id=3458 round=3 rank=5 planner_reason=ok executor_reason=action_not_in_available trace_reasons=invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Pick up the yellow key.
+  planner_context_used: Pick up the yellow key.
+  executor_raw: Thought:
+go to yellow key 1
+
+Action:
+pickup yellow key 1
+  executor_normalized: Thought:
+go to yellow key 1
+
+Action:
+pickup yellow key 1
+  env_payload: 
+
+====================================================================================================
+training_step: 80
+trace_reasons: every_k_training_steps, invalid_action_rate>0
+events: 148
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 1
+planner_retry_count: 0
+top_invalid_executor_outputs:
+  [1] Thought:
+go to blue key 1
+
+Action:
+pickup blue key 1
+examples:
+- item_id=139 round=3 rank=2 planner_reason=ok executor_reason=action_not_in_available trace_reasons=every_k_training_steps,invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Pick up the blue key.
+  planner_context_used: Pick up the blue key.
+  executor_raw: Thought:
+go to blue key 1
+
+Action:
+pickup blue key 1
+  executor_normalized: Thought:
+go to blue key 1
+
+Action:
+pickup blue key 1
+  env_payload: 
+
+====================================================================================================
+training_step: 81
+trace_reasons: invalid_action_rate>0
+events: 5
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 3
+planner_retry_count: 0
+top_invalid_executor_outputs:
+  [1] Thought:
+go to blue key 1
+
+Action:
+pickup blue key
+  [1] Thought:
+go to blue key 1
+
+Action:
+pickup blue key 1
+  [1] Thought:
+go to red key 1
+
+Action:
+pickup red key 1
+examples:
+- item_id=1961 round=3 rank=2 planner_reason=ok executor_reason=action_not_in_available trace_reasons=invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Pick up the blue key.
+  planner_context_used: Pick up the blue key.
+  executor_raw: Thought:
+go to blue key 1
+
+Action:
+pickup blue key
+  executor_normalized: Thought:
+go to blue key 1
+
+Action:
+pickup blue key
+  env_payload: 
+- item_id=1961 round=4 rank=2 planner_reason=ok executor_reason=action_not_in_available trace_reasons=invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Pick up the blue key.
+  planner_context_used: Pick up the blue key.
+  executor_raw: Thought:
+go to blue key 1
+
+Action:
+pickup blue key 1
+  executor_normalized: Thought:
+go to blue key 1
+
+Action:
+pickup blue key 1
+  env_payload: 
+
+====================================================================================================
+training_step: 85
+trace_reasons: every_k_training_steps, invalid_action_rate>0
+events: 104
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 1
+planner_retry_count: 4
+top_invalid_executor_outputs:
+  [1] Thought:
+go to grey key 1
+
+Action:
+pickup grey key 1
+examples:
+- item_id=1004 round=4 rank=7 planner_reason=ok executor_reason=action_not_in_available trace_reasons=every_k_training_steps,invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Pick up the grey key to proceed.
+  planner_context_used: Pick up the grey key to proceed.
+  executor_raw: Thought:
+go to grey key 1
+
+Action:
+pickup grey key 1
+  executor_normalized: Thought:
+go to grey key 1
+
+Action:
+pickup grey key 1
+  env_payload: 
+
+====================================================================================================
+training_step: 90
+trace_reasons: every_k_training_steps
+events: 240
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 0
+planner_retry_count: 3
+
+====================================================================================================
+training_step: 95
+trace_reasons: every_k_training_steps
+events: 170
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 0
+planner_retry_count: 1
+
+====================================================================================================
+training_step: 98
+trace_reasons: invalid_action_rate>0
+events: 2
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 1
+planner_retry_count: 0
+top_invalid_executor_outputs:
+  [1] Thought:
+go to red ball 1
+
+Action:
+pickup red ball 1
+examples:
+- item_id=1121 round=7 rank=6 planner_reason=ok executor_reason=action_not_in_available trace_reasons=invalid_action_rate>0
+  planner_retry_count=0 planner_resolved_after_retry=False
+  planner_raw: Pick up the red ball.
+  planner_context_used: Pick up the red ball.
+  executor_raw: Thought:
+go to red ball 1
+
+Action:
+pickup red ball 1
+  executor_normalized: Thought:
+go to red ball 1
+
+Action:
+pickup red ball 1
+  env_payload: 
+
+====================================================================================================
+training_step: 100
+trace_reasons: every_k_training_steps
+events: 130
+planner_invalid_count: 0
+planner_fallback_count: 0
+executor_invalid_format_count: 0
+invalid_action_count: 0
+planner_retry_count: 1
+
