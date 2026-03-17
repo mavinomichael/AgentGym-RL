@@ -14,7 +14,7 @@ export DATA_ROOT="${DATA_ROOT:-$(dirname "$TRAIN_ROOT")}"
 export ENV_SERVER_URL="${ENV_SERVER_URL:-http://127.0.0.1:36005}"
 export SAVE_ROOT="${SAVE_ROOT:-/dev/shm/agentgym_saves}"
 export LOG_ROOT="${LOG_ROOT:-/dev/shm/agentgym_logs}"
-export EXP_NAME="${EXP_NAME:-babyai_diagnostic_100_8gpu}"
+export EXP_NAME="${EXP_NAME:-babyai_diagnostic_100_8gpu_v3}"
 export N_GPUS="${N_GPUS:-8}"
 export NNODES="${NNODES:-1}"
 export TP_SIZE="${TP_SIZE:-1}"
@@ -28,16 +28,17 @@ export CONDA_ENV_NAME="${CONDA_ENV_NAME:-agentgym-rl}"
 export PYTHON_BIN="${PYTHON_BIN:-python3}"
 export TOTAL_TRAINING_STEPS="${TOTAL_TRAINING_STEPS:-101}"
 export CHECKPOINT_STEP="${CHECKPOINT_STEP:-100}"
-export SAVE_FREQ="${SAVE_FREQ:-100}"
+export SAVE_FREQ="${SAVE_FREQ:-10}"
+export RESUME_MODE="${RESUME_MODE:-disable}"
 
 RUN_DIR="$SAVE_ROOT/agentgym_multi_agent/$EXP_NAME"
 LOG_DIR="$LOG_ROOT/$EXP_NAME"
 TRACE_DIR="$LOG_DIR/trace_train"
-REPORT_DIR="$REPO_ROOT/reports/babyai_multi_agent_diagnostics_2026-03-10"
-TRACE_SUMMARY_PATH="$REPORT_DIR/diagnostic_step100_trace_summary.txt"
-TRAIN_LOG="$LOG_DIR/train_step100_diagnostic.log"
-MERGE_LOG="$LOG_DIR/merge_step100_diagnostic.log"
-EVAL_LOG="$LOG_DIR/eval_step100_diagnostic.log"
+REPORT_DIR="$REPO_ROOT/reports/babyai_multi_agent_diagnostics_2026-03-12"
+TRACE_SUMMARY_PATH="$REPORT_DIR/diagnostic_step${CHECKPOINT_STEP}_trace_summary.txt"
+TRAIN_LOG="$LOG_DIR/train_step${CHECKPOINT_STEP}_diagnostic.log"
+MERGE_LOG="$LOG_DIR/merge_step${CHECKPOINT_STEP}_diagnostic.log"
+EVAL_LOG="$LOG_DIR/eval_step${CHECKPOINT_STEP}_diagnostic.log"
 
 mkdir -p "$LOG_DIR" "$TRACE_DIR" "$TMPDIR" "$RAY_TMPDIR" "$RAY_TMPDIR/spill" "$REPORT_DIR"
 
@@ -117,6 +118,7 @@ def first_step(predicate):
 
 first_planner_invalid = first_step(lambda e: not bool(e.get("planner_validation_valid", True)))
 first_planner_fallback = first_step(lambda e: bool(e.get("planner_fallback_used", False)))
+first_planner_rewrite = first_step(lambda e: bool(e.get("planner_rewrite_used", False)))
 first_executor_invalid_format = first_step(lambda e: not bool(e.get("executor_native_format_valid", True)))
 first_invalid_action = first_step(lambda e: not bool(e.get("executor_action_valid", True)))
 
@@ -132,6 +134,7 @@ with open(report_path, "w", encoding="utf-8") as report:
     report.write(f"Traced training steps: {', '.join(str(step) for step in events_by_step)}\n")
     report.write(f"First planner_invalid_format step: {first_planner_invalid}\n")
     report.write(f"First planner_fallback step: {first_planner_fallback}\n")
+    report.write(f"First planner_rewrite step: {first_planner_rewrite}\n")
     report.write(f"First executor_invalid_format step: {first_executor_invalid_format}\n")
     report.write(f"First invalid_action step: {first_invalid_action}\n\n")
 
@@ -154,6 +157,7 @@ with open(report_path, "w", encoding="utf-8") as report:
         report.write(f"events: {len(step_events)}\n")
         report.write(f"planner_invalid_count: {len(planner_invalid)}\n")
         report.write(f"planner_fallback_count: {len(planner_fallback)}\n")
+        report.write(f"planner_rewrite_count: {sum(1 for event in step_events if bool(event.get('planner_rewrite_used', False)))}\n")
         report.write(f"executor_invalid_format_count: {len(executor_invalid_format)}\n")
         report.write(f"invalid_action_count: {len(invalid_action)}\n")
         report.write(f"planner_retry_count: {sum(int(event.get('planner_retry_count_total', 0)) for event in step_events)}\n")
@@ -185,9 +189,12 @@ with open(report_path, "w", encoding="utf-8") as report:
                 )
                 report.write(
                     f"  planner_retry_count={event.get('planner_retry_count_total')} "
-                    f"planner_resolved_after_retry={event.get('planner_resolved_after_retry')}\n"
+                    f"planner_resolved_after_retry={event.get('planner_resolved_after_retry')} "
+                    f"planner_rewrite_used={event.get('planner_rewrite_used')} "
+                    f"planner_context_source={event.get('planner_context_source')}\n"
                 )
                 report.write(f"  planner_raw: {(event.get('planner_raw_output') or '')[:200]}\n")
+                report.write(f"  planner_rewritten: {(event.get('planner_rewritten_output') or '')[:200]}\n")
                 report.write(f"  planner_context_used: {(event.get('planner_context_used_by_executor') or '')[:200]}\n")
                 report.write(f"  executor_raw: {(event.get('executor_raw_output') or '')[:200]}\n")
                 report.write(f"  executor_normalized: {(event.get('executor_normalized_output') or '')[:200]}\n")
@@ -224,6 +231,11 @@ run_eval() {
       multi_agent.invalid_output.max_retries=2 \
       multi_agent.invalid_output.retry_temperature=0.2 \
       multi_agent.invalid_output.retry_max_tokens=80 \
+      multi_agent.invalid_output.planner_max_retries=3 \
+      multi_agent.invalid_output.planner_retry_temperature=0.1 \
+      multi_agent.invalid_output.planner_retry_max_tokens=16 \
+      multi_agent.roles.planner.max_tokens=16 \
+      multi_agent.roles.planner.temperature=0.2 \
       multi_agent.debug.trace_executor_payload=false \
       multi_agent.debug.trace_dir="$LOG_DIR/trace_eval_step100" \
       multi_agent.debug.trace_max_chars=800
@@ -270,11 +282,11 @@ cleanup_old_ray_sessions
     trainer.nnodes=$NNODES \
     trainer.n_gpus_per_node=$N_GPUS \
     trainer.total_training_steps=$TOTAL_TRAINING_STEPS \
-    trainer.resume_mode=disable \
+    trainer.resume_mode="$RESUME_MODE" \
     trainer.save_freq=$SAVE_FREQ \
     algo.use_kl_loss=true \
     algo.kl_coef=0.001 \
-    multi_agent.roles.planner.max_tokens=20 \
+    multi_agent.roles.planner.max_tokens=16 \
     multi_agent.roles.planner.temperature=0.2 \
     actor_rollout_ref.actor.planner_kl_weight=4.0 \
     multi_agent.invalid_output.policy=terminate_with_penalty \
@@ -282,9 +294,9 @@ cleanup_old_ray_sessions
     multi_agent.invalid_output.max_retries=2 \
     multi_agent.invalid_output.retry_temperature=0.2 \
     multi_agent.invalid_output.retry_max_tokens=80 \
-    multi_agent.invalid_output.planner_max_retries=2 \
+    multi_agent.invalid_output.planner_max_retries=3 \
     multi_agent.invalid_output.planner_retry_temperature=0.1 \
-    multi_agent.invalid_output.planner_retry_max_tokens=20 \
+    multi_agent.invalid_output.planner_retry_max_tokens=16 \
     multi_agent.debug.trace_executor_payload=true \
     multi_agent.debug.trace_dir="$TRACE_DIR" \
     multi_agent.debug.trace_max_chars=800 \

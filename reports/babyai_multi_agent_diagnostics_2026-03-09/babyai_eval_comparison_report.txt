@@ -79,3 +79,10 @@ Resume step-350
 - ExecutorNativeFormatViolations: 1.000000
 - PlannerInvalidFormatRate: 1.000000
 - PlannerFallbackRate: 1.000000
+
+2026-03-14 Addendum: 4-Agent Reviewer Topology
+- Separate report: `/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-14/reviewer_eval_summary.txt`
+- `step 50`: `Avg@1=0.739644`, `Pass@1=0.777778`, `ExecutorNativeFormatViolations=0.066667`, `PlannerInvalidFormatRate=0.000000`, `PlannerFallbackRate=0.000000`
+- `step 100`: `Avg@1=0.510516`, `Pass@1=0.533333`, `ExecutorNativeFormatViolations=0.344444`, `PlannerInvalidFormatRate=0.000000`, `PlannerFallbackRate=0.000000`
+- `step 150`: `Avg@1=0.134307`, `Pass@1=0.144444`, `ExecutorNativeFormatViolations=0.566667`, `PlannerInvalidFormatRate=0.000000`, `PlannerFallbackRate=0.000000`
+- Interpretation: reviewer gating kept the planner clean through all evaluated checkpoints, but executor format quality degraded sharply over training. The 4-agent run peaked at `step 50` and then declined monotonically through `step 150`.

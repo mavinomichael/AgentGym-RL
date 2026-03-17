@@ -7,7 +7,7 @@ max_prompt_length: 1024
 max_response_length: 4096
 default_max_rounds: 20
 rollout_max_tokens: 200
-planner_max_tokens: 24
+planner_max_tokens: 16
 executor_max_tokens: 200
 train_batch_size: 16
 rollout_n: 8

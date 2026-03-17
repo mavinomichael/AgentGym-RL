@@ -1,0 +1,2 @@
+[    5684ms] [ERROR] Access to font at 'about:blank' from origin 'https://www.mdpi.com' has been blocked by CORS policy: Cross origin requests are only supported for protocol schemes: chrome, chrome-extension, chrome-untrusted, data, http, https, isolated-app. @ https://www.mdpi.com/2076-3417/15/7/3676:0
+[    5684ms] [ERROR] Failed to load resource: net::ERR_FAILED @ about:blank:0

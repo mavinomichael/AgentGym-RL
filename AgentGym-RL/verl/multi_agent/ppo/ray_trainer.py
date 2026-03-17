@@ -41,7 +41,15 @@ def compute_data_metrics(batch, use_critic=True):
 
     task_name = _infer_task_name(batch)
     planner_tokens = batch.batch["planner_response_mask"].sum(-1).float()
+    planner_reviewer_tokens = batch.batch.get(
+        "planner_reviewer_response_mask",
+        torch.zeros_like(batch.batch["planner_response_mask"]),
+    ).sum(-1).float()
     executor_tokens = batch.batch["executor_response_mask"].sum(-1).float()
+    executor_reviewer_tokens = batch.batch.get(
+        "executor_reviewer_response_mask",
+        torch.zeros_like(batch.batch["executor_response_mask"]),
+    ).sum(-1).float()
     reward_events = batch.batch["reward_event_mask"].sum(-1).float()
     env_rounds = batch.batch.get("team_env_rounds", batch.batch["task_rounds"]).float()
     valid_actions = batch.batch.get("executor_action_valid", torch.ones_like(env_rounds, dtype=torch.float32)).float()
@@ -60,13 +68,30 @@ def compute_data_metrics(batch, use_critic=True):
     planner_fallback_used = batch.batch.get(
         "planner_fallback_used", torch.zeros_like(env_rounds, dtype=torch.float32)
     ).float()
+    planner_rewrite_used = batch.batch.get(
+        "planner_rewrite_used", torch.zeros_like(env_rounds, dtype=torch.float32)
+    ).float()
     planner_tag_only = batch.batch.get("planner_tag_only", torch.zeros_like(env_rounds, dtype=torch.float32)).float()
+    planner_review_retry_count = batch.batch.get(
+        "planner_review_retry_count", torch.zeros_like(env_rounds, dtype=torch.float32)
+    ).float()
+    planner_review_repair_count = batch.batch.get(
+        "planner_review_repair_count", torch.zeros_like(env_rounds, dtype=torch.float32)
+    ).float()
+    executor_review_retry_count = batch.batch.get(
+        "executor_review_retry_count", torch.zeros_like(env_rounds, dtype=torch.float32)
+    ).float()
+    executor_review_passed = batch.batch.get(
+        "executor_review_passed", torch.ones_like(env_rounds, dtype=torch.float32)
+    ).float()
     invalid_terminated = invalid_format_terminated + invalid_action_terminated
 
     metrics.update(
         {
             "planner_tokens/mean": torch.mean(planner_tokens).detach().item(),
+            "planner_reviewer_tokens/mean": torch.mean(planner_reviewer_tokens).detach().item(),
             "executor_tokens/mean": torch.mean(executor_tokens).detach().item(),
+            "executor_reviewer_tokens/mean": torch.mean(executor_reviewer_tokens).detach().item(),
             "planner_to_executor_ratio": (
                 (torch.mean(planner_tokens) / (torch.mean(executor_tokens) + 1e-6)).detach().item()
             ),
@@ -79,7 +104,12 @@ def compute_data_metrics(batch, use_critic=True):
             f"executor_native_format_violations/{task_name}": (1.0 - torch.mean(valid_format)).detach().item(),
             f"planner_invalid_format_rate/{task_name}": (1.0 - torch.mean(planner_output_valid)).detach().item(),
             f"planner_fallback_rate/{task_name}": torch.mean(planner_fallback_used).detach().item(),
+            f"planner_rewrite_rate/{task_name}": torch.mean(planner_rewrite_used).detach().item(),
             f"planner_tag_only_rate/{task_name}": torch.mean(planner_tag_only).detach().item(),
+            f"planner_reviewer_retry_mean/{task_name}": torch.mean(planner_review_retry_count).detach().item(),
+            f"planner_reviewer_repair_rate/{task_name}": torch.mean(planner_review_repair_count).detach().item(),
+            f"executor_reviewer_retry_mean/{task_name}": torch.mean(executor_review_retry_count).detach().item(),
+            f"executor_reviewer_pass_rate/{task_name}": torch.mean(executor_review_passed).detach().item(),
             f"invalid_format_termination_rate/{task_name}": torch.mean(invalid_format_terminated).detach().item(),
             f"invalid_action_termination_rate/{task_name}": torch.mean(invalid_action_terminated).detach().item(),
             f"invalid_termination_rate/{task_name}": torch.mean(invalid_terminated).detach().item(),

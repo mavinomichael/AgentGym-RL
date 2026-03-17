@@ -1,0 +1,145 @@
+BabyAI 4-Agent Reviewer Topology: Proposed Approach Evidence
+Date: 2026-03-14
+
+Purpose
+- Preserve the concrete metrics and trace examples needed to describe the 4-agent shared-policy topology in the paper's proposed approach section.
+
+Topology Under Test
+- Topology name: `planner_executor_reviewers`
+- Shared policy across four roles:
+  - `planner`
+  - `planner_reviewer`
+  - `executor`
+  - `executor_reviewer`
+- Intended message flow:
+  1. Planner produces longer grounded reasoning.
+  2. Planner reviewer approves, retries, or repairs planner output before the executor sees it.
+  3. Executor emits BabyAI-native `Thought:` + `Action:`.
+  4. Executor reviewer approves or retries the executor output before deterministic validation and `env.step()`.
+
+Primary Quantitative Results
+- `step 50`
+  - `Avg@1 = 0.7396441327200995`
+  - `Pass@1 = 0.7777777777777778`
+  - `ExecutorNativeFormatViolations = 0.06666666666666665`
+  - `InvalidFormatTerminationRate = 0.06666666666666667`
+  - `InvalidActionTerminationRate = 0.0`
+  - `PlannerInvalidFormatRate = 0.0`
+  - `PlannerFallbackRate = 0.0`
+  - `PlannerTagOnlyRate = 0.0`
+- `step 100`
+  - `Avg@1 = 0.5105164806048076`
+  - `Pass@1 = 0.5333333333333333`
+  - `ExecutorNativeFormatViolations = 0.34444444444444444`
+  - `InvalidFormatTerminationRate = 0.34444444444444444`
+  - `InvalidActionTerminationRate = 0.022222222222222223`
+  - `PlannerInvalidFormatRate = 0.0`
+  - `PlannerFallbackRate = 0.0`
+  - `PlannerTagOnlyRate = 0.03333333333333333`
+- `step 150`
+  - `Avg@1 = 0.1343066755268309`
+  - `Pass@1 = 0.14444444444444443`
+  - `ExecutorNativeFormatViolations = 0.5666666666666667`
+  - `InvalidFormatTerminationRate = 0.5666666666666667`
+  - `InvalidActionTerminationRate = 0.03333333333333333`
+  - `PlannerInvalidFormatRate = 0.0`
+  - `PlannerFallbackRate = 0.0`
+  - `PlannerTagOnlyRate = 0.06666666666666667`
+
+Quantitative Interpretation
+- The 4-agent reviewer topology peaked at `step 50`.
+- The degradation from `step 50 -> 100 -> 150` is monotonic.
+- The degradation is primarily executor-side:
+  - planner fallback remained `0.0` at all evaluated checkpoints
+  - planner invalid format remained `0.0` at all evaluated checkpoints
+  - executor native format violations rose sharply from `0.0667 -> 0.3444 -> 0.5667`
+- This supports the claim that reviewer gating kept planner outputs consumable, but did not prevent executor quality from collapsing over longer training.
+
+Representative Trace Examples
+
+1. Early successful 4-agent coordination
+- File: `/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-14/reviewer_run_artifacts/extracted/babyai_reviewers_200_8gpu/trace_train/executor_payload_trace_rank0.jsonl:1`
+- `training_step = 1`
+- Planner reviewer verdict: `PASS`
+- Executor reviewer verdict: `PASS`
+- Deterministic validation: `ok`
+- Extracted action: `turn left`
+- Example planner draft:
+  - `The wall is in the way, so turn left to face the opposite direction.`
+- Example reviewed plan:
+  - `Turn left to face the opposite direction.`
+- Example executor output:
+  - `Thought: Turn to face the opposite direction`
+  - `Action: turn left`
+- Why this matters:
+  - This is the clean nominal path for the proposed architecture.
+
+2. Planner repair succeeds while preserving execution
+- File: `/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-14/reviewer_run_artifacts/extracted/babyai_reviewers_200_8gpu/trace_train/executor_payload_trace_rank0.jsonl:108`
+- `training_step = 6`
+- Planner reviewer verdict: `REPAIR`
+- Planner reviewer reason: `exact_env_action`
+- Planner review retry count: `5`
+- Planner context source: `planner_repair`
+- Reviewed plan used by executor:
+  - `Look around and decide next move`
+- Executor reviewer verdict: `PASS`
+- Deterministic validation: `ok`
+- Extracted action: `turn left`
+- Why this matters:
+  - This is the core reviewer-repair mechanism that differentiates the proposed 4-agent architecture from the 2-agent path.
+
+3. Executor retry succeeds after reviewer intervention
+- File: `/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-14/reviewer_run_artifacts/extracted/babyai_reviewers_200_8gpu/trace_train/executor_payload_trace_rank0.jsonl:228`
+- `training_step = 11`
+- Planner reviewer verdict: `PASS`
+- Executor reviewer retry count: `1`
+- Executor reviewer final verdict: `PASS`
+- Deterministic validation: `ok`
+- Extracted action:
+  - `go through red open door 1`
+- Why this matters:
+  - This shows the executor-review loop working as intended without planner repair.
+
+4. Late failure mode: planner remains repairable, executor collapses
+- File: `/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-14/reviewer_run_artifacts/extracted/babyai_reviewers_200_8gpu/trace_train/executor_payload_trace_rank0.jsonl:805`
+- `training_step = 101`
+- Planner reviewer verdict: `REPAIR`
+- Planner review retry count: `5`
+- Planner repair used: `True`
+- Executor reviewer verdict: `RETRY`
+- Executor reviewer retry count: `5`
+- Deterministic validation: `invalid_format`
+- Executor raw output:
+  - `!`
+- Executor reviewer raw output:
+  - `!`
+- `env_step_called = False`
+- Why this matters:
+  - This is the key late-stage failure mode for the paper: planner gating still prevents fallback, but executor generation degrades into unusable output despite reviewer retries.
+
+Local Artifact Locations
+- Summary report:
+  - `/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-14/reviewer_eval_summary.txt`
+- Machine-readable metrics:
+  - `/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-14/reviewer_stage_metrics.tsv`
+- Eval logs:
+  - `/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-14/eval_step50_reviewers_manual.log`
+  - `/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-14/eval_step100_reviewers_manual.log`
+  - `/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-14/eval_step150_reviewers_manual.log`
+- Full compressed run artifacts copied from VM before shutdown:
+  - `/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-14/reviewer_run_artifacts/babyai_reviewers_200_8gpu_logs.tgz`
+- Extracted run artifacts:
+  - `/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-14/reviewer_run_artifacts/extracted/babyai_reviewers_200_8gpu/train_step200.log`
+  - `/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-14/reviewer_run_artifacts/extracted/babyai_reviewers_200_8gpu.orchestrator.log`
+  - `/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-14/reviewer_run_artifacts/extracted/babyai_reviewers_200_8gpu/trace_train`
+
+Suggested Paper Framing
+- Proposed architecture claim:
+  - reviewer-gated multi-agent decomposition can keep planner outputs consumable even when raw planner drafts drift.
+- Limitation supported by the data:
+  - reviewer gating alone was insufficient to stabilize the executor over longer PPO training.
+- Best empirical evidence:
+  - strong early checkpoint at `step 50`
+  - monotonic degradation at `step 100` and `step 150`
+  - trace evidence showing planner repair succeeds while late executor outputs still collapse into invalid format.

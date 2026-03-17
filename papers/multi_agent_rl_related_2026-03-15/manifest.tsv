@@ -1,0 +1,8 @@
+category	title	year	local_file	source_url	notes
+Direct	GUARDIAN: Safeguarding LLM Multi-Agent Collaborations with Temporal Graph Modeling	2025	guardian_llm_multi_agent_collaborations_2025.pdf	https://arxiv.org/pdf/2505.19234.pdf	official arXiv PDF
+Direct	Multi-Agent Large Language Models for Conversational Task-Solving	2024	multi_agent_llms_conversational_task_solving_2024.pdf	https://arxiv.org/pdf/2410.22932.pdf	official arXiv PDF
+Direct	Hallucination Mitigation using Agentic AI Natural Language-Based Frameworks	2025	hallucination_mitigation_agentic_ai_frameworks_2025.pdf	https://arxiv.org/pdf/2501.13946.pdf	official arXiv PDF
+Direct	Minimizing Hallucinations and Communication Costs: Adversarial Debate and Voting Mechanisms in LLM-Based Multi-Agents	2025	adversarial_debate_voting_llm_multi_agents_2025.pdf	https://www.mdpi.com/2076-3417/15/7/3676	browser-generated PDF from official HTML because direct PDF download returned 403
+Adjacent	Review-Instruct: A Review-Driven Multi-Turn Conversations Generation Method for Large Language Models	2025	review_instruct_2025.pdf	https://aclanthology.org/2025.findings-acl.851.pdf	official ACL Anthology PDF
+Direct	Mitigating reasoning hallucination through Multi-agent Collaborative Filtering	2024	multi_agent_collaborative_filtering_2024.pdf	https://yuanhao-cs.github.io/assets/PDF/2025-3_shi_mitigating.pdf	author-hosted PDF; DOI page appears paywalled
+Direct	Mitigating Large Vision-Language Model Hallucination at Post-hoc via Multi-agent System	2024	posthoc_lvlm_hallucination_multi_agent_2024.pdf	https://ojs.aaai.org/index.php/AAAI-SS/article/download/31780/33947	official AAAI OJS PDF

@@ -1,0 +1,40 @@
+BabyAI 4-Agent Reviewer Eval Summary
+Date: 2026-03-14
+
+Context
+- Run: `babyai_reviewers_200_8gpu`
+- Topology: `planner_executor_reviewers`
+- Checkpoints requested: `50`, `100`, `150`
+- Completed: `50`, `100`, `150`
+
+Completed Results
+Stage	Avg@1	Pass@1	ExecutorNativeFormatViolations	InvalidFormatTerminationRate	InvalidActionTerminationRate	PlannerInvalidFormatRate	PlannerFallbackRate	PlannerTagOnlyRate
+50	0.7396441327200995	0.7777777777777778	0.06666666666666665	0.06666666666666667	0.0	0.0	0.0	0.0
+100	0.5105164806048076	0.5333333333333333	0.34444444444444444	0.34444444444444444	0.022222222222222223	0.0	0.0	0.03333333333333333
+150	0.1343066755268309	0.14444444444444443	0.5666666666666667	0.5666666666666667	0.03333333333333333	0.0	0.0	0.06666666666666667
+
+Interpretation
+- `step 50` is the strongest checkpoint from this 4-agent run so far.
+- `step 50` beats the historical base-model reference on both task metrics:
+  - base model: `Avg@1=0.672827`, `Pass@1=0.733333`
+  - reviewer step 50: `Avg@1=0.739644`, `Pass@1=0.777778`
+- `step 50` remains below the earlier 2-agent planner-v3 `step 100` checkpoint:
+  - 2-agent planner-v3 step 100: `Avg@1=0.780073`, `Pass@1=0.833333`
+- `step 100` degrades sharply relative to `step 50`.
+- The degradation from `50 -> 100` is mostly executor-side:
+  - `ExecutorNativeFormatViolations` rises from `0.066667` to `0.344444`
+  - `InvalidFormatTerminationRate` rises from `0.066667` to `0.344444`
+  - `PlannerInvalidFormatRate` and `PlannerFallbackRate` stay at `0.0`
+- That pattern indicates the 4-agent reviewer topology preserved planner cleanliness on eval through `step 100`, but executor quality regressed substantially.
+- `step 150` degrades further and confirms the same failure mode:
+  - `Avg@1` falls to `0.134307`
+  - `Pass@1` falls to `0.144444`
+  - `ExecutorNativeFormatViolations` rises to `0.566667`
+  - `PlannerInvalidFormatRate` and `PlannerFallbackRate` still remain at `0.0`
+- The full `50 -> 100 -> 150` curve is therefore a monotonic collapse driven primarily by executor-side degradation, not planner fallback.
+
+Files
+- `step 50` log: `/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-14/eval_step50_reviewers_manual.log`
+- `step 100` log: `/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-14/eval_step100_reviewers_manual.log`
+- `step 150` log: `/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-14/eval_step150_reviewers_manual.log`
+- machine-readable table: `/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-14/reviewer_stage_metrics.tsv`

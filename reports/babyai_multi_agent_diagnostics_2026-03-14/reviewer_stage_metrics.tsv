@@ -1,0 +1,4 @@
+stage	avg_at_1	pass_at_1	executor_native_format_violations	invalid_format_termination_rate	invalid_action_termination_rate	planner_invalid_format_rate	planner_fallback_rate	planner_tag_only_rate	eval_log
+50	0.7396441327200995	0.7777777777777778	0.06666666666666665	0.06666666666666667	0.0	0.0	0.0	0.0	/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-14/eval_step50_reviewers_manual.log
+100	0.5105164806048076	0.5333333333333333	0.34444444444444444	0.34444444444444444	0.022222222222222223	0.0	0.0	0.03333333333333333	/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-14/eval_step100_reviewers_manual.log
+150	0.1343066755268309	0.14444444444444443	0.5666666666666667	0.5666666666666667	0.03333333333333333	0.0	0.0	0.06666666666666667	/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-14/eval_step150_reviewers_manual.log

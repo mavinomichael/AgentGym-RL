@@ -34,9 +34,9 @@ multi_agent:
     max_retries: 2
     retry_temperature: 0.2
     retry_max_tokens: 80
-    planner_max_retries: 2
+    planner_max_retries: 3
     planner_retry_temperature: 0.1
-    planner_retry_max_tokens: 24
+    planner_retry_max_tokens: 16
   debug:
     trace_executor_payload: false
     trace_dir: /mnt/data/logs
@@ -51,9 +51,23 @@ multi_agent:
     planner:
       max_tokens: ${task.planner_max_tokens}
       temperature: ${runtime.temperature}
+      ppo_weight: 1.0
+      kl_weight: 4.0
+    planner_reviewer:
+      max_tokens: 96
+      temperature: ${runtime.temperature}
+      ppo_weight: 0.5
+      kl_weight: 6.0
     executor:
       max_tokens: ${task.executor_max_tokens}
       temperature: ${runtime.temperature}
+      ppo_weight: 1.0
+      kl_weight: 1.0
+    executor_reviewer:
+      max_tokens: 64
+      temperature: ${runtime.temperature}
+      ppo_weight: 0.5
+      kl_weight: 6.0
 
 actor_rollout_ref:
   hybrid_engine: True

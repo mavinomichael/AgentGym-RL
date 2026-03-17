@@ -1,0 +1,697 @@
+/home/mavinomichael/miniconda/envs/agentgym-rl/lib/python3.10/site-packages/vllm/connections.py:8: RuntimeWarning: Failed to read commit hash:
+No module named 'vllm._version'
+  from vllm.version import __version__ as VLLM_VERSION
+2026-03-14 16:43:54,948	INFO worker.py:2013 -- Started a local Ray instance.
+/home/mavinomichael/miniconda/envs/agentgym-rl/lib/python3.10/site-packages/ray/_private/worker.py:2052: FutureWarning: Tip: In future versions of Ray, Ray will no longer override accelerator visible devices env var if num_gpus=0 or num_gpus=None (default). To enable this behavior and turn off this error message, set RAY_ACCEL_ENV_VAR_OVERRIDE_ON_ZERO=0
+  warnings.warn(
+[36m(pid=2144720)[0m /home/mavinomichael/miniconda/envs/agentgym-rl/lib/python3.10/site-packages/vllm/connections.py:8: RuntimeWarning: Failed to read commit hash:
+[36m(pid=2144720)[0m No module named 'vllm._version'
+[36m(pid=2144720)[0m   from vllm.version import __version__ as VLLM_VERSION
+[36m(ActorRolloutRefWorker pid=2144720)[0m [W314 16:44:01.827023521 CUDAAllocatorConfig.h:28] Warning: expandable_segments not supported on this platform (function operator())
+[33m(raylet)[0m [2026-03-14 16:44:03,863 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.3744 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+{'actor': {'clip_ratio': 0.2,
+           'entropy_coeff': 0.001,
+           'fsdp_config': {'fsdp_size': -1,
+                           'grad_offload': False,
+                           'optimizer_offload': False,
+                           'param_offload': False,
+                           'wrap_policy': {'min_num_params': 0}},
+           'grad_clip': 1.0,
+           'kl_loss_coef': 0.001,
+           'kl_loss_type': 'low_var_kl',
+           'optim': {'lr': 1e-06,
+                     'lr_warmup_steps_ratio': 0.0,
+                     'min_lr_ratio': None,
+                     'total_training_steps': -1,
+                     'warmup_style': 'constant'},
+           'ppo_epochs': 1,
+           'ppo_max_token_len_per_gpu': 16384,
+           'ppo_micro_batch_size': None,
+           'ppo_micro_batch_size_per_gpu': 1,
+           'ppo_mini_batch_size': 8,
+           'shuffle': False,
+           'strategy': 'fsdp',
+           'ulysses_sequence_parallel_size': 1,
+           'use_dynamic_bsz': False,
+           'use_kl_loss': False},
+ 'agentgym': {'env_addr': 'http://127.0.0.1:36005',
+              'max_retries': 10,
+              'max_rounds': 20,
+              'task_name': 'babyai',
+              'timeout': 600},
+ 'data': {'batch_size': 8,
+          'max_prompt_length': 512,
+          'max_response_length': 8192,
+          'n_samples': 1,
+          'output_path': None,
+          'path': '/home/mavinomichael/AgentGym-RL/AgentEval/babyai',
+          'prompt_key': 'item_id'},
+ 'model': {'external_lib': None,
+           'path': '/dev/shm/agentgym_saves/agentgym_multi_agent/babyai_reviewers_200_8gpu/global_step_50/actor/huggingface'},
+ 'multi_agent': {'centralized_critic': True,
+                 'count_rounds_as': 'env_steps',
+                 'debug': {'trace_dir': '/mnt/data/logs',
+                           'trace_executor_payload': False,
+                           'trace_max_chars': 800},
+                 'enabled': True,
+                 'invalid_output': {'max_retries': 5,
+                                    'penalty': -0.2,
+                                    'planner_max_retries': 5,
+                                    'planner_retry_max_tokens': 64,
+                                    'planner_retry_temperature': 0.1,
+                                    'policy': 'terminate_with_penalty',
+                                    'retry_max_tokens': 80,
+                                    'retry_temperature': 0.2},
+                 'reward_mode': 'delta_per_executor_step',
+                 'roles': {'executor': {'kl_weight': 1.0,
+                                        'max_tokens': 200,
+                                        'ppo_weight': 1.0,
+                                        'temperature': 1.0},
+                           'executor_reviewer': {'kl_weight': 6.0,
+                                                 'max_tokens': 64,
+                                                 'ppo_weight': 0.5,
+                                                 'temperature': 0.2},
+                           'planner': {'kl_weight': 4.0,
+                                       'max_tokens': 64,
+                                       'ppo_weight': 1.0,
+                                       'temperature': 0.7},
+                           'planner_reviewer': {'kl_weight': 6.0,
+                                                'max_tokens': 96,
+                                                'ppo_weight': 0.5,
+                                                'temperature': 0.2}},
+                 'shared_policy': True,
+                 'topology': 'planner_executor_reviewers'},
+ 'rollout': {'disable_log_stats': True,
+             'do_sample': True,
+             'dtype': 'bfloat16',
+             'enable_chunked_prefill': True,
+             'enforce_eager': True,
+             'free_cache_engine': True,
+             'gpu_memory_utilization': 0.55,
+             'ignore_eos': False,
+             'load_format': 'dummy_dtensor',
+             'log_prob_max_token_len_per_gpu': 16384,
+             'log_prob_micro_batch_size': None,
+             'log_prob_micro_batch_size_per_gpu': 1,
+             'log_prob_use_dynamic_bsz': False,
+             'max_model_len': 32768,
+             'max_num_batched_tokens': 1024,
+             'max_num_seqs': 16,
+             'max_tokens': 200,
+             'n': 1,
+             'name': 'vllm',
+             'prompt_length': 512,
+             'response_length': 8192,
+             'rollout_log_dir': 'checkpoints/eval_logs/babyai',
+             'send_interval': 1,
+             'temperature': 1.0,
+             'tensor_model_parallel_size': 1,
+             'top_k': -1,
+             'top_p': 1},
+ 'runtime': {'actor_ppo_max_token_len_per_gpu': 16384,
+             'critic_ppo_max_token_len_per_gpu': 32768,
+             'env_server_url': 'http://127.0.0.1:36005',
+             'eval_gpu_memory_utilization': 0.55,
+             'eval_n_samples': 1,
+             'eval_temperature': 1.0,
+             'gpu_memory_utilization': 0.7,
+             'loggers': ['console'],
+             'max_model_len': 32768,
+             'max_num_batched_tokens': 4096,
+             'max_num_seqs': 256,
+             'model_path': '/dev/shm/agentgym_saves/agentgym_multi_agent/babyai_reviewers_200_8gpu/global_step_50/actor/huggingface',
+             'n_gpus_per_node': 1,
+             'nnodes': 1,
+             'save_freq': 25,
+             'temperature': 1.0,
+             'tensor_model_parallel_size': 1},
+ 'task': {'critic_ppo_micro_batch_size_per_gpu': 1,
+          'default_max_rounds': 20,
+          'default_timeout': 600,
+          'eval_batch_size': 32,
+          'eval_dir': 'AgentEval/babyai',
+          'eval_max_prompt_length': 512,
+          'eval_max_response_length': 8192,
+          'eval_max_rounds': 20,
+          'executor_max_tokens': 200,
+          'executor_native_format_hint': 'Use the BabyAI native format with '
+                                         'Thought: followed by a single '
+                                         'Action: line.',
+          'invalid_action_patterns': ["Error: Only one 'Action' is allowed per "
+                                      'response.'],
+          'max_prompt_length': 1024,
+          'max_response_length': 4096,
+          'planner_max_tokens': 16,
+          'ppo_micro_batch_size_per_gpu': 1,
+          'ppo_mini_batch_size': 8,
+          'rollout_max_tokens': 200,
+          'rollout_n': 8,
+          'task_name': 'babyai',
+          'total_epochs': 10,
+          'train_batch_size': 16,
+          'train_file': 'AgentItemId/babyai_train.json'},
+ 'trainer': {'n_gpus_per_node': 1, 'nnodes': 1}}
+[36m(ActorRolloutRefWorker pid=2144720)[0m Model config after override: Qwen2Config {
+[36m(ActorRolloutRefWorker pid=2144720)[0m   "architectures": [
+[36m(ActorRolloutRefWorker pid=2144720)[0m     "Qwen2ForCausalLM"
+[36m(ActorRolloutRefWorker pid=2144720)[0m   ],
+[36m(ActorRolloutRefWorker pid=2144720)[0m   "attention_dropout": 0.0,
+[36m(ActorRolloutRefWorker pid=2144720)[0m   "eos_token_id": 151645,
+[36m(ActorRolloutRefWorker pid=2144720)[0m   "hidden_act": "silu",
+[36m(ActorRolloutRefWorker pid=2144720)[0m   "hidden_size": 3584,
+[36m(ActorRolloutRefWorker pid=2144720)[0m   "initializer_range": 0.02,
+[36m(ActorRolloutRefWorker pid=2144720)[0m   "intermediate_size": 18944,
+[36m(ActorRolloutRefWorker pid=2144720)[0m   "max_position_embeddings": 32768,
+[36m(ActorRolloutRefWorker pid=2144720)[0m   "max_window_layers": 28,
+[36m(ActorRolloutRefWorker pid=2144720)[0m   "model_type": "qwen2",
+[36m(ActorRolloutRefWorker pid=2144720)[0m   "num_attention_heads": 28,
+[36m(ActorRolloutRefWorker pid=2144720)[0m   "num_hidden_layers": 28,
+[36m(ActorRolloutRefWorker pid=2144720)[0m   "num_key_value_heads": 4,
+[36m(ActorRolloutRefWorker pid=2144720)[0m   "pad_token_id": 151643,
+[36m(ActorRolloutRefWorker pid=2144720)[0m   "rms_norm_eps": 1e-06,
+[36m(ActorRolloutRefWorker pid=2144720)[0m   "rope_scaling": null,
+[36m(ActorRolloutRefWorker pid=2144720)[0m   "rope_theta": 1000000.0,
+[36m(ActorRolloutRefWorker pid=2144720)[0m   "sliding_window": 131072,
+[36m(ActorRolloutRefWorker pid=2144720)[0m You are attempting to use Flash Attention 2.0 with a model not initialized on GPU. Make sure to move the model to GPU after initializing it on CPU with `model.to('cuda')`.
+[36m(ActorRolloutRefWorker pid=2144720)[0m Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:00<00:00, 77.90it/s]
+[36m(ActorRolloutRefWorker pid=2144720)[0m /home/mavinomichael/miniconda/envs/agentgym-rl/lib/python3.10/site-packages/torch/distributed/fsdp/_init_utils.py:440: UserWarning: FSDP is switching to use `NO_SHARD` instead of ShardingStrategy.FULL_SHARD since the world size is 1.
+[36m(ActorRolloutRefWorker pid=2144720)[0m   warnings.warn(
+[33m(raylet)[0m [2026-03-14 16:44:13,869 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.37439 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m /home/mavinomichael/miniconda/envs/agentgym-rl/lib/python3.10/site-packages/torch/distributed/fsdp/fully_sharded_data_parallel.py:689: FutureWarning: FSDP.state_dict_type() and FSDP.set_state_dict_type() are being deprecated. Please use APIs, get_state_dict() and set_state_dict(), which can support different parallelisms, FSDP1, FSDP2, DDP. API doc: https://pytorch.org/docs/stable/distributed.checkpoint.html#torch.distributed.checkpoint.state_dict.get_state_dict .Tutorial: https://pytorch.org/tutorials/recipes/distributed_checkpoint_recipe.html .
+[36m(ActorRolloutRefWorker pid=2144720)[0m   warnings.warn(
+[36m(ActorRolloutRefWorker pid=2144720)[0m /home/mavinomichael/miniconda/envs/agentgym-rl/lib/python3.10/site-packages/torch/distributed/fsdp/_state_dict_utils.py:773: UserWarning: When using ``NO_SHARD`` for ``ShardingStrategy``, full_state_dict willbe returned.
+[36m(ActorRolloutRefWorker pid=2144720)[0m   warnings.warn(
+[36m(ActorRolloutRefWorker pid=2144720)[0m /home/mavinomichael/miniconda/envs/agentgym-rl/lib/python3.10/site-packages/torch/distributed/fsdp/_state_dict_utils.py:716: UserWarning: When using ``NO_SHARD`` for ``ShardingStrategy``, full_state_dict willbe returned.
+[36m(ActorRolloutRefWorker pid=2144720)[0m   warnings.warn(
+[33m(raylet)[0m [2026-03-14 16:44:23,873 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.37438 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m Multi-agent rounds:   0%|          | 0/20 [00:00<?, ?it/s]4-agent rounds 1/20 | Active episodes per gpu: 8:   0%|          | 0/20 [00:00<?, ?it/s]
+[33m(raylet)[0m [2026-03-14 16:44:33,879 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.37436 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 1/20 | Active episodes per gpu: 8:   5%|▌         | 1/20 [00:10<03:10, 10.03s/it]4-agent rounds 2/20 | Active episodes per gpu: 2:   5%|▌         | 1/20 [00:10<03:10, 10.03s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 2/20 | Active episodes per gpu: 2:  10%|█         | 2/20 [00:14<02:03,  6.85s/it]4-agent rounds 3/20 | Active episodes per gpu: 1:  10%|█         | 2/20 [00:14<02:03,  6.85s/it]
+[33m(raylet)[0m [2026-03-14 16:44:43,886 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.37436 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 3/20 | Active episodes per gpu: 1:  15%|█▌        | 3/20 [00:17<01:29,  5.25s/it]4-agent rounds 3/20 | Active episodes per gpu: 1:  15%|█▌        | 3/20 [00:17<01:41,  6.00s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m Multi-agent rounds:   0%|          | 0/20 [00:00<?, ?it/s]4-agent rounds 1/20 | Active episodes per gpu: 8:   0%|          | 0/20 [00:00<?, ?it/s]
+[33m(raylet)[0m [2026-03-14 16:44:53,892 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.3743 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 16:45:03,896 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.37348 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 1/20 | Active episodes per gpu: 8:   5%|▌         | 1/20 [00:10<03:12, 10.13s/it]4-agent rounds 2/20 | Active episodes per gpu: 3:   5%|▌         | 1/20 [00:10<03:12, 10.13s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 2/20 | Active episodes per gpu: 3:  10%|█         | 2/20 [00:15<02:14,  7.47s/it]4-agent rounds 3/20 | Active episodes per gpu: 3:  10%|█         | 2/20 [00:15<02:14,  7.47s/it]
+[33m(raylet)[0m [2026-03-14 16:45:13,902 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.37347 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 3/20 | Active episodes per gpu: 3:  15%|█▌        | 3/20 [00:22<01:58,  6.96s/it]4-agent rounds 4/20 | Active episodes per gpu: 1:  15%|█▌        | 3/20 [00:22<01:58,  6.96s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 4/20 | Active episodes per gpu: 1:  20%|██        | 4/20 [00:25<01:30,  5.65s/it]4-agent rounds 5/20 | Active episodes per gpu: 1:  20%|██        | 4/20 [00:25<01:30,  5.65s/it]
+[33m(raylet)[0m [2026-03-14 16:45:23,907 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.37347 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 5/20 | Active episodes per gpu: 1:  25%|██▌       | 5/20 [00:37<01:59,  7.97s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 6/20 | Active episodes per gpu: 1:  25%|██▌       | 5/20 [00:37<01:59,  7.97s/it]
+[33m(raylet)[0m [2026-03-14 16:45:33,912 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.37346 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 16:45:43,918 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.37346 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 16:45:53,922 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.37343 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 6/20 | Active episodes per gpu: 1:  30%|███       | 6/20 [01:05<03:23, 14.50s/it]4-agent rounds 7/20 | Active episodes per gpu: 1:  30%|███       | 6/20 [01:05<03:23, 14.50s/it]
+[33m(raylet)[0m [2026-03-14 16:46:03,927 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.3726 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 16:46:13,932 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.37259 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 16:46:23,936 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.37258 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 16:46:33,941 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.37258 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 7/20 | Active episodes per gpu: 1:  35%|███▌      | 7/20 [01:42<04:45, 21.94s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 8/20 | Active episodes per gpu: 1:  35%|███▌      | 7/20 [01:42<04:45, 21.94s/it]
+[33m(raylet)[0m [2026-03-14 16:46:43,946 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.37257 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 16:46:53,950 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.37255 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 16:47:03,954 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.37093 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 16:47:13,959 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.37093 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 8/20 | Active episodes per gpu: 1:  40%|████      | 8/20 [02:30<06:01, 30.16s/it]4-agent rounds 8/20 | Active episodes per gpu: 1:  40%|████      | 8/20 [02:30<03:45, 18.75s/it]
+[33m(raylet)[0m [2026-03-14 16:47:23,963 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.37074 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m Multi-agent rounds:   0%|          | 0/20 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 1/20 | Active episodes per gpu: 8:   0%|          | 0/20 [00:00<?, ?it/s]
+[33m(raylet)[0m [2026-03-14 16:47:33,968 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.37073 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 1/20 | Active episodes per gpu: 8:   5%|▌         | 1/20 [00:10<03:27, 10.91s/it]4-agent rounds 2/20 | Active episodes per gpu: 5:   5%|▌         | 1/20 [00:10<03:27, 10.91s/it]
+[33m(raylet)[0m [2026-03-14 16:47:43,972 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.37072 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 2/20 | Active episodes per gpu: 5:  10%|█         | 2/20 [00:20<03:01, 10.06s/it]4-agent rounds 3/20 | Active episodes per gpu: 3:  10%|█         | 2/20 [00:20<03:01, 10.06s/it]
+[33m(raylet)[0m [2026-03-14 16:47:53,976 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.3707 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 3/20 | Active episodes per gpu: 3:  15%|█▌        | 3/20 [00:28<02:35,  9.13s/it]4-agent rounds 4/20 | Active episodes per gpu: 2:  15%|█▌        | 3/20 [00:28<02:35,  9.13s/it]
+[33m(raylet)[0m [2026-03-14 16:48:03,981 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36987 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 4/20 | Active episodes per gpu: 2:  20%|██        | 4/20 [00:34<02:06,  7.88s/it]4-agent rounds 5/20 | Active episodes per gpu: 2:  20%|██        | 4/20 [00:34<02:06,  7.88s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 5/20 | Active episodes per gpu: 2:  25%|██▌       | 5/20 [00:40<01:49,  7.31s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 6/20 | Active episodes per gpu: 2:  25%|██▌       | 5/20 [00:40<01:49,  7.31s/it]
+[33m(raylet)[0m [2026-03-14 16:48:13,986 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36986 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 6/20 | Active episodes per gpu: 2:  30%|███       | 6/20 [00:47<01:39,  7.12s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 7/20 | Active episodes per gpu: 2:  30%|███       | 6/20 [00:47<01:39,  7.12s/it]
+[33m(raylet)[0m [2026-03-14 16:48:23,990 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36985 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 16:48:33,995 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36906 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 7/20 | Active episodes per gpu: 2:  35%|███▌      | 7/20 [01:07<02:28, 11.43s/it]4-agent rounds 8/20 | Active episodes per gpu: 2:  35%|███▌      | 7/20 [01:07<02:28, 11.43s/it]
+[33m(raylet)[0m [2026-03-14 16:48:44,000 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36906 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 8/20 | Active episodes per gpu: 2:  40%|████      | 8/20 [01:16<02:05, 10.50s/it]4-agent rounds 9/20 | Active episodes per gpu: 2:  40%|████      | 8/20 [01:16<02:05, 10.50s/it]
+[33m(raylet)[0m [2026-03-14 16:48:54,004 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36903 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 9/20 | Active episodes per gpu: 2:  45%|████▌     | 9/20 [01:25<01:49, 10.00s/it]4-agent rounds 10/20 | Active episodes per gpu: 2:  45%|████▌     | 9/20 [01:25<01:49, 10.00s/it]
+[33m(raylet)[0m [2026-03-14 16:49:04,008 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36819 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 10/20 | Active episodes per gpu: 2:  50%|█████     | 10/20 [01:34<01:39,  9.93s/it]4-agent rounds 11/20 | Active episodes per gpu: 1:  50%|█████     | 10/20 [01:34<01:39,  9.93s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 11/20 | Active episodes per gpu: 1:  55%|█████▌    | 11/20 [01:40<01:18,  8.71s/it]4-agent rounds 12/20 | Active episodes per gpu: 1:  55%|█████▌    | 11/20 [01:40<01:18,  8.71s/it]
+[33m(raylet)[0m [2026-03-14 16:49:14,013 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36819 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 12/20 | Active episodes per gpu: 1:  60%|██████    | 12/20 [01:47<01:03,  7.98s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 13/20 | Active episodes per gpu: 1:  60%|██████    | 12/20 [01:47<01:03,  7.98s/it]
+[33m(raylet)[0m [2026-03-14 16:49:24,017 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36818 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 13/20 | Active episodes per gpu: 1:  65%|██████▌   | 13/20 [01:53<00:52,  7.57s/it]4-agent rounds 14/20 | Active episodes per gpu: 1:  65%|██████▌   | 13/20 [01:53<00:52,  7.57s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 14/20 | Active episodes per gpu: 1:  70%|███████   | 14/20 [02:00<00:44,  7.44s/it]4-agent rounds 15/20 | Active episodes per gpu: 1:  70%|███████   | 14/20 [02:00<00:44,  7.44s/it]
+[33m(raylet)[0m [2026-03-14 16:49:34,020 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36817 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 15/20 | Active episodes per gpu: 1:  75%|███████▌  | 15/20 [02:08<00:37,  7.44s/it]4-agent rounds 16/20 | Active episodes per gpu: 1:  75%|███████▌  | 15/20 [02:08<00:37,  7.44s/it]
+[33m(raylet)[0m [2026-03-14 16:49:44,024 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36817 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 16/20 | Active episodes per gpu: 1:  80%|████████  | 16/20 [02:16<00:30,  7.57s/it]4-agent rounds 17/20 | Active episodes per gpu: 1:  80%|████████  | 16/20 [02:16<00:30,  7.57s/it]
+[33m(raylet)[0m [2026-03-14 16:49:54,028 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36814 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 17/20 | Active episodes per gpu: 1:  85%|████████▌ | 17/20 [02:24<00:23,  7.77s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 18/20 | Active episodes per gpu: 1:  85%|████████▌ | 17/20 [02:24<00:23,  7.77s/it]
+[33m(raylet)[0m [2026-03-14 16:50:04,032 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36653 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 18/20 | Active episodes per gpu: 1:  90%|█████████ | 18/20 [02:33<00:16,  8.09s/it]4-agent rounds 19/20 | Active episodes per gpu: 1:  90%|█████████ | 18/20 [02:33<00:16,  8.09s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 19/20 | Active episodes per gpu: 1:  95%|█████████▌| 19/20 [02:42<00:08,  8.42s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 20/20 | Active episodes per gpu: 1:  95%|█████████▌| 19/20 [02:42<00:08,  8.42s/it]
+[33m(raylet)[0m [2026-03-14 16:50:14,036 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36653 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 16:50:24,039 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36652 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 16:50:34,043 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36652 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 16:50:44,047 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36652 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 16:50:54,051 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36649 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 20/20 | Active episodes per gpu: 1: 100%|██████████| 20/20 [03:31<00:00, 20.52s/it]4-agent rounds 20/20 | Active episodes per gpu: 1: 100%|██████████| 20/20 [03:31<00:00, 10.56s/it]
+[33m(raylet)[0m [2026-03-14 16:51:04,055 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36536 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m Multi-agent rounds:   0%|          | 0/20 [00:00<?, ?it/s]4-agent rounds 1/20 | Active episodes per gpu: 8:   0%|          | 0/20 [00:00<?, ?it/s]
+[33m(raylet)[0m [2026-03-14 16:51:14,060 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36536 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 1/20 | Active episodes per gpu: 8:   5%|▌         | 1/20 [00:10<03:14, 10.22s/it]4-agent rounds 2/20 | Active episodes per gpu: 6:   5%|▌         | 1/20 [00:10<03:14, 10.22s/it]
+[33m(raylet)[0m [2026-03-14 16:51:24,064 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36536 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 2/20 | Active episodes per gpu: 6:  10%|█         | 2/20 [00:19<02:52,  9.57s/it]4-agent rounds 3/20 | Active episodes per gpu: 4:  10%|█         | 2/20 [00:19<02:52,  9.57s/it]
+[33m(raylet)[0m [2026-03-14 16:51:34,068 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36535 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 3/20 | Active episodes per gpu: 4:  15%|█▌        | 3/20 [00:27<02:28,  8.71s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 4/20 | Active episodes per gpu: 3:  15%|█▌        | 3/20 [00:27<02:28,  8.71s/it]
+[33m(raylet)[0m [2026-03-14 16:51:44,072 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36534 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 4/20 | Active episodes per gpu: 3:  20%|██        | 4/20 [00:33<02:07,  7.99s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 5/20 | Active episodes per gpu: 2:  20%|██        | 4/20 [00:33<02:07,  7.99s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 5/20 | Active episodes per gpu: 2:  25%|██▌       | 5/20 [00:39<01:45,  7.03s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 6/20 | Active episodes per gpu: 2:  25%|██▌       | 5/20 [00:39<01:45,  7.03s/it]
+[33m(raylet)[0m [2026-03-14 16:51:54,077 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36532 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 6/20 | Active episodes per gpu: 2:  30%|███       | 6/20 [00:46<01:41,  7.23s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 7/20 | Active episodes per gpu: 2:  30%|███       | 6/20 [00:46<01:41,  7.23s/it]
+[33m(raylet)[0m [2026-03-14 16:52:04,081 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36449 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 7/20 | Active episodes per gpu: 2:  35%|███▌      | 7/20 [00:55<01:38,  7.56s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 8/20 | Active episodes per gpu: 2:  35%|███▌      | 7/20 [00:55<01:38,  7.56s/it]
+[33m(raylet)[0m [2026-03-14 16:52:14,084 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36448 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 8/20 | Active episodes per gpu: 2:  40%|████      | 8/20 [01:03<01:35,  7.98s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 9/20 | Active episodes per gpu: 2:  40%|████      | 8/20 [01:04<01:35,  7.98s/it]
+[33m(raylet)[0m [2026-03-14 16:52:24,088 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36448 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 9/20 | Active episodes per gpu: 2:  45%|████▌     | 9/20 [01:13<01:33,  8.47s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 10/20 | Active episodes per gpu: 2:  45%|████▌     | 9/20 [01:13<01:33,  8.47s/it]
+[33m(raylet)[0m [2026-03-14 16:52:34,092 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36446 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 10/20 | Active episodes per gpu: 2:  50%|█████     | 10/20 [01:23<01:30,  9.05s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 11/20 | Active episodes per gpu: 2:  50%|█████     | 10/20 [01:23<01:30,  9.05s/it]
+[33m(raylet)[0m [2026-03-14 16:52:44,096 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36446 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 11/20 | Active episodes per gpu: 2:  55%|█████▌    | 11/20 [01:35<01:27,  9.69s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 12/20 | Active episodes per gpu: 2:  55%|█████▌    | 11/20 [01:35<01:27,  9.69s/it]
+[33m(raylet)[0m [2026-03-14 16:52:54,100 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36443 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 12/20 | Active episodes per gpu: 2:  60%|██████    | 12/20 [01:46<01:22, 10.37s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 13/20 | Active episodes per gpu: 2:  60%|██████    | 12/20 [01:46<01:22, 10.37s/it]
+[33m(raylet)[0m [2026-03-14 16:53:04,103 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36283 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 13/20 | Active episodes per gpu: 2:  65%|██████▌   | 13/20 [01:59<01:17, 11.10s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 14/20 | Active episodes per gpu: 2:  65%|██████▌   | 13/20 [01:59<01:17, 11.10s/it]
+[33m(raylet)[0m [2026-03-14 16:53:14,107 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36282 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 16:53:24,111 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36281 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 14/20 | Active episodes per gpu: 2:  70%|███████   | 14/20 [02:13<01:11, 11.88s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 15/20 | Active episodes per gpu: 2:  70%|███████   | 14/20 [02:13<01:11, 11.88s/it]
+[33m(raylet)[0m [2026-03-14 16:53:34,115 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.3628 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 15/20 | Active episodes per gpu: 2:  75%|███████▌  | 15/20 [02:27<01:03, 12.67s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 16/20 | Active episodes per gpu: 2:  75%|███████▌  | 15/20 [02:27<01:03, 12.67s/it]
+[33m(raylet)[0m [2026-03-14 16:53:44,119 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.3628 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 16:53:54,123 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36277 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 16/20 | Active episodes per gpu: 2:  80%|████████  | 16/20 [02:43<00:54, 13.50s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 17/20 | Active episodes per gpu: 2:  80%|████████  | 16/20 [02:43<00:54, 13.50s/it]
+[33m(raylet)[0m [2026-03-14 16:54:04,127 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36194 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 17/20 | Active episodes per gpu: 2:  85%|████████▌ | 17/20 [02:59<00:43, 14.37s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 18/20 | Active episodes per gpu: 2:  85%|████████▌ | 17/20 [02:59<00:43, 14.37s/it]
+[33m(raylet)[0m [2026-03-14 16:54:14,131 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36193 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 16:54:24,135 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36193 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 18/20 | Active episodes per gpu: 2:  90%|█████████ | 18/20 [03:17<00:30, 15.26s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 19/20 | Active episodes per gpu: 2:  90%|█████████ | 18/20 [03:17<00:30, 15.26s/it]
+[33m(raylet)[0m [2026-03-14 16:54:34,140 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36192 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 16:54:44,144 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36191 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 19/20 | Active episodes per gpu: 2:  95%|█████████▌| 19/20 [03:35<00:16, 16.19s/it]4-agent rounds 20/20 | Active episodes per gpu: 2:  95%|█████████▌| 19/20 [03:35<00:16, 16.19s/it]
+[33m(raylet)[0m [2026-03-14 16:54:54,149 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36188 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 16:55:04,153 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36105 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 16:55:14,157 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36103 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 16:55:24,161 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36103 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 16:55:34,165 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36103 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 20/20 | Active episodes per gpu: 2: 100%|██████████| 20/20 [04:28<00:00, 27.21s/it]4-agent rounds 20/20 | Active episodes per gpu: 2: 100%|██████████| 20/20 [04:28<00:00, 13.41s/it]
+[33m(raylet)[0m [2026-03-14 16:55:44,169 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36068 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m Multi-agent rounds:   0%|          | 0/20 [00:00<?, ?it/s]4-agent rounds 1/20 | Active episodes per gpu: 8:   0%|          | 0/20 [00:00<?, ?it/s]
+[33m(raylet)[0m [2026-03-14 16:55:54,173 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.36065 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 1/20 | Active episodes per gpu: 8:   5%|▌         | 1/20 [00:10<03:23, 10.72s/it]4-agent rounds 2/20 | Active episodes per gpu: 1:   5%|▌         | 1/20 [00:10<03:23, 10.72s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 2/20 | Active episodes per gpu: 1:  10%|█         | 2/20 [00:13<01:50,  6.16s/it]4-agent rounds 3/20 | Active episodes per gpu: 1:  10%|█         | 2/20 [00:13<01:50,  6.16s/it]
+[33m(raylet)[0m [2026-03-14 16:56:04,177 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35905 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 3/20 | Active episodes per gpu: 1:  15%|█▌        | 3/20 [00:17<01:23,  4.94s/it]4-agent rounds 4/20 | Active episodes per gpu: 1:  15%|█▌        | 3/20 [00:17<01:23,  4.94s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 4/20 | Active episodes per gpu: 1:  20%|██        | 4/20 [00:20<01:09,  4.34s/it]4-agent rounds 5/20 | Active episodes per gpu: 1:  20%|██        | 4/20 [00:20<01:09,  4.34s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 5/20 | Active episodes per gpu: 1:  25%|██▌       | 5/20 [00:24<01:01,  4.08s/it]4-agent rounds 6/20 | Active episodes per gpu: 1:  25%|██▌       | 5/20 [00:24<01:01,  4.08s/it]
+[33m(raylet)[0m [2026-03-14 16:56:14,181 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35904 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 6/20 | Active episodes per gpu: 1:  30%|███       | 6/20 [00:28<00:55,  3.99s/it]4-agent rounds 7/20 | Active episodes per gpu: 1:  30%|███       | 6/20 [00:28<00:55,  3.99s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 7/20 | Active episodes per gpu: 1:  35%|███▌      | 7/20 [00:32<00:51,  3.99s/it]4-agent rounds 8/20 | Active episodes per gpu: 1:  35%|███▌      | 7/20 [00:32<00:51,  3.99s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 8/20 | Active episodes per gpu: 1:  40%|████      | 8/20 [00:36<00:48,  4.07s/it]4-agent rounds 9/20 | Active episodes per gpu: 1:  40%|████      | 8/20 [00:36<00:48,  4.07s/it]
+[33m(raylet)[0m [2026-03-14 16:56:24,185 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35904 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 9/20 | Active episodes per gpu: 1:  45%|████▌     | 9/20 [00:40<00:46,  4.19s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 10/20 | Active episodes per gpu: 1:  45%|████▌     | 9/20 [00:40<00:46,  4.19s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 10/20 | Active episodes per gpu: 1:  50%|█████     | 10/20 [00:45<00:43,  4.35s/it]4-agent rounds 11/20 | Active episodes per gpu: 1:  50%|█████     | 10/20 [00:45<00:43,  4.35s/it]
+[33m(raylet)[0m [2026-03-14 16:56:34,190 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35903 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 11/20 | Active episodes per gpu: 1:  55%|█████▌    | 11/20 [00:50<00:40,  4.53s/it]4-agent rounds 12/20 | Active episodes per gpu: 1:  55%|█████▌    | 11/20 [00:50<00:40,  4.53s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 12/20 | Active episodes per gpu: 1:  60%|██████    | 12/20 [00:55<00:37,  4.73s/it]4-agent rounds 13/20 | Active episodes per gpu: 1:  60%|██████    | 12/20 [00:55<00:37,  4.73s/it]
+[33m(raylet)[0m [2026-03-14 16:56:44,194 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35903 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 13/20 | Active episodes per gpu: 1:  65%|██████▌   | 13/20 [01:00<00:34,  4.94s/it]4-agent rounds 14/20 | Active episodes per gpu: 1:  65%|██████▌   | 13/20 [01:01<00:34,  4.94s/it]
+[33m(raylet)[0m [2026-03-14 16:56:54,197 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.359 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 14/20 | Active episodes per gpu: 1:  70%|███████   | 14/20 [01:06<00:31,  5.18s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 15/20 | Active episodes per gpu: 1:  70%|███████   | 14/20 [01:06<00:31,  5.18s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 15/20 | Active episodes per gpu: 1:  75%|███████▌  | 15/20 [01:12<00:27,  5.42s/it]4-agent rounds 16/20 | Active episodes per gpu: 1:  75%|███████▌  | 15/20 [01:12<00:27,  5.42s/it]
+[33m(raylet)[0m [2026-03-14 16:57:04,201 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35815 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 16/20 | Active episodes per gpu: 1:  80%|████████  | 16/20 [01:18<00:22,  5.67s/it]4-agent rounds 17/20 | Active episodes per gpu: 1:  80%|████████  | 16/20 [01:18<00:22,  5.67s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 17/20 | Active episodes per gpu: 1:  85%|████████▌ | 17/20 [01:25<00:17,  5.95s/it]4-agent rounds 18/20 | Active episodes per gpu: 1:  85%|████████▌ | 17/20 [01:25<00:17,  5.95s/it]
+[33m(raylet)[0m [2026-03-14 16:57:14,205 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35815 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 18/20 | Active episodes per gpu: 1:  90%|█████████ | 18/20 [01:32<00:12,  6.23s/it]4-agent rounds 19/20 | Active episodes per gpu: 1:  90%|█████████ | 18/20 [01:32<00:12,  6.23s/it]
+[33m(raylet)[0m [2026-03-14 16:57:24,210 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35814 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 19/20 | Active episodes per gpu: 1:  95%|█████████▌| 19/20 [01:39<00:06,  6.51s/it]4-agent rounds 20/20 | Active episodes per gpu: 1:  95%|█████████▌| 19/20 [01:39<00:06,  6.51s/it]
+[33m(raylet)[0m [2026-03-14 16:57:34,215 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35813 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 20/20 | Active episodes per gpu: 1: 100%|██████████| 20/20 [01:47<00:00,  6.82s/it]4-agent rounds 20/20 | Active episodes per gpu: 1: 100%|██████████| 20/20 [01:47<00:00,  5.36s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m Multi-agent rounds:   0%|          | 0/20 [00:00<?, ?it/s]4-agent rounds 1/20 | Active episodes per gpu: 8:   0%|          | 0/20 [00:00<?, ?it/s]
+[33m(raylet)[0m [2026-03-14 16:57:44,219 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.358 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 1/20 | Active episodes per gpu: 8:   5%|▌         | 1/20 [00:11<03:32, 11.19s/it]4-agent rounds 2/20 | Active episodes per gpu: 8:   5%|▌         | 1/20 [00:11<03:32, 11.19s/it]
+[33m(raylet)[0m [2026-03-14 16:57:54,223 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35797 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 16:58:04,227 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35637 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 2/20 | Active episodes per gpu: 8:  10%|█         | 2/20 [00:22<03:23, 11.33s/it]4-agent rounds 3/20 | Active episodes per gpu: 5:  10%|█         | 2/20 [00:22<03:23, 11.33s/it]
+[33m(raylet)[0m [2026-03-14 16:58:14,230 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35636 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 3/20 | Active episodes per gpu: 5:  15%|█▌        | 3/20 [00:34<03:13, 11.38s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 4/20 | Active episodes per gpu: 4:  15%|█▌        | 3/20 [00:34<03:13, 11.38s/it]
+[33m(raylet)[0m [2026-03-14 16:58:24,235 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35636 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 4/20 | Active episodes per gpu: 4:  20%|██        | 4/20 [00:42<02:44, 10.29s/it]4-agent rounds 5/20 | Active episodes per gpu: 3:  20%|██        | 4/20 [00:42<02:44, 10.29s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 5/20 | Active episodes per gpu: 3:  25%|██▌       | 5/20 [00:50<02:19,  9.31s/it]4-agent rounds 6/20 | Active episodes per gpu: 2:  25%|██▌       | 5/20 [00:50<02:19,  9.31s/it]
+[33m(raylet)[0m [2026-03-14 16:58:34,238 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35635 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 6/20 | Active episodes per gpu: 2:  30%|███       | 6/20 [00:57<02:02,  8.73s/it]4-agent rounds 7/20 | Active episodes per gpu: 2:  30%|███       | 6/20 [00:57<02:02,  8.73s/it]
+[33m(raylet)[0m [2026-03-14 16:58:44,242 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35635 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 7/20 | Active episodes per gpu: 2:  35%|███▌      | 7/20 [01:06<01:51,  8.59s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 8/20 | Active episodes per gpu: 2:  35%|███▌      | 7/20 [01:06<01:51,  8.59s/it]
+[33m(raylet)[0m [2026-03-14 16:58:54,245 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35632 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 8/20 | Active episodes per gpu: 2:  40%|████      | 8/20 [01:15<01:44,  8.68s/it]4-agent rounds 9/20 | Active episodes per gpu: 1:  40%|████      | 8/20 [01:15<01:44,  8.68s/it]
+[33m(raylet)[0m [2026-03-14 16:59:04,249 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35548 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 9/20 | Active episodes per gpu: 1:  45%|████▌     | 9/20 [01:21<01:29,  8.13s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 10/20 | Active episodes per gpu: 1:  45%|████▌     | 9/20 [01:21<01:29,  8.13s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 10/20 | Active episodes per gpu: 1:  50%|█████     | 10/20 [01:29<01:19,  7.92s/it]4-agent rounds 11/20 | Active episodes per gpu: 1:  50%|█████     | 10/20 [01:29<01:19,  7.92s/it]
+[33m(raylet)[0m [2026-03-14 16:59:14,253 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35548 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 11/20 | Active episodes per gpu: 1:  55%|█████▌    | 11/20 [01:37<01:11,  7.93s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 12/20 | Active episodes per gpu: 1:  55%|█████▌    | 11/20 [01:37<01:11,  7.93s/it]
+[33m(raylet)[0m [2026-03-14 16:59:24,256 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35546 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 12/20 | Active episodes per gpu: 1:  60%|██████    | 12/20 [01:45<01:05,  8.13s/it]4-agent rounds 13/20 | Active episodes per gpu: 1:  60%|██████    | 12/20 [01:45<01:05,  8.13s/it]
+[33m(raylet)[0m [2026-03-14 16:59:34,261 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35546 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 13/20 | Active episodes per gpu: 1:  65%|██████▌   | 13/20 [01:55<00:59,  8.45s/it]4-agent rounds 14/20 | Active episodes per gpu: 1:  65%|██████▌   | 13/20 [01:55<00:59,  8.45s/it]
+[33m(raylet)[0m [2026-03-14 16:59:44,264 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35546 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 14/20 | Active episodes per gpu: 1:  70%|███████   | 14/20 [02:04<00:53,  8.86s/it]4-agent rounds 15/20 | Active episodes per gpu: 1:  70%|███████   | 14/20 [02:04<00:53,  8.86s/it]
+[33m(raylet)[0m [2026-03-14 16:59:54,268 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35542 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 15/20 | Active episodes per gpu: 1:  75%|███████▌  | 15/20 [02:15<00:46,  9.32s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 16/20 | Active episodes per gpu: 1:  75%|███████▌  | 15/20 [02:15<00:46,  9.32s/it]
+[33m(raylet)[0m [2026-03-14 17:00:04,272 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35459 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 16/20 | Active episodes per gpu: 1:  80%|████████  | 16/20 [02:26<00:39,  9.85s/it]4-agent rounds 17/20 | Active episodes per gpu: 1:  80%|████████  | 16/20 [02:26<00:39,  9.85s/it]
+[33m(raylet)[0m [2026-03-14 17:00:14,276 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35458 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 17/20 | Active episodes per gpu: 1:  85%|████████▌ | 17/20 [02:38<00:31, 10.45s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 18/20 | Active episodes per gpu: 1:  85%|████████▌ | 17/20 [02:38<00:31, 10.45s/it]
+[33m(raylet)[0m [2026-03-14 17:00:24,280 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35458 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 18/20 | Active episodes per gpu: 1:  90%|█████████ | 18/20 [02:50<00:22, 11.06s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 19/20 | Active episodes per gpu: 1:  90%|█████████ | 18/20 [02:50<00:22, 11.06s/it]
+[33m(raylet)[0m [2026-03-14 17:00:34,284 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35456 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 17:00:44,288 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35455 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 19/20 | Active episodes per gpu: 1:  95%|█████████▌| 19/20 [03:03<00:11, 11.71s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 20/20 | Active episodes per gpu: 1:  95%|█████████▌| 19/20 [03:04<00:11, 11.71s/it]
+[33m(raylet)[0m [2026-03-14 17:00:54,292 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35453 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 17:01:04,296 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35292 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 17:01:14,300 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35291 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 17:01:24,303 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35291 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 17:01:34,308 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.3529 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 20/20 | Active episodes per gpu: 1: 100%|██████████| 20/20 [03:52<00:00, 22.62s/it]4-agent rounds 20/20 | Active episodes per gpu: 1: 100%|██████████| 20/20 [03:52<00:00, 11.60s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m Multi-agent rounds:   0%|          | 0/20 [00:00<?, ?it/s]4-agent rounds 1/20 | Active episodes per gpu: 8:   0%|          | 0/20 [00:00<?, ?it/s]
+[33m(raylet)[0m [2026-03-14 17:01:44,312 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35257 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 1/20 | Active episodes per gpu: 8:   5%|▌         | 1/20 [00:10<03:12, 10.12s/it]4-agent rounds 2/20 | Active episodes per gpu: 4:   5%|▌         | 1/20 [00:10<03:12, 10.12s/it]
+[33m(raylet)[0m [2026-03-14 17:01:54,316 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35255 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 2/20 | Active episodes per gpu: 4:  10%|█         | 2/20 [00:17<02:29,  8.31s/it]4-agent rounds 3/20 | Active episodes per gpu: 3:  10%|█         | 2/20 [00:17<02:29,  8.31s/it]
+[33m(raylet)[0m [2026-03-14 17:02:04,320 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35172 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 3/20 | Active episodes per gpu: 3:  15%|█▌        | 3/20 [00:23<02:06,  7.42s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 4/20 | Active episodes per gpu: 2:  15%|█▌        | 3/20 [00:23<02:06,  7.42s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 4/20 | Active episodes per gpu: 2:  20%|██        | 4/20 [00:29<01:46,  6.66s/it]4-agent rounds 5/20 | Active episodes per gpu: 2:  20%|██        | 4/20 [00:29<01:46,  6.66s/it]
+[33m(raylet)[0m [2026-03-14 17:02:14,324 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.3517 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 5/20 | Active episodes per gpu: 2:  25%|██▌       | 5/20 [00:35<01:36,  6.42s/it]4-agent rounds 6/20 | Active episodes per gpu: 2:  25%|██▌       | 5/20 [00:35<01:36,  6.42s/it]
+[33m(raylet)[0m [2026-03-14 17:02:24,328 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.3517 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 6/20 | Active episodes per gpu: 2:  30%|███       | 6/20 [00:41<01:28,  6.35s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 7/20 | Active episodes per gpu: 2:  30%|███       | 6/20 [00:41<01:28,  6.35s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 7/20 | Active episodes per gpu: 2:  35%|███▌      | 7/20 [00:48<01:25,  6.60s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 8/20 | Active episodes per gpu: 2:  35%|███▌      | 7/20 [00:48<01:25,  6.60s/it]
+[33m(raylet)[0m [2026-03-14 17:02:34,332 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.3517 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 8/20 | Active episodes per gpu: 2:  40%|████      | 8/20 [00:55<01:22,  6.88s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 9/20 | Active episodes per gpu: 2:  40%|████      | 8/20 [00:55<01:22,  6.88s/it]
+[33m(raylet)[0m [2026-03-14 17:02:44,336 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35169 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 9/20 | Active episodes per gpu: 2:  45%|████▌     | 9/20 [01:03<01:19,  7.22s/it]4-agent rounds 10/20 | Active episodes per gpu: 2:  45%|████▌     | 9/20 [01:03<01:19,  7.22s/it]
+[33m(raylet)[0m [2026-03-14 17:02:54,340 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35165 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 10/20 | Active episodes per gpu: 2:  50%|█████     | 10/20 [01:12<01:15,  7.56s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 11/20 | Active episodes per gpu: 2:  50%|█████     | 10/20 [01:12<01:15,  7.56s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 11/20 | Active episodes per gpu: 2:  55%|█████▌    | 11/20 [01:20<01:10,  7.86s/it]4-agent rounds 12/20 | Active episodes per gpu: 1:  55%|█████▌    | 11/20 [01:20<01:10,  7.86s/it]
+[33m(raylet)[0m [2026-03-14 17:03:04,344 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35006 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 12/20 | Active episodes per gpu: 1:  60%|██████    | 12/20 [01:25<00:56,  7.06s/it]4-agent rounds 13/20 | Active episodes per gpu: 1:  60%|██████    | 12/20 [01:25<00:56,  7.06s/it]
+[33m(raylet)[0m [2026-03-14 17:03:14,348 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35004 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 13/20 | Active episodes per gpu: 1:  65%|██████▌   | 13/20 [01:31<00:46,  6.58s/it]4-agent rounds 14/20 | Active episodes per gpu: 1:  65%|██████▌   | 13/20 [01:31<00:46,  6.58s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 14/20 | Active episodes per gpu: 1:  70%|███████   | 14/20 [01:37<00:37,  6.32s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 15/20 | Active episodes per gpu: 1:  70%|███████   | 14/20 [01:37<00:37,  6.32s/it]
+[33m(raylet)[0m [2026-03-14 17:03:24,352 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35004 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 15/20 | Active episodes per gpu: 1:  75%|███████▌  | 15/20 [01:43<00:31,  6.21s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 16/20 | Active episodes per gpu: 1:  75%|███████▌  | 15/20 [01:43<00:31,  6.21s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 16/20 | Active episodes per gpu: 1:  80%|████████  | 16/20 [01:49<00:24,  6.19s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 17/20 | Active episodes per gpu: 1:  80%|████████  | 16/20 [01:49<00:24,  6.19s/it]
+[33m(raylet)[0m [2026-03-14 17:03:34,356 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35003 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 17/20 | Active episodes per gpu: 1:  85%|████████▌ | 17/20 [01:55<00:18,  6.28s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 18/20 | Active episodes per gpu: 1:  85%|████████▌ | 17/20 [01:55<00:18,  6.28s/it]
+[33m(raylet)[0m [2026-03-14 17:03:44,361 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.35003 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 18/20 | Active episodes per gpu: 1:  90%|█████████ | 18/20 [02:02<00:12,  6.41s/it]4-agent rounds 19/20 | Active episodes per gpu: 1:  90%|█████████ | 18/20 [02:02<00:12,  6.41s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 19/20 | Active episodes per gpu: 1:  95%|█████████▌| 19/20 [02:09<00:06,  6.59s/it]4-agent rounds 20/20 | Active episodes per gpu: 1:  95%|█████████▌| 19/20 [02:09<00:06,  6.59s/it]
+[33m(raylet)[0m [2026-03-14 17:03:54,365 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34998 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 20/20 | Active episodes per gpu: 1: 100%|██████████| 20/20 [02:16<00:00,  6.80s/it]4-agent rounds 20/20 | Active episodes per gpu: 1: 100%|██████████| 20/20 [02:16<00:00,  6.83s/it]
+[33m(raylet)[0m [2026-03-14 17:04:04,369 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34894 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m Multi-agent rounds:   0%|          | 0/20 [00:00<?, ?it/s]4-agent rounds 1/20 | Active episodes per gpu: 8:   0%|          | 0/20 [00:00<?, ?it/s]
+[33m(raylet)[0m [2026-03-14 17:04:14,373 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34894 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 1/20 | Active episodes per gpu: 8:   5%|▌         | 1/20 [00:09<03:09,  9.97s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 2/20 | Active episodes per gpu: 6:   5%|▌         | 1/20 [00:10<03:09,  9.97s/it]
+[33m(raylet)[0m [2026-03-14 17:04:24,377 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34893 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 2/20 | Active episodes per gpu: 6:  10%|█         | 2/20 [00:18<02:47,  9.31s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 3/20 | Active episodes per gpu: 4:  10%|█         | 2/20 [00:18<02:47,  9.31s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 3/20 | Active episodes per gpu: 4:  15%|█▌        | 3/20 [00:26<02:23,  8.42s/it]4-agent rounds 4/20 | Active episodes per gpu: 2:  15%|█▌        | 3/20 [00:26<02:23,  8.42s/it]
+[33m(raylet)[0m [2026-03-14 17:04:34,381 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34893 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 4/20 | Active episodes per gpu: 2:  20%|██        | 4/20 [00:31<01:53,  7.09s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 5/20 | Active episodes per gpu: 2:  20%|██        | 4/20 [00:31<01:53,  7.09s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 5/20 | Active episodes per gpu: 2:  25%|██▌       | 5/20 [00:36<01:37,  6.48s/it]
+[33m(raylet)[0m [2026-03-14 17:04:44,385 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34892 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 6/20 | Active episodes per gpu: 2:  25%|██▌       | 5/20 [00:36<01:37,  6.48s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 6/20 | Active episodes per gpu: 2:  30%|███       | 6/20 [00:42<01:27,  6.28s/it]4-agent rounds 7/20 | Active episodes per gpu: 2:  30%|███       | 6/20 [00:42<01:27,  6.28s/it]
+[33m(raylet)[0m [2026-03-14 17:04:54,390 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34887 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 7/20 | Active episodes per gpu: 2:  35%|███▌      | 7/20 [00:48<01:20,  6.23s/it]4-agent rounds 8/20 | Active episodes per gpu: 1:  35%|███▌      | 7/20 [00:48<01:20,  6.23s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 8/20 | Active episodes per gpu: 1:  40%|████      | 8/20 [00:52<01:06,  5.58s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 9/20 | Active episodes per gpu: 1:  40%|████      | 8/20 [00:52<01:06,  5.58s/it]
+[33m(raylet)[0m [2026-03-14 17:05:04,394 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34805 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 9/20 | Active episodes per gpu: 1:  45%|████▌     | 9/20 [00:57<00:57,  5.21s/it]4-agent rounds 10/20 | Active episodes per gpu: 1:  45%|████▌     | 9/20 [00:57<00:57,  5.21s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 10/20 | Active episodes per gpu: 1:  50%|█████     | 10/20 [01:01<00:50,  5.02s/it]4-agent rounds 11/20 | Active episodes per gpu: 1:  50%|█████     | 10/20 [01:01<00:50,  5.02s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 11/20 | Active episodes per gpu: 1:  55%|█████▌    | 11/20 [01:06<00:44,  4.95s/it]4-agent rounds 12/20 | Active episodes per gpu: 1:  55%|█████▌    | 11/20 [01:06<00:44,  4.95s/it]
+[33m(raylet)[0m [2026-03-14 17:05:14,398 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34804 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 12/20 | Active episodes per gpu: 1:  60%|██████    | 12/20 [01:11<00:39,  4.98s/it]4-agent rounds 13/20 | Active episodes per gpu: 1:  60%|██████    | 12/20 [01:11<00:39,  4.98s/it]
+[33m(raylet)[0m [2026-03-14 17:05:24,401 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34803 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 13/20 | Active episodes per gpu: 1:  65%|██████▌   | 13/20 [01:16<00:35,  5.06s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 14/20 | Active episodes per gpu: 1:  65%|██████▌   | 13/20 [01:16<00:35,  5.06s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 14/20 | Active episodes per gpu: 1:  70%|███████   | 14/20 [01:22<00:31,  5.19s/it]4-agent rounds 15/20 | Active episodes per gpu: 1:  70%|███████   | 14/20 [01:22<00:31,  5.19s/it]
+[33m(raylet)[0m [2026-03-14 17:05:34,406 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34802 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 15/20 | Active episodes per gpu: 1:  75%|███████▌  | 15/20 [01:28<00:26,  5.36s/it]4-agent rounds 16/20 | Active episodes per gpu: 1:  75%|███████▌  | 15/20 [01:28<00:26,  5.36s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 16/20 | Active episodes per gpu: 1:  80%|████████  | 16/20 [01:34<00:22,  5.55s/it]4-agent rounds 17/20 | Active episodes per gpu: 1:  80%|████████  | 16/20 [01:34<00:22,  5.55s/it]
+[33m(raylet)[0m [2026-03-14 17:05:44,410 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34802 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 17/20 | Active episodes per gpu: 1:  85%|████████▌ | 17/20 [01:40<00:17,  5.76s/it]4-agent rounds 18/20 | Active episodes per gpu: 1:  85%|████████▌ | 17/20 [01:40<00:17,  5.76s/it]
+[33m(raylet)[0m [2026-03-14 17:05:54,414 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34797 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 18/20 | Active episodes per gpu: 1:  90%|█████████ | 18/20 [01:46<00:11,  6.00s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 19/20 | Active episodes per gpu: 1:  90%|█████████ | 18/20 [01:46<00:11,  6.00s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 19/20 | Active episodes per gpu: 1:  95%|█████████▌| 19/20 [01:53<00:06,  6.24s/it]4-agent rounds 20/20 | Active episodes per gpu: 1:  95%|█████████▌| 19/20 [01:53<00:06,  6.24s/it]
+[33m(raylet)[0m [2026-03-14 17:06:04,418 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34639 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 20/20 | Active episodes per gpu: 1: 100%|██████████| 20/20 [02:00<00:00,  6.50s/it]4-agent rounds 20/20 | Active episodes per gpu: 1: 100%|██████████| 20/20 [02:00<00:00,  6.04s/it]
+[33m(raylet)[0m [2026-03-14 17:06:14,422 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34618 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m Multi-agent rounds:   0%|          | 0/20 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 1/20 | Active episodes per gpu: 8:   0%|          | 0/20 [00:00<?, ?it/s]
+[33m(raylet)[0m [2026-03-14 17:06:24,427 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34618 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 1/20 | Active episodes per gpu: 8:   5%|▌         | 1/20 [00:09<03:07,  9.88s/it]4-agent rounds 2/20 | Active episodes per gpu: 5:   5%|▌         | 1/20 [00:09<03:07,  9.88s/it]
+[33m(raylet)[0m [2026-03-14 17:06:34,431 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34617 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 2/20 | Active episodes per gpu: 5:  10%|█         | 2/20 [00:17<02:34,  8.60s/it]4-agent rounds 3/20 | Active episodes per gpu: 5:  10%|█         | 2/20 [00:17<02:34,  8.60s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 3/20 | Active episodes per gpu: 5:  15%|█▌        | 3/20 [00:26<02:25,  8.54s/it]4-agent rounds 4/20 | Active episodes per gpu: 4:  15%|█▌        | 3/20 [00:26<02:25,  8.54s/it]
+[33m(raylet)[0m [2026-03-14 17:06:44,435 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34616 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 4/20 | Active episodes per gpu: 4:  20%|██        | 4/20 [00:33<02:11,  8.21s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 5/20 | Active episodes per gpu: 3:  20%|██        | 4/20 [00:33<02:11,  8.21s/it]
+[33m(raylet)[0m [2026-03-14 17:06:54,439 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34611 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 5/20 | Active episodes per gpu: 3:  25%|██▌       | 5/20 [00:40<01:56,  7.76s/it]4-agent rounds 6/20 | Active episodes per gpu: 3:  25%|██▌       | 5/20 [00:40<01:56,  7.76s/it]
+[33m(raylet)[0m [2026-03-14 17:07:04,443 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34529 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 6/20 | Active episodes per gpu: 3:  30%|███       | 6/20 [00:49<01:51,  8.00s/it]4-agent rounds 7/20 | Active episodes per gpu: 2:  30%|███       | 6/20 [00:49<01:51,  8.00s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 7/20 | Active episodes per gpu: 2:  35%|███▌      | 7/20 [00:55<01:37,  7.48s/it]4-agent rounds 8/20 | Active episodes per gpu: 2:  35%|███▌      | 7/20 [00:55<01:37,  7.48s/it]
+[33m(raylet)[0m [2026-03-14 17:07:14,447 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34529 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 8/20 | Active episodes per gpu: 2:  40%|████      | 8/20 [01:02<01:26,  7.24s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 9/20 | Active episodes per gpu: 2:  40%|████      | 8/20 [01:02<01:26,  7.24s/it]
+[33m(raylet)[0m [2026-03-14 17:07:24,451 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34528 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 9/20 | Active episodes per gpu: 2:  45%|████▌     | 9/20 [01:09<01:19,  7.19s/it]4-agent rounds 10/20 | Active episodes per gpu: 1:  45%|████▌     | 9/20 [01:09<01:19,  7.19s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 10/20 | Active episodes per gpu: 1:  50%|█████     | 10/20 [01:13<01:02,  6.27s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 11/20 | Active episodes per gpu: 1:  50%|█████     | 10/20 [01:13<01:02,  6.27s/it]
+[33m(raylet)[0m [2026-03-14 17:07:34,456 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34528 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 11/20 | Active episodes per gpu: 1:  55%|█████▌    | 11/20 [01:17<00:51,  5.69s/it]4-agent rounds 12/20 | Active episodes per gpu: 1:  55%|█████▌    | 11/20 [01:18<00:51,  5.69s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 12/20 | Active episodes per gpu: 1:  60%|██████    | 12/20 [01:22<00:42,  5.36s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 13/20 | Active episodes per gpu: 1:  60%|██████    | 12/20 [01:22<00:42,  5.36s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 13/20 | Active episodes per gpu: 1:  65%|██████▌   | 13/20 [01:27<00:36,  5.19s/it]
+[33m(raylet)[0m [2026-03-14 17:07:44,460 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34526 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 14/20 | Active episodes per gpu: 1:  65%|██████▌   | 13/20 [01:27<00:36,  5.19s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 14/20 | Active episodes per gpu: 1:  70%|███████   | 14/20 [01:32<00:30,  5.14s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 15/20 | Active episodes per gpu: 1:  70%|███████   | 14/20 [01:32<00:30,  5.14s/it]
+[33m(raylet)[0m [2026-03-14 17:07:54,465 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34521 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 15/20 | Active episodes per gpu: 1:  75%|███████▌  | 15/20 [01:37<00:25,  5.17s/it]4-agent rounds 16/20 | Active episodes per gpu: 1:  75%|███████▌  | 15/20 [01:37<00:25,  5.17s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 16/20 | Active episodes per gpu: 1:  80%|████████  | 16/20 [01:43<00:21,  5.27s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 17/20 | Active episodes per gpu: 1:  80%|████████  | 16/20 [01:43<00:21,  5.27s/it]
+[33m(raylet)[0m [2026-03-14 17:08:04,469 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34362 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 17/20 | Active episodes per gpu: 1:  85%|████████▌ | 17/20 [01:48<00:16,  5.40s/it]4-agent rounds 18/20 | Active episodes per gpu: 1:  85%|████████▌ | 17/20 [01:48<00:16,  5.40s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 18/20 | Active episodes per gpu: 1:  90%|█████████ | 18/20 [01:54<00:11,  5.55s/it]4-agent rounds 19/20 | Active episodes per gpu: 1:  90%|█████████ | 18/20 [01:54<00:11,  5.55s/it]
+[33m(raylet)[0m [2026-03-14 17:08:14,473 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34362 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 19/20 | Active episodes per gpu: 1:  95%|█████████▌| 19/20 [02:00<00:05,  5.74s/it]4-agent rounds 20/20 | Active episodes per gpu: 1:  95%|█████████▌| 19/20 [02:00<00:05,  5.74s/it]
+[33m(raylet)[0m [2026-03-14 17:08:24,477 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34361 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 20/20 | Active episodes per gpu: 1: 100%|██████████| 20/20 [02:07<00:00,  5.96s/it]4-agent rounds 20/20 | Active episodes per gpu: 1: 100%|██████████| 20/20 [02:07<00:00,  6.37s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m Multi-agent rounds:   0%|          | 0/20 [00:00<?, ?it/s]4-agent rounds 1/20 | Active episodes per gpu: 8:   0%|          | 0/20 [00:00<?, ?it/s]
+[33m(raylet)[0m [2026-03-14 17:08:34,481 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34338 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 1/20 | Active episodes per gpu: 8:   5%|▌         | 1/20 [00:09<03:06,  9.80s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 2/20 | Active episodes per gpu: 8:   5%|▌         | 1/20 [00:09<03:06,  9.80s/it]
+[33m(raylet)[0m [2026-03-14 17:08:44,485 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34336 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 2/20 | Active episodes per gpu: 8:  10%|█         | 2/20 [00:21<03:11, 10.66s/it]4-agent rounds 3/20 | Active episodes per gpu: 4:  10%|█         | 2/20 [00:21<03:11, 10.66s/it]
+[33m(raylet)[0m [2026-03-14 17:08:54,489 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34332 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 3/20 | Active episodes per gpu: 4:  15%|█▌        | 3/20 [00:28<02:35,  9.15s/it]4-agent rounds 4/20 | Active episodes per gpu: 3:  15%|█▌        | 3/20 [00:28<02:35,  9.15s/it]
+[33m(raylet)[0m [2026-03-14 17:09:04,493 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34251 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 4/20 | Active episodes per gpu: 3:  20%|██        | 4/20 [00:34<02:09,  8.10s/it]4-agent rounds 5/20 | Active episodes per gpu: 2:  20%|██        | 4/20 [00:34<02:09,  8.10s/it]
+[33m(raylet)[0m [2026-03-14 17:09:14,497 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.3425 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 5/20 | Active episodes per gpu: 2:  25%|██▌       | 5/20 [00:48<02:32, 10.18s/it]4-agent rounds 6/20 | Active episodes per gpu: 2:  25%|██▌       | 5/20 [00:48<02:32, 10.18s/it]
+[33m(raylet)[0m [2026-03-14 17:09:24,502 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.3425 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 17:09:34,506 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34248 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 6/20 | Active episodes per gpu: 2:  30%|███       | 6/20 [01:10<03:18, 14.16s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 7/20 | Active episodes per gpu: 2:  30%|███       | 6/20 [01:10<03:18, 14.16s/it]
+[33m(raylet)[0m [2026-03-14 17:09:44,510 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34248 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 17:09:54,515 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34243 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 17:10:04,519 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34162 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 7/20 | Active episodes per gpu: 2:  35%|███▌      | 7/20 [01:37<03:56, 18.20s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 8/20 | Active episodes per gpu: 2:  35%|███▌      | 7/20 [01:37<03:56, 18.20s/it]
+[33m(raylet)[0m [2026-03-14 17:10:14,524 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34161 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 17:10:24,530 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34161 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 17:10:34,534 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.3416 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 8/20 | Active episodes per gpu: 2:  40%|████      | 8/20 [02:09<04:31, 22.62s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 9/20 | Active episodes per gpu: 2:  40%|████      | 8/20 [02:09<04:31, 22.62s/it]
+[33m(raylet)[0m [2026-03-14 17:10:44,539 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34159 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 17:10:54,543 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.34154 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 17:11:04,547 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.33996 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 17:11:14,551 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.33995 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 17:11:24,555 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.33994 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[33m(raylet)[0m [2026-03-14 17:11:34,559 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.33994 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 9/20 | Active episodes per gpu: 2:  45%|████▌     | 9/20 [03:01<05:49, 31.81s/it]4-agent rounds 10/20 | Active episodes per gpu: 1:  45%|████▌     | 9/20 [03:01<05:49, 31.81s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 10/20 | Active episodes per gpu: 1:  50%|█████     | 10/20 [03:05<03:54, 23.44s/it]4-agent rounds 11/20 | Active episodes per gpu: 1:  50%|█████     | 10/20 [03:06<03:54, 23.44s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 11/20 | Active episodes per gpu: 1:  55%|█████▌    | 11/20 [03:10<02:39, 17.68s/it]4-agent rounds 12/20 | Active episodes per gpu: 1:  55%|█████▌    | 11/20 [03:10<02:39, 17.68s/it]
+[33m(raylet)[0m [2026-03-14 17:11:44,563 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.33994 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 12/20 | Active episodes per gpu: 1:  60%|██████    | 12/20 [03:15<01:50, 13.77s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 13/20 | Active episodes per gpu: 1:  60%|██████    | 12/20 [03:15<01:50, 13.77s/it]
+[33m(raylet)[0m [2026-03-14 17:11:54,567 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.33989 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 13/20 | Active episodes per gpu: 1:  65%|██████▌   | 13/20 [03:23<01:24, 12.02s/it]4-agent rounds 14/20 | Active episodes per gpu: 1:  65%|██████▌   | 13/20 [03:23<01:24, 12.02s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 14/20 | Active episodes per gpu: 1:  70%|███████   | 14/20 [03:28<01:00, 10.03s/it]4-agent rounds 15/20 | Active episodes per gpu: 1:  70%|███████   | 14/20 [03:28<01:00, 10.03s/it]
+[33m(raylet)[0m [2026-03-14 17:12:04,571 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.33907 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 15/20 | Active episodes per gpu: 1:  75%|███████▌  | 15/20 [03:34<00:43,  8.70s/it]4-agent rounds 16/20 | Active episodes per gpu: 1:  75%|███████▌  | 15/20 [03:34<00:43,  8.70s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 16/20 | Active episodes per gpu: 1:  80%|████████  | 16/20 [03:40<00:31,  7.86s/it]4-agent rounds 17/20 | Active episodes per gpu: 1:  80%|████████  | 16/20 [03:40<00:31,  7.86s/it]
+[33m(raylet)[0m [2026-03-14 17:12:14,575 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.33907 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 17/20 | Active episodes per gpu: 1:  85%|████████▌ | 17/20 [03:46<00:21,  7.31s/it]4-agent rounds 18/20 | Active episodes per gpu: 1:  85%|████████▌ | 17/20 [03:46<00:21,  7.31s/it]
+[33m(raylet)[0m [2026-03-14 17:12:24,579 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.33906 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 18/20 | Active episodes per gpu: 1:  90%|█████████ | 18/20 [03:52<00:14,  7.01s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 19/20 | Active episodes per gpu: 1:  90%|█████████ | 18/20 [03:52<00:14,  7.01s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 19/20 | Active episodes per gpu: 1:  95%|█████████▌| 19/20 [03:59<00:06,  6.88s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 20/20 | Active episodes per gpu: 1:  95%|█████████▌| 19/20 [03:59<00:06,  6.88s/it]
+[33m(raylet)[0m [2026-03-14 17:12:34,582 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.33906 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 20/20 | Active episodes per gpu: 1: 100%|██████████| 20/20 [04:06<00:00,  6.91s/it]4-agent rounds 20/20 | Active episodes per gpu: 1: 100%|██████████| 20/20 [04:06<00:00, 12.31s/it]
+[33m(raylet)[0m [2026-03-14 17:12:44,587 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.33871 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m Multi-agent rounds:   0%|          | 0/20 [00:00<?, ?it/s]4-agent rounds 1/20 | Active episodes per gpu: 8:   0%|          | 0/20 [00:00<?, ?it/s]
+[33m(raylet)[0m [2026-03-14 17:12:54,591 E 2133239 2133263] (raylet) file_system_monitor.cc:116: /tmp/ray/session_2026-03-14_16-43-51_398528_2132575 is over 95% full, available space: 1.33866 GB; capacity: 1938.16 GB. Object creation will fail if spilling is required.
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 1/20 | Active episodes per gpu: 8:   5%|▌         | 1/20 [00:09<03:07,  9.88s/it]4-agent rounds 2/20 | Active episodes per gpu: 5:   5%|▌         | 1/20 [00:09<03:07,  9.88s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 2/20 | Active episodes per gpu: 5:  10%|█         | 2/20 [00:17<02:39,  8.83s/it]4-agent rounds 3/20 | Active episodes per gpu: 3:  10%|█         | 2/20 [00:18<02:39,  8.83s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 3/20 | Active episodes per gpu: 3:  15%|█▌        | 3/20 [00:24<02:11,  7.75s/it]4-agent rounds 4/20 | Active episodes per gpu: 3:  15%|█▌        | 3/20 [00:24<02:11,  7.75s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 4/20 | Active episodes per gpu: 3:  20%|██        | 4/20 [00:31<01:56,  7.31s/it]4-agent rounds 5/20 | Active episodes per gpu: 3:  20%|██        | 4/20 [00:31<01:56,  7.31s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 5/20 | Active episodes per gpu: 3:  25%|██▌       | 5/20 [00:41<02:04,  8.28s/it]4-agent rounds 6/20 | Active episodes per gpu: 3:  25%|██▌       | 5/20 [00:41<02:04,  8.28s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 6/20 | Active episodes per gpu: 3:  30%|███       | 6/20 [00:49<01:56,  8.34s/it]4-agent rounds 7/20 | Active episodes per gpu: 3:  30%|███       | 6/20 [00:49<01:56,  8.34s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 7/20 | Active episodes per gpu: 3:  35%|███▌      | 7/20 [01:00<01:58,  9.11s/it]4-agent rounds 8/20 | Active episodes per gpu: 3:  35%|███▌      | 7/20 [01:00<01:58,  9.11s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 8/20 | Active episodes per gpu: 3:  40%|████      | 8/20 [01:12<02:00, 10.05s/it]4-agent rounds 9/20 | Active episodes per gpu: 3:  40%|████      | 8/20 [01:12<02:00, 10.05s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 9/20 | Active episodes per gpu: 3:  45%|████▌     | 9/20 [01:23<01:53, 10.32s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 10/20 | Active episodes per gpu: 3:  45%|████▌     | 9/20 [01:23<01:53, 10.32s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 10/20 | Active episodes per gpu: 3:  50%|█████     | 10/20 [01:34<01:47, 10.74s/it]4-agent rounds 11/20 | Active episodes per gpu: 3:  50%|█████     | 10/20 [01:34<01:47, 10.74s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 11/20 | Active episodes per gpu: 3:  55%|█████▌    | 11/20 [01:47<01:41, 11.28s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 12/20 | Active episodes per gpu: 3:  55%|█████▌    | 11/20 [01:47<01:41, 11.28s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 12/20 | Active episodes per gpu: 3:  60%|██████    | 12/20 [02:00<01:35, 11.91s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 13/20 | Active episodes per gpu: 3:  60%|██████    | 12/20 [02:00<01:35, 11.91s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 13/20 | Active episodes per gpu: 3:  65%|██████▌   | 13/20 [02:17<01:34, 13.52s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 14/20 | Active episodes per gpu: 3:  65%|██████▌   | 13/20 [02:18<01:34, 13.52s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 14/20 | Active episodes per gpu: 3:  70%|███████   | 14/20 [02:36<01:30, 15.03s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 15/20 | Active episodes per gpu: 3:  70%|███████   | 14/20 [02:36<01:30, 15.03s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 15/20 | Active episodes per gpu: 3:  75%|███████▌  | 15/20 [02:56<01:22, 16.54s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 16/20 | Active episodes per gpu: 3:  75%|███████▌  | 15/20 [02:56<01:22, 16.54s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 16/20 | Active episodes per gpu: 3:  80%|████████  | 16/20 [03:17<01:12, 18.02s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 17/20 | Active episodes per gpu: 3:  80%|████████  | 16/20 [03:18<01:12, 18.02s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 17/20 | Active episodes per gpu: 3:  85%|████████▌ | 17/20 [03:41<00:58, 19.55s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 18/20 | Active episodes per gpu: 3:  85%|████████▌ | 17/20 [03:41<00:58, 19.55s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 18/20 | Active episodes per gpu: 3:  90%|█████████ | 18/20 [04:40<01:03, 31.57s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 19/20 | Active episodes per gpu: 2:  90%|█████████ | 18/20 [04:40<01:03, 31.57s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 19/20 | Active episodes per gpu: 2:  95%|█████████▌| 19/20 [04:54<00:26, 26.19s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 20/20 | Active episodes per gpu: 2:  95%|█████████▌| 19/20 [04:54<00:26, 26.19s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 20/20 | Active episodes per gpu: 2: 100%|██████████| 20/20 [05:08<00:00, 22.62s/it]4-agent rounds 20/20 | Active episodes per gpu: 2: 100%|██████████| 20/20 [05:08<00:00, 15.43s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m Multi-agent rounds:   0%|          | 0/20 [00:00<?, ?it/s]4-agent rounds 1/20 | Active episodes per gpu: 2:   0%|          | 0/20 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 1/20 | Active episodes per gpu: 2:   5%|▌         | 1/20 [00:04<01:22,  4.34s/it]4-agent rounds 2/20 | Active episodes per gpu: 1:   5%|▌         | 1/20 [00:04<01:22,  4.34s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 2/20 | Active episodes per gpu: 1:  10%|█         | 2/20 [00:07<01:05,  3.65s/it]4-agent rounds 3/20 | Active episodes per gpu: 1:  10%|█         | 2/20 [00:07<01:05,  3.65s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m 4-agent rounds 3/20 | Active episodes per gpu: 1:  15%|█▌        | 3/20 [00:10<00:59,  3.48s/it]4-agent rounds 3/20 | Active episodes per gpu: 1:  15%|█▌        | 3/20 [00:10<01:01,  3.59s/it]
+[36m(ActorRolloutRefWorker pid=2144720)[0m   "tie_word_embeddings": false,
+[36m(ActorRolloutRefWorker pid=2144720)[0m   "torch_dtype": "bfloat16",
+[36m(ActorRolloutRefWorker pid=2144720)[0m   "transformers_version": "4.51.3",
+[36m(ActorRolloutRefWorker pid=2144720)[0m   "use_cache": true,
+[36m(ActorRolloutRefWorker pid=2144720)[0m   "use_sliding_window": false,
+[36m(ActorRolloutRefWorker pid=2144720)[0m   "vocab_size": 152064
+[36m(ActorRolloutRefWorker pid=2144720)[0m }
+[36m(ActorRolloutRefWorker pid=2144720)[0m 
+[36m(ActorRolloutRefWorker pid=2144720)[0m NCCL version 2.20.5+cuda12.4
+[36m(ActorRolloutRefWorker pid=2144720)[0m Qwen2ForCausalLM contains 7.62B parameters
+[36m(ActorRolloutRefWorker pid=2144720)[0m wrap_policy: functools.partial(<function _or_policy at 0x7c0e44d6add0>, policies=[functools.partial(<function transformer_auto_wrap_policy at 0x7c0e44d6acb0>, transformer_layer_cls={<class 'transformers.models.qwen2.modeling_qwen2.Qwen2DecoderLayer'>})])
+[36m(ActorRolloutRefWorker pid=2144720)[0m Total steps: -1, num_warmup_steps: 0
+[36m(ActorRolloutRefWorker pid=2144720)[0m Before building multi-agent vllm rollout, memory allocated (GB): 14.185192108154297, memory reserved (GB): 18.693359375
+[36m(ActorRolloutRefWorker pid=2144720)[0m INFO 03-14 16:44:11 config.py:1005] Chunked prefill is enabled with max_num_batched_tokens=1024.
+[36m(ActorRolloutRefWorker pid=2144720)[0m WARNING 03-14 16:44:11 config.py:380] To see benefits of async output processing, enable CUDA graph. Since, enforce-eager is enabled, async output processor cannot be used
+[36m(ActorRolloutRefWorker pid=2144720)[0m local rank 0
+[36m(ActorRolloutRefWorker pid=2144720)[0m no hf weight loader need to be updated
+[36m(ActorRolloutRefWorker pid=2144720)[0m before init cache memory allocated: 30.504414208GB, reserved: 30.536630272GB
+[36m(ActorRolloutRefWorker pid=2144720)[0m after init cache memory allocated: 59.021356032GB, reserved: 59.057897472GB
+[36m(ActorRolloutRefWorker pid=2144720)[0m kwargs: {'n': 1, 'logprobs': 1, 'max_tokens': 200, 'detokenize': False, 'temperature': 1.0, 'top_k': -1, 'top_p': 1, 'ignore_eos': False}
+[36m(ActorRolloutRefWorker pid=2144720)[0m After building multi-agent vllm rollout, memory allocated (GB): 40.78273010253906, memory reserved (GB): 55.001953125
+[36m(ActorRolloutRefWorker pid=2144720)[0m After building multi-agent sharding manager, memory allocated (GB): 40.78273010253906, memory reserved (GB): 55.001953125
+[1/12] Start to process.
+[1/12] Start to generate.
+[2/12] Start to process.
+[2/12] Start to generate.
+[3/12] Start to process.
+[3/12] Start to generate.
+[4/12] Start to process.
+[4/12] Start to generate.
+[5/12] Start to process.
+[5/12] Start to generate.
+[6/12] Start to process.
+[6/12] Start to generate.
+[7/12] Start to process.
+[7/12] Start to generate.
+[8/12] Start to process.
+[8/12] Start to generate.
+[9/12] Start to process.
+[9/12] Start to generate.
+[10/12] Start to process.
+[10/12] Start to generate.
+[11/12] Start to process.
+[11/12] Start to generate.
+[12/12] Start to process.
+[12/12] Start to generate.
+============Total Task Evaluation============
+Avg@1: 0.7396441327200995
+Pass@1: 0.7777777777777778
+ExecutorNativeFormatViolations: 0.06666666666666665
+InvalidFormatTerminationRate: 0.06666666666666667
+InvalidActionTerminationRate: 0.0
+PlannerInvalidFormatRate: 0.0
+PlannerFallbackRate: 0.0
+PlannerTagOnlyRate: 0.0
+============Sub Task Evaluation============
+Category: babyai_all
+Avg@1: 0.7396441327200995
+Pass@1: 0.7777777777777778

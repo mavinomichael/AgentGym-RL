@@ -211,6 +211,12 @@ class DataParallelPPOActor(BasePPOActor):
             select_keys.append('ref_log_prob')
             if 'planner_response_mask' in data.batch.keys():
                 select_keys.append('planner_response_mask')
+        if 'response_speaker_ids' in data.batch.keys():
+            select_keys.append('response_speaker_ids')
+        if 'ppo_loss_weights' in data.batch.keys():
+            select_keys.append('ppo_loss_weights')
+        if 'kl_loss_weights' in data.batch.keys():
+            select_keys.append('kl_loss_weights')
         batch = data.select(batch_keys=select_keys).batch
 
         # Split to make minibatch iterator for updating the actor
@@ -242,14 +248,27 @@ class DataParallelPPOActor(BasePPOActor):
 
                 # all return: (bsz, response_length)
                 entropy, log_prob = self._forward_micro_batch(micro_batch=data, temperature=temperature)
-
-                pg_loss, pg_clipfrac, ppo_kl = core_algos.compute_policy_loss(old_log_prob=old_log_prob,
-                                                                             log_prob=log_prob,
-                                                                             advantages=advantages,
-                                                                             eos_mask=response_mask,
-                                                                             cliprange=clip_ratio)
+                if 'ppo_loss_weights' in data.keys():
+                    weighted_mask = response_mask.float() * data['ppo_loss_weights'].float()
+                    denom = torch.clamp_min(weighted_mask.sum(), 1.0)
+                    negative_approx_kl = log_prob - old_log_prob
+                    ratio = torch.exp(negative_approx_kl)
+                    pg_losses = -advantages * ratio
+                    pg_losses2 = -advantages * torch.clamp(ratio, 1.0 - clip_ratio, 1.0 + clip_ratio)
+                    pg_loss = (torch.max(pg_losses, pg_losses2) * weighted_mask).sum() / denom
+                    pg_clipfrac = (torch.gt(pg_losses2, pg_losses).float() * weighted_mask).sum() / denom
+                    ppo_kl = ((-negative_approx_kl) * weighted_mask).sum() / denom
+                else:
+                    pg_loss, pg_clipfrac, ppo_kl = core_algos.compute_policy_loss(old_log_prob=old_log_prob,
+                                                                                 log_prob=log_prob,
+                                                                                 advantages=advantages,
+                                                                                 eos_mask=response_mask,
+                                                                                 cliprange=clip_ratio)
                 # compute entropy loss from entropy
-                entropy_loss = verl_F.masked_mean(entropy, response_mask)
+                if 'ppo_loss_weights' in data.keys():
+                    entropy_loss = (entropy * weighted_mask).sum() / denom
+                else:
+                    entropy_loss = verl_F.masked_mean(entropy, response_mask)
 
                 # compute policy loss
                 policy_loss = pg_loss - entropy_loss * entropy_coeff
@@ -260,15 +279,24 @@ class DataParallelPPOActor(BasePPOActor):
                     kld = core_algos.kl_penalty(logprob=log_prob,
                                                 ref_logprob=ref_log_prob,
                                                 kl_penalty=self.config.kl_loss_type)
-                    planner_kl_weight = float(getattr(self.config, 'planner_kl_weight', 1.0))
-                    if planner_kl_weight != 1.0 and 'planner_response_mask' in data.keys():
-                        planner_mask = data['planner_response_mask'].float()
-                        kl_weights = response_mask.float() + planner_mask * (planner_kl_weight - 1.0)
+                    if 'kl_loss_weights' in data.keys():
+                        kl_weights = response_mask.float() * data['kl_loss_weights'].float()
                         denom = torch.clamp_min(kl_weights.sum(), 1.0)
                         kl_loss = (kld * kl_weights).sum() / denom
-                        metrics['actor/planner_kl_weight'] = planner_kl_weight
                     else:
-                        kl_loss = masked_mean(kld, response_mask)
+                        planner_kl_weight = float(getattr(self.config, 'planner_kl_weight', 1.0))
+                        if planner_kl_weight != 1.0 and 'planner_response_mask' in data.keys():
+                            planner_mask = data['planner_response_mask'].float()
+                            kl_weights = response_mask.float() + planner_mask * (planner_kl_weight - 1.0)
+                            denom = torch.clamp_min(kl_weights.sum(), 1.0)
+                            kl_loss = (kld * kl_weights).sum() / denom
+                            metrics['actor/planner_kl_weight'] = planner_kl_weight
+                        else:
+                            kl_loss = masked_mean(kld, response_mask)
+                    if 'kl_loss_weights' not in data.keys():
+                        planner_kl_weight = float(getattr(self.config, 'planner_kl_weight', 1.0))
+                        if planner_kl_weight != 1.0 and 'planner_response_mask' in data.keys():
+                            metrics['actor/planner_kl_weight'] = planner_kl_weight
 
                     policy_loss = policy_loss + kl_loss * self.config.kl_loss_coef
                     metrics['actor/kl_loss'] = kl_loss.detach().item()

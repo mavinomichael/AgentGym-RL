@@ -12,9 +12,51 @@ from .task_registry import TaskProfile
 CONTROL_SPEAKER_ID = 0
 PLANNER_SPEAKER_ID = 1
 EXECUTOR_SPEAKER_ID = 2
+PLANNER_REVIEWER_SPEAKER_ID = 3
+EXECUTOR_REVIEWER_SPEAKER_ID = 4
+SPEAKER_ID_TO_ROLE = {
+    CONTROL_SPEAKER_ID: "control",
+    PLANNER_SPEAKER_ID: "planner",
+    EXECUTOR_SPEAKER_ID: "executor",
+    PLANNER_REVIEWER_SPEAKER_ID: "planner_reviewer",
+    EXECUTOR_REVIEWER_SPEAKER_ID: "executor_reviewer",
+}
+ROLE_TO_SPEAKER_ID = {role: speaker_id for speaker_id, role in SPEAKER_ID_TO_ROLE.items()}
 QWEN_SYSTEM_PROMPT = "You are Qwen, created by Alibaba Cloud. You are a helpful assistant."
-PLANNER_MAX_WORDS = 12
-PLANNER_MAX_CHARS = 96
+PLANNER_MIN_WORDS = 2
+PLANNER_MAX_WORDS = 6
+PLANNER_MAX_CHARS = 48
+PLANNER_FILLER_OPENERS = (
+    "given that",
+    "given",
+    "since",
+    "in this environment",
+    "it seems",
+    "you should",
+    "you might",
+    "because",
+)
+PLANNER_NON_IMPERATIVE_STARTERS = {
+    "a",
+    "an",
+    "the",
+    "this",
+    "that",
+    "there",
+    "it",
+    "you",
+    "we",
+    "i",
+    "because",
+    "given",
+    "since",
+    "in",
+}
+PLANNER_STATE_WORDS = {"closed", "locked", "open", "opened"}
+PLANNER_DIRECTIONS = ("left", "right", "forward", "ahead", "front")
+PLANNER_REVIEW_MAX_WORDS = 32
+PLANNER_REVIEW_MAX_CHARS = 220
+REVIEWER_JUNK_RE = re.compile(r"^[\W_!?.:,;|`~^=-]+$")
 
 
 @dataclass(frozen=True)
@@ -29,6 +71,21 @@ class PlannerPayloadValidation:
     valid: bool
     reason: str
     message: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class PlannerReviewerDecision:
+    valid: bool
+    verdict: str
+    reason: str
+    reviewed_plan: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class ExecutorReviewerDecision:
+    valid: bool
+    verdict: str
+    reason: str
 
 
 def build_multi_agent_instruction(base_instruction: str) -> str:
@@ -68,13 +125,42 @@ def build_planner_turn_prompt(observation: str, task_profile: Optional[TaskProfi
         "[Planner Turn]\n"
         "[Environment Observation]\n"
         f"{observation}\n\n"
-        "Planner: provide exactly one short guidance sentence for the Executor.\n"
-        "Do not emit an environment action.\n"
-        "Do not output role labels or sections such as [PLANNER], [EXECUTOR], Planner:, Executor:, Thought:, or Action:.\n"
-        "Output only the guidance sentence.\n"
-        f"Keep it under {PLANNER_MAX_WORDS} words.\n"
-        "Use an imperative sentence such as 'Turn left toward the red ball.'\n"
-        "Focus only on the next step while preserving long-horizon progress."
+        "You are the Planner.\n\n"
+        "Your job is to give the Executor one short intent-level guidance phrase.\n\n"
+        "Output rules:\n"
+        "- Output exactly one phrase.\n"
+        f"- Output {PLANNER_MIN_WORDS} to {PLANNER_MAX_WORDS} words only.\n"
+        "- Start with a verb.\n"
+        "- Describe direction, focus, or target.\n"
+        "- Do not output the exact environment action.\n"
+        "- Do not explain.\n"
+        "- Do not hedge.\n"
+        "- Do not narrate the scene.\n"
+        "- Do not output role labels or sections such as:\n"
+        "  [PLANNER], [EXECUTOR], Planner:, Executor:, Thought:, Action:\n\n"
+        "Never start with filler openers such as:\n"
+        "- Given\n"
+        "- Given that\n"
+        "- Since\n"
+        "- In this environment\n"
+        "- It seems\n"
+        "- You should\n"
+        "- You might\n"
+        "- Because\n\n"
+        "Good examples:\n"
+        "- Approach the red key\n"
+        "- Face the blue door\n"
+        "- Search left side\n"
+        "- Check options for door\n"
+        "- Focus on purple box\n\n"
+        "Bad examples:\n"
+        "- turn right\n"
+        "- move forward\n"
+        "- Given that the key is nearby, you should move right first.\n"
+        "- In this environment, it seems exploration is needed.\n"
+        "- Thought: turn right\n"
+        "- Action: move forward\n\n"
+        "Output only the phrase."
     )
 
 
@@ -92,11 +178,159 @@ def build_planner_retry_prompt(
         f"{observation}\n\n"
         "[Previous Invalid Planner Output]\n"
         f"{invalid_planner_output}\n\n"
-        "Respond again with exactly one short guidance sentence.\n"
-        "Do not emit an environment action.\n"
-        "Do not output role labels or sections such as [PLANNER], [EXECUTOR], Planner:, Executor:, Thought:, or Action:.\n"
-        f"Keep it under {PLANNER_MAX_WORDS} words.\n"
-        "Output only the guidance sentence."
+        "Respond again.\n\n"
+        "Rules:\n"
+        "- Output exactly one phrase.\n"
+        f"- Output {PLANNER_MIN_WORDS} to {PLANNER_MAX_WORDS} words only.\n"
+        "- Start with a verb.\n"
+        "- Give intent-level guidance, not the exact environment action.\n"
+        "- No explanation.\n"
+        "- No filler openers.\n"
+        "- No role labels.\n"
+        "- No Thought: or Action:.\n\n"
+        "Good examples:\n"
+        "- Approach the red key\n"
+        "- Face the blue door\n"
+        "- Search left side\n\n"
+        "Bad examples:\n"
+        "- turn right\n"
+        "- move forward\n"
+        "- Given that the key is nearby, you should move right first.\n"
+        "- It seems you should explore.\n"
+        "- Thought: turn right\n"
+        "- Action: move forward\n\n"
+        "Output only the phrase."
+    )
+
+
+def build_long_planner_turn_prompt(observation: str, task_profile: Optional[TaskProfile] = None) -> str:
+    return (
+        "[Planner Turn]\n"
+        "[Environment Observation]\n"
+        f"{observation}\n\n"
+        "You are the Planner.\n\n"
+        "Think through the next useful move for the team.\n"
+        "You may use grounded natural-language reasoning, but keep it concise.\n\n"
+        "Rules:\n"
+        "- Stay grounded in the observation only.\n"
+        "- Output at most 64 tokens.\n"
+        "- Explain the next useful direction, focus, or target.\n"
+        "- Do not output BabyAI environment syntax.\n"
+        "- Do not output role labels or sections such as [PLANNER], [EXECUTOR], Planner:, Executor:, Thought:, Action:.\n"
+        "- Do not emit garbage characters or punctuation spam.\n"
+        "- Mention only objects, doors, directions, or actions that are supported by the observation.\n\n"
+        "Good examples:\n"
+        "- The red key is nearby, so focus on reaching it before exploring farther.\n"
+        "- Face the blue door first, then see whether the key is reachable.\n"
+        "- Check the available actions to verify which nearby object can be approached safely.\n\n"
+        "Bad examples:\n"
+        "- [PLANNER]\n"
+        "- Thought: move forward\n"
+        "- Action: turn right\n"
+        "- !!!!!!!!!!!!!!!!!!!!!\n\n"
+        "Output only the planner draft."
+    )
+
+
+def build_long_planner_retry_prompt(
+    observation: str,
+    invalid_planner_output: str,
+    reviewer_reason: str,
+    retry_count: int,
+    task_profile: Optional[TaskProfile] = None,
+) -> str:
+    return (
+        "[Planner Retry]\n"
+        f"Your previous planner draft was rejected by the Planner Reviewer.\n"
+        f"Reviewer reason: {reviewer_reason}\n"
+        f"Retry attempt: {retry_count}\n\n"
+        "[Environment Observation]\n"
+        f"{observation}\n\n"
+        "[Previous Planner Draft]\n"
+        f"{invalid_planner_output}\n\n"
+        "Respond again.\n\n"
+        "Rules:\n"
+        "- Stay grounded in the observation only.\n"
+        "- Output at most 64 tokens.\n"
+        "- Give useful planner-level guidance for the next step.\n"
+        "- Do not emit exact BabyAI env actions.\n"
+        "- Do not emit role labels, Thought:, or Action:.\n"
+        "- Do not emit garbage characters or punctuation spam.\n"
+        "- Prefer concrete, grounded guidance over generic filler.\n\n"
+        "Output only the planner draft."
+    )
+
+
+def build_planner_reviewer_prompt(
+    observation: str,
+    planner_draft: str,
+    retry_count: int = 0,
+    allow_repair: bool = False,
+    review_reason: Optional[str] = None,
+    task_profile: Optional[TaskProfile] = None,
+) -> str:
+    retry_note = f"Planner retries already used: {retry_count}\n" if retry_count else ""
+    repair_rule = (
+        "- Use Verdict: REPAIR only when retries are exhausted and you can safely rewrite the planner draft.\n"
+        if allow_repair
+        else "- Do not use Verdict: REPAIR yet. Use PASS or RETRY only.\n"
+    )
+    review_reason_block = f"Previous review reason: {review_reason}\n\n" if review_reason else ""
+    return (
+        "[Planner Reviewer Turn]\n"
+        "[Environment Observation]\n"
+        f"{observation}\n\n"
+        "[Planner Draft]\n"
+        f"{planner_draft}\n\n"
+        f"{review_reason_block}"
+        "You are the Planner Reviewer.\n"
+        "Judge whether the planner draft is grounded, non-garbage, and useful for the Executor.\n\n"
+        "Output exactly this schema:\n"
+        "Verdict: PASS | RETRY | REPAIR\n"
+        "Reason: <short reason>\n"
+        "ReviewedPlan: <clean reviewed plan>\n\n"
+        "Rules:\n"
+        f"{retry_note}"
+        "- ReviewedPlan is required for PASS and REPAIR.\n"
+        "- ReviewedPlan must be concise and executor-oriented.\n"
+        "- ReviewedPlan must be at most 32 words.\n"
+        "- ReviewedPlan must not be empty, tag-only, garbage, Thought:, or Action:.\n"
+        "- ReviewedPlan should not simply copy an exact BabyAI environment action.\n"
+        "- If the planner draft contains garbage, planner tags, unsupported claims, or is not useful, use RETRY.\n"
+        f"{repair_rule}"
+        "Output only the schema."
+    )
+
+
+def build_executor_reviewer_prompt(
+    observation: str,
+    reviewed_plan: str,
+    executor_output: str,
+    retry_count: int = 0,
+    review_reason: Optional[str] = None,
+    task_profile: Optional[TaskProfile] = None,
+) -> str:
+    review_reason_block = f"Previous review reason: {review_reason}\n\n" if review_reason else ""
+    return (
+        "[Executor Reviewer Turn]\n"
+        "[Environment Observation]\n"
+        f"{observation}\n\n"
+        "[Reviewed Planner Plan]\n"
+        f"{reviewed_plan}\n\n"
+        "[Executor Output]\n"
+        f"{executor_output}\n\n"
+        f"{review_reason_block}"
+        "You are the Executor Reviewer.\n"
+        "Judge whether the executor output satisfies the task-native format and can be checked by deterministic validation.\n\n"
+        "Output exactly this schema:\n"
+        "Verdict: PASS | RETRY\n"
+        "Reason: <short reason>\n\n"
+        "Rules:\n"
+        f"- Executor retries already used: {retry_count}\n"
+        "- PASS only if the output looks properly structured and grounded in the observation.\n"
+        "- Use RETRY when the output contains garbage, wrong format, multiple actions, role labels, or unsupported action text.\n"
+        "- Do not repair or rewrite the executor output yourself.\n"
+        "Output only the schema."
     )
 
 
@@ -212,6 +446,71 @@ def normalize_planner_payload(raw_text: str) -> str:
     return _strip_control_headers(text)
 
 
+def normalize_reviewer_payload(raw_text: str) -> str:
+    text = raw_text.strip()
+    for suffix in ("</s>", "<|im_end|>", "<|endoftext|>"):
+        if text.endswith(suffix):
+            text = text[: -len(suffix)].rstrip()
+    return _strip_control_headers(text)
+
+
+def rewrite_planner_payload(
+    raw_text: str,
+    observation: str,
+    task_profile: Optional[TaskProfile] = None,
+) -> Optional[str]:
+    normalized = normalize_planner_payload(raw_text)
+    if not normalized:
+        return None
+
+    available_actions = extract_available_actions_from_observation(observation)
+    exact_action_rewrite = _planner_guidance_from_exact_action(normalized, available_actions)
+    if exact_action_rewrite:
+        return _validated_rewritten_planner_phrase(exact_action_rewrite, observation, task_profile)
+
+    lowered = normalized.lower()
+    target = _select_best_planner_target(lowered, available_actions)
+    if target:
+        phrase = f"Face {target}" if "door" in target.split() else f"Approach {target}"
+        return _validated_rewritten_planner_phrase(phrase, observation, task_profile)
+
+    if "check" in lowered or "action" in lowered or "option" in lowered:
+        return _validated_rewritten_planner_phrase("Check options now", observation, task_profile)
+    if re.search(r"\bleft\b", lowered):
+        return _validated_rewritten_planner_phrase("Search left side", observation, task_profile)
+    if re.search(r"\bright\b", lowered):
+        return _validated_rewritten_planner_phrase("Search right side", observation, task_profile)
+    if any(token in lowered for token in ("forward", "ahead", "front")):
+        return _validated_rewritten_planner_phrase("Advance toward target", observation, task_profile)
+    if any(token in lowered for token in ("search", "explore", "look")):
+        return _validated_rewritten_planner_phrase("Search nearby objects", observation, task_profile)
+
+    fallback_target = _select_best_planner_target("", available_actions)
+    if fallback_target:
+        phrase = f"Face {fallback_target}" if "door" in fallback_target.split() else f"Approach {fallback_target}"
+        return _validated_rewritten_planner_phrase(phrase, observation, task_profile)
+    if available_actions:
+        return _validated_rewritten_planner_phrase("Check options now", observation, task_profile)
+    return None
+
+
+def rewrite_reviewed_planner_plan(
+    raw_text: str,
+    observation: str,
+    task_profile: Optional[TaskProfile] = None,
+) -> Optional[str]:
+    rewritten = rewrite_planner_payload(raw_text, observation=observation, task_profile=task_profile)
+    if rewritten:
+        return rewritten
+    fallback = planner_fallback_message()
+    validation = validate_reviewed_planner_plan(
+        fallback,
+        observation=observation,
+        task_profile=task_profile,
+    )
+    return validation.reviewed_plan if validation.valid else None
+
+
 def _strip_control_headers(text: str) -> str:
     header_pattern = re.compile(
         r"^(?:\[(?:executor response|planner message|executor|planner)\]\s*)+",
@@ -246,7 +545,196 @@ def _is_tag_only_planner_text(text: str) -> bool:
     return stripped == ""
 
 
-def validate_planner_payload(raw_text: str) -> PlannerPayloadValidation:
+def _collapse_planner_text(text: str) -> str:
+    collapsed = " ".join(text.split())
+    collapsed = re.sub(r"[.!?;,:\s]+$", "", collapsed)
+    return collapsed.strip()
+
+
+def _starts_with_filler_opener(text: str) -> bool:
+    lowered = text.lower()
+    return any(lowered.startswith(opener) for opener in PLANNER_FILLER_OPENERS)
+
+
+def _starts_with_non_imperative_token(text: str) -> bool:
+    first_token = re.findall(r"[A-Za-z]+", text.lower())
+    if not first_token:
+        return True
+    return first_token[0] in PLANNER_NON_IMPERATIVE_STARTERS
+
+
+def _clean_planner_target(target: str) -> str:
+    words = [word for word in target.lower().split() if not word.isdigit()]
+    words = [word for word in words if word not in PLANNER_STATE_WORDS]
+    words = [word for word in words if word not in {"the", "a", "an"}]
+    if not words:
+        return ""
+    return " ".join(words[:3])
+
+
+def _candidate_planner_targets(available_actions: List[str]) -> List[str]:
+    targets: List[str] = []
+    for action in available_actions:
+        target = ""
+        if action.startswith("go to "):
+            target = action[len("go to ") :]
+        elif action.startswith("pickup "):
+            target = action[len("pickup ") :]
+        elif action.startswith("toggle and go through "):
+            target = action[len("toggle and go through ") :]
+        if target:
+            cleaned = _clean_planner_target(target)
+            if cleaned and cleaned not in targets:
+                targets.append(cleaned)
+    return targets
+
+
+def _select_best_planner_target(text: str, available_actions: List[str]) -> Optional[str]:
+    candidates = _candidate_planner_targets(available_actions)
+    if not candidates:
+        return None
+    text_tokens = set(re.findall(r"[a-z]+", text.lower()))
+    best_target = None
+    best_score = -1
+    for candidate in candidates:
+        candidate_tokens = set(candidate.split())
+        score = len(candidate_tokens & text_tokens)
+        if score > best_score:
+            best_score = score
+            best_target = candidate
+    if best_score <= 0:
+        return candidates[0]
+    return best_target
+
+
+def _planner_guidance_from_exact_action(text: str, available_actions: List[str]) -> Optional[str]:
+    action = _normalize_action_text(text)
+    if action not in available_actions:
+        return None
+    if action == "turn left":
+        return "Search left side"
+    if action == "turn right":
+        return "Search right side"
+    if action == "move forward":
+        return "Advance toward target"
+    if action == "check available actions":
+        return "Check options now"
+    if action.startswith("go to "):
+        target = _clean_planner_target(action[len("go to ") :])
+        return f"Approach {target}" if target else None
+    if action.startswith("pickup "):
+        target = _clean_planner_target(action[len("pickup ") :])
+        return f"Approach {target}" if target else None
+    if action.startswith("toggle and go through "):
+        target = _clean_planner_target(action[len("toggle and go through ") :])
+        return f"Face {target}" if target else None
+    return None
+
+
+def _validated_rewritten_planner_phrase(
+    phrase: str,
+    observation: str,
+    task_profile: Optional[TaskProfile],
+) -> Optional[str]:
+    phrase = _collapse_planner_text(phrase)
+    if not phrase:
+        return None
+    words = phrase.split()
+    if len(words) > PLANNER_MAX_WORDS:
+        phrase = " ".join(words[:PLANNER_MAX_WORDS])
+    if phrase:
+        phrase = phrase[0].upper() + phrase[1:]
+    validation = validate_planner_payload(phrase, observation=observation, task_profile=task_profile)
+    return validation.message if validation.valid else None
+
+
+def _extract_labeled_value(text: str, label: str) -> Optional[str]:
+    match = re.search(
+        rf"{label}:\s*(.*?)(?=\n(?:Verdict|Reason|ReviewedPlan):|\Z)",
+        text,
+        re.IGNORECASE | re.DOTALL,
+    )
+    if not match:
+        return None
+    value = " ".join(match.group(1).strip().split())
+    return value or None
+
+
+def _looks_like_garbage(text: str) -> bool:
+    stripped = text.strip()
+    if not stripped:
+        return True
+    if REVIEWER_JUNK_RE.match(stripped):
+        return True
+    alnum_count = len(re.findall(r"[A-Za-z0-9]", stripped))
+    punct_count = len(re.findall(r"[^\w\s]", stripped))
+    return alnum_count == 0 or punct_count > max(alnum_count * 2, 12)
+
+
+def validate_reviewed_planner_plan(
+    reviewed_plan: str,
+    observation: str,
+    task_profile: Optional[TaskProfile] = None,
+) -> PlannerReviewerDecision:
+    normalized = normalize_reviewer_payload(reviewed_plan)
+    collapsed = _collapse_planner_text(normalized)
+    if not collapsed:
+        return PlannerReviewerDecision(valid=False, verdict="RETRY", reason="empty_reviewed_plan", reviewed_plan=None)
+    if _looks_like_garbage(collapsed):
+        return PlannerReviewerDecision(valid=False, verdict="RETRY", reason="garbage_reviewed_plan", reviewed_plan=None)
+    if _contains_disallowed_planner_tokens(collapsed):
+        return PlannerReviewerDecision(valid=False, verdict="RETRY", reason="contains_role_or_schema_tokens", reviewed_plan=None)
+    words = collapsed.split()
+    if len(words) > PLANNER_REVIEW_MAX_WORDS or len(collapsed) > PLANNER_REVIEW_MAX_CHARS:
+        return PlannerReviewerDecision(valid=False, verdict="RETRY", reason="reviewed_plan_too_long", reviewed_plan=None)
+    if task_profile is not None and task_profile.task_name == "babyai":
+        available_actions = extract_available_actions_from_observation(observation)
+        if _normalize_action_text(collapsed) in available_actions:
+            return PlannerReviewerDecision(valid=False, verdict="RETRY", reason="exact_env_action", reviewed_plan=None)
+    return PlannerReviewerDecision(valid=True, verdict="PASS", reason="ok", reviewed_plan=collapsed)
+
+
+def parse_planner_reviewer_output(
+    raw_text: str,
+    observation: str,
+    task_profile: Optional[TaskProfile] = None,
+) -> PlannerReviewerDecision:
+    normalized = normalize_reviewer_payload(raw_text)
+    if not normalized or _looks_like_garbage(normalized):
+        return PlannerReviewerDecision(valid=False, verdict="RETRY", reason="invalid_reviewer_schema", reviewed_plan=None)
+    verdict_match = re.search(r"Verdict:\s*(PASS|RETRY|REPAIR)\b", normalized, re.IGNORECASE)
+    if not verdict_match:
+        return PlannerReviewerDecision(valid=False, verdict="RETRY", reason="invalid_reviewer_schema", reviewed_plan=None)
+    verdict = verdict_match.group(1).upper()
+    reason = _extract_labeled_value(normalized, "Reason") or "unspecified"
+    reviewed_plan = _extract_labeled_value(normalized, "ReviewedPlan")
+    if verdict in {"PASS", "REPAIR"}:
+        if reviewed_plan is None:
+            return PlannerReviewerDecision(valid=False, verdict="RETRY", reason="missing_reviewed_plan", reviewed_plan=None)
+        validation = validate_reviewed_planner_plan(reviewed_plan, observation=observation, task_profile=task_profile)
+        if not validation.valid:
+            return PlannerReviewerDecision(valid=False, verdict="RETRY", reason=validation.reason, reviewed_plan=None)
+        return PlannerReviewerDecision(valid=True, verdict=verdict, reason=reason, reviewed_plan=validation.reviewed_plan)
+    return PlannerReviewerDecision(valid=True, verdict=verdict, reason=reason, reviewed_plan=None)
+
+
+def parse_executor_reviewer_output(raw_text: str) -> ExecutorReviewerDecision:
+    normalized = normalize_reviewer_payload(raw_text)
+    if not normalized or _looks_like_garbage(normalized):
+        return ExecutorReviewerDecision(valid=False, verdict="RETRY", reason="invalid_reviewer_schema")
+    verdict_match = re.search(r"Verdict:\s*(PASS|RETRY)\b", normalized, re.IGNORECASE)
+    if not verdict_match:
+        return ExecutorReviewerDecision(valid=False, verdict="RETRY", reason="invalid_reviewer_schema")
+    verdict = verdict_match.group(1).upper()
+    reason = _extract_labeled_value(normalized, "Reason") or "unspecified"
+    return ExecutorReviewerDecision(valid=True, verdict=verdict, reason=reason)
+
+
+def validate_planner_payload(
+    raw_text: str,
+    observation: str = "",
+    task_profile: Optional[TaskProfile] = None,
+) -> PlannerPayloadValidation:
     normalized = normalize_planner_payload(raw_text)
     if not normalized:
         return PlannerPayloadValidation(valid=False, reason="empty", message=None)
@@ -254,9 +742,20 @@ def validate_planner_payload(raw_text: str) -> PlannerPayloadValidation:
         return PlannerPayloadValidation(valid=False, reason="tag_only", message=None)
     if _contains_disallowed_planner_tokens(normalized):
         return PlannerPayloadValidation(valid=False, reason="contains_role_or_schema_tokens", message=None)
-    collapsed = " ".join(normalized.split())
-    if len(collapsed) > PLANNER_MAX_CHARS or len(collapsed.split()) > PLANNER_MAX_WORDS:
+    collapsed = _collapse_planner_text(normalized)
+    if _starts_with_filler_opener(collapsed):
+        return PlannerPayloadValidation(valid=False, reason="filler_opener", message=None)
+    words = collapsed.split()
+    if len(words) < PLANNER_MIN_WORDS:
+        return PlannerPayloadValidation(valid=False, reason="not_intent_phrase", message=None)
+    if len(collapsed) > PLANNER_MAX_CHARS or len(words) > PLANNER_MAX_WORDS:
         return PlannerPayloadValidation(valid=False, reason="too_long", message=None)
+    if _starts_with_non_imperative_token(collapsed):
+        return PlannerPayloadValidation(valid=False, reason="not_intent_phrase", message=None)
+    if task_profile is not None and task_profile.task_name == "babyai":
+        available_actions = extract_available_actions_from_observation(observation)
+        if _normalize_action_text(collapsed) in available_actions:
+            return PlannerPayloadValidation(valid=False, reason="exact_env_action", message=None)
     return PlannerPayloadValidation(valid=True, reason="ok", message=collapsed)
 
 

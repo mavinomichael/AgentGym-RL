@@ -14,7 +14,14 @@ try:
 except ModuleNotFoundError:  # pragma: no cover - fallback for lightweight test environments
     PreTrainedTokenizer = Any
 
-from .agent_vllm_rollout.planner_executor import CONTROL_SPEAKER_ID, EXECUTOR_SPEAKER_ID, PLANNER_SPEAKER_ID
+from .agent_vllm_rollout.planner_executor import (
+    CONTROL_SPEAKER_ID,
+    EXECUTOR_SPEAKER_ID,
+    EXECUTOR_REVIEWER_SPEAKER_ID,
+    PLANNER_SPEAKER_ID,
+    PLANNER_REVIEWER_SPEAKER_ID,
+    SPEAKER_ID_TO_ROLE,
+)
 
 
 def _pre_process_inputs(pad_token_id, prompt_token_ids: Any) -> List[int]:
@@ -85,6 +92,18 @@ class RolloutHandler:
         reward_event_mask: List[int],
         prompt_reward_event_mask: List[int],
         response_reward_event_mask: List[int],
+        planner_reviewer_response_mask: Optional[List[int]] = None,
+        prompt_planner_reviewer_response_mask: Optional[List[int]] = None,
+        response_planner_reviewer_response_mask: Optional[List[int]] = None,
+        executor_reviewer_response_mask: Optional[List[int]] = None,
+        prompt_executor_reviewer_response_mask: Optional[List[int]] = None,
+        response_executor_reviewer_response_mask: Optional[List[int]] = None,
+        ppo_loss_weights: Optional[List[float]] = None,
+        prompt_ppo_loss_weights: Optional[List[float]] = None,
+        response_ppo_loss_weights: Optional[List[float]] = None,
+        kl_loss_weights: Optional[List[float]] = None,
+        prompt_kl_loss_weights: Optional[List[float]] = None,
+        response_kl_loss_weights: Optional[List[float]] = None,
         max_response_len: int = 8192,
         max_model_len: int = 32768,
     ):
@@ -111,9 +130,25 @@ class RolloutHandler:
         self.planner_response_mask = planner_response_mask
         self.prompt_planner_response_mask = prompt_planner_response_mask
         self.response_planner_response_mask = response_planner_response_mask
+        self.planner_reviewer_response_mask = planner_reviewer_response_mask or [0] * len(input_ids)
+        self.prompt_planner_reviewer_response_mask = (
+            prompt_planner_reviewer_response_mask or [0] * len(prompt_ids)
+        )
+        self.response_planner_reviewer_response_mask = response_planner_reviewer_response_mask or []
         self.executor_response_mask = executor_response_mask
         self.prompt_executor_response_mask = prompt_executor_response_mask
         self.response_executor_response_mask = response_executor_response_mask
+        self.executor_reviewer_response_mask = executor_reviewer_response_mask or [0] * len(input_ids)
+        self.prompt_executor_reviewer_response_mask = (
+            prompt_executor_reviewer_response_mask or [0] * len(prompt_ids)
+        )
+        self.response_executor_reviewer_response_mask = response_executor_reviewer_response_mask or []
+        self.ppo_loss_weights = ppo_loss_weights or [0.0] * len(input_ids)
+        self.prompt_ppo_loss_weights = prompt_ppo_loss_weights or [0.0] * len(prompt_ids)
+        self.response_ppo_loss_weights = response_ppo_loss_weights or []
+        self.kl_loss_weights = kl_loss_weights or [0.0] * len(input_ids)
+        self.prompt_kl_loss_weights = prompt_kl_loss_weights or [0.0] * len(prompt_ids)
+        self.response_kl_loss_weights = response_kl_loss_weights or []
         self.score_values = score_values
         self.prompt_score_values = prompt_score_values
         self.response_score_values = response_score_values
@@ -128,6 +163,7 @@ class RolloutHandler:
         self.executor_native_format_valid = 1.0
         self.planner_output_valid = 1.0
         self.planner_fallback_used = 0.0
+        self.planner_rewrite_used = 0.0
         self.planner_tag_only = 0.0
         self.env_step_failed = 0.0
         self.timeout_occurred = 0.0
@@ -138,10 +174,15 @@ class RolloutHandler:
         self.latest_observation = ""
         self.latest_planner_message = ""
         self.latest_planner_context_used = ""
+        self.latest_planner_context_source = "original"
         self.latest_planner_validation_reason = "ok"
         self.latest_planner_raw_output = ""
         self.latest_planner_normalized_output = ""
         self.latest_planner_prompt = ""
+        self.planner_review_retry_count = 0.0
+        self.planner_review_repair_count = 0.0
+        self.executor_review_retry_count = 0.0
+        self.executor_review_passed = 1.0
         self.format_config = {
             "qwen": {
                 "assistant_prefix_msg": "\n<|im_start|>assistant\n",
@@ -161,7 +202,11 @@ class RolloutHandler:
         loss_mask: List[int],
         speaker_id: int,
         planner_mask: List[int],
+        planner_reviewer_mask: List[int],
         executor_mask: List[int],
+        executor_reviewer_mask: List[int],
+        ppo_weight_mask: List[float],
+        kl_weight_mask: List[float],
     ) -> None:
         self.input_ids += append_token_ids
         self.attention_mask += [1] * len(append_token_ids)
@@ -170,7 +215,11 @@ class RolloutHandler:
         self.loss_mask += loss_mask
         self.speaker_ids += [speaker_id] * len(append_token_ids)
         self.planner_response_mask += planner_mask
+        self.planner_reviewer_response_mask += planner_reviewer_mask
         self.executor_response_mask += executor_mask
+        self.executor_reviewer_response_mask += executor_reviewer_mask
+        self.ppo_loss_weights += ppo_weight_mask
+        self.kl_loss_weights += kl_weight_mask
         self.score_values += [0.0] * len(append_token_ids)
         self.reward_event_mask += [0] * len(append_token_ids)
 
@@ -204,7 +253,11 @@ class RolloutHandler:
             loss_mask=local_loss_mask,
             speaker_id=CONTROL_SPEAKER_ID,
             planner_mask=[0] * len(append_token_ids),
+            planner_reviewer_mask=[0] * len(append_token_ids),
             executor_mask=[0] * len(append_token_ids),
+            executor_reviewer_mask=[0] * len(append_token_ids),
+            ppo_weight_mask=[0.0] * len(append_token_ids),
+            kl_weight_mask=[0.0] * len(append_token_ids),
         )
 
     def add_assistant_message(
@@ -214,9 +267,11 @@ class RolloutHandler:
         speaker_id: int,
         prompt_content: Optional[str] = None,
         trainable: bool = True,
+        ppo_weight: float = 1.0,
+        kl_weight: float = 1.0,
         format: Literal["qwen"] = "qwen",
     ) -> None:
-        speaker = "planner" if speaker_id == PLANNER_SPEAKER_ID else "executor"
+        speaker = SPEAKER_ID_TO_ROLE.get(speaker_id, "assistant")
         prompt_content = prompt_content if prompt_content is not None else content
         self.messages.append(
             Message(role="assistant", content=content, speaker=speaker, prompt_content=prompt_content)
@@ -252,13 +307,25 @@ class RolloutHandler:
         local_loss_mask += suffix_mask
         role_mask += suffix_mask
         planner_mask = role_mask if speaker_id == PLANNER_SPEAKER_ID else [0] * len(role_mask)
+        planner_reviewer_mask = role_mask if speaker_id == PLANNER_REVIEWER_SPEAKER_ID else [0] * len(role_mask)
         executor_mask = role_mask if speaker_id == EXECUTOR_SPEAKER_ID else [0] * len(role_mask)
+        executor_reviewer_mask = role_mask if speaker_id == EXECUTOR_REVIEWER_SPEAKER_ID else [0] * len(role_mask)
+        if trainable:
+            ppo_weight_mask = [float(ppo_weight) if token else 0.0 for token in role_mask]
+            kl_weight_mask = [float(kl_weight) if token else 0.0 for token in role_mask]
+        else:
+            ppo_weight_mask = [0.0] * len(role_mask)
+            kl_weight_mask = [0.0] * len(role_mask)
         self._append_segment(
             append_token_ids=append_token_ids,
             loss_mask=local_loss_mask,
             speaker_id=speaker_id,
             planner_mask=planner_mask,
+            planner_reviewer_mask=planner_reviewer_mask,
             executor_mask=executor_mask,
+            executor_reviewer_mask=executor_reviewer_mask,
+            ppo_weight_mask=ppo_weight_mask,
+            kl_weight_mask=kl_weight_mask,
         )
         if speaker_id == PLANNER_SPEAKER_ID and trainable:
             self.last_planner_score_index = len(self.input_ids) - 1
@@ -284,7 +351,11 @@ class RolloutHandler:
         self.loss_mask = self.loss_mask[: self.max_model_len]
         self.speaker_ids = self.speaker_ids[: self.max_model_len]
         self.planner_response_mask = self.planner_response_mask[: self.max_model_len]
+        self.planner_reviewer_response_mask = self.planner_reviewer_response_mask[: self.max_model_len]
         self.executor_response_mask = self.executor_response_mask[: self.max_model_len]
+        self.executor_reviewer_response_mask = self.executor_reviewer_response_mask[: self.max_model_len]
+        self.ppo_loss_weights = self.ppo_loss_weights[: self.max_model_len]
+        self.kl_loss_weights = self.kl_loss_weights[: self.max_model_len]
         self.score_values = self.score_values[: self.max_model_len]
         self.reward_event_mask = self.reward_event_mask[: self.max_model_len]
 
@@ -296,6 +367,10 @@ class RolloutHandler:
         self.response_loss_mask = self.loss_mask[response_slice]
         self.response_speaker_ids = self.speaker_ids[response_slice]
         self.response_planner_response_mask = self.planner_response_mask[response_slice]
+        self.response_planner_reviewer_response_mask = self.planner_reviewer_response_mask[response_slice]
         self.response_executor_response_mask = self.executor_response_mask[response_slice]
+        self.response_executor_reviewer_response_mask = self.executor_reviewer_response_mask[response_slice]
+        self.response_ppo_loss_weights = self.ppo_loss_weights[response_slice]
+        self.response_kl_loss_weights = self.kl_loss_weights[response_slice]
         self.response_score_values = self.score_values[response_slice]
         self.response_reward_event_mask = self.reward_event_mask[response_slice]
