@@ -45,13 +45,13 @@ def test_turn_prompts_are_role_specific_without_role_prefixes():
     planner_prompt = planner_executor.build_planner_turn_prompt(observation, profile)
     executor_prompt = planner_executor.build_executor_turn_prompt(observation, "Use the search box.", profile)
     assert "Planner Turn" in planner_prompt
-    assert "short intent-level guidance phrase" in planner_prompt
+    assert "original task instruction, action surface, and final response format remain unchanged" in planner_prompt
+    assert "next valid single-agent response" in planner_prompt
     assert "Output 2 to 6 words only." in planner_prompt
     assert "Do not output the exact environment action." in planner_prompt
-    assert "Good examples:" in planner_prompt
-    assert "Bad examples:" in planner_prompt
     assert "Executor Turn" in executor_prompt
     assert "Use the search box." in executor_prompt
+    assert "original single-agent agent would" in executor_prompt
     assert "Do not prepend role labels" in executor_prompt
 
 
@@ -79,6 +79,7 @@ def test_long_planner_prompt_and_retry_prompt_support_reviewer_topology():
         task_profile=profile,
     )
     assert "Output at most 64 tokens." in planner_prompt
+    assert "next valid single-agent response" in planner_prompt
     assert "planner-level guidance" in retry_prompt
     assert "Reviewer reason: garbage" in retry_prompt
 
@@ -243,14 +244,14 @@ def test_planner_rewrite_turns_long_prose_into_short_intent_phrase():
     assert rewritten != "move forward"
 
 
-def test_babyai_executor_prompt_includes_strict_action_constraints():
+def test_babyai_executor_prompt_stays_close_to_single_agent_contract():
     observation = 'obs\nAvailable actions: ["turn left", "turn right", "move forward"]'
     profile = planner_executor.get_task_profile("babyai")
     executor_prompt = planner_executor.build_executor_turn_prompt(observation, "Go near the key.", profile)
-    assert "BabyAI strict rules" in executor_prompt
-    assert "Action must be exactly one of" in executor_prompt
-    assert "Go, Up, Left, or Right" in executor_prompt
-    assert "[Executor Response]" in executor_prompt
+    assert "BabyAI reminder" in executor_prompt
+    assert "original single-agent agent would" in executor_prompt
+    assert "Action must be exactly one of" not in executor_prompt
+    assert "[Executor Response]" not in executor_prompt
 
 
 def test_babyai_executor_retry_prompt_restates_schema_and_allowed_actions():

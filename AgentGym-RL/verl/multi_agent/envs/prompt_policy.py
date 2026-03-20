@@ -90,18 +90,19 @@ class ExecutorReviewerDecision:
 
 def build_multi_agent_instruction(base_instruction: str) -> str:
     return (
-        "You are a two-agent team with a shared objective and shared reward.\n\n"
-        "Roles:\n"
-        "- Planner: analyze the latest environment state, reason about long-horizon progress, and send concise guidance to the Executor. Never issue an environment action.\n"
-        "- Executor: follow the Planner's guidance and produce exactly one next environment response in the original task format.\n\n"
+        f"{base_instruction}\n\n"
+        "You will now solve the same task as a cooperative multi-agent team with shared reward.\n"
+        "Keep the original task instruction, action surface, and environment-facing response format unchanged.\n\n"
+        "Team protocol:\n"
+        "- Planner: send short non-environment-facing guidance to help with the next response.\n"
+        "- Executor: produce the actual environment-facing response in the original single-agent format.\n"
+        "- Reviewers, if present, only check drafts and do not change the task definition.\n\n"
         "Rules:\n"
-        "- Only the Executor may interact with the environment.\n"
-        "- Planner and Executor cooperate through explicit natural-language communication.\n"
-        "- The Executor must respond in the original task format exactly.\n"
-        "- Do not prepend role labels like Planner: or Executor: to environment-facing outputs.\n\n"
-        "Original task instructions:\n"
-        f"{base_instruction}"
+        "- Only the Executor may emit the final environment-facing response.\n"
+        "- Planner and reviewers must not emit the final environment response.\n"
+        "- Do not prepend role labels like Planner: or Executor: to the environment-facing response."
     )
+
 
 
 def build_multi_agent_bootstrap(env_client, task_profile: Optional[TaskProfile] = None) -> Tuple[List[dict], str]:
@@ -126,42 +127,21 @@ def build_planner_turn_prompt(observation: str, task_profile: Optional[TaskProfi
         "[Environment Observation]\n"
         f"{observation}\n\n"
         "You are the Planner.\n\n"
-        "Your job is to give the Executor one short intent-level guidance phrase.\n\n"
+        "The original task instruction, action surface, and final response format remain unchanged.\n"
+        "Help the Executor produce the next valid single-agent response.\n\n"
         "Output rules:\n"
-        "- Output exactly one phrase.\n"
+        "- Output exactly one short guidance phrase.\n"
         f"- Output {PLANNER_MIN_WORDS} to {PLANNER_MAX_WORDS} words only.\n"
         "- Start with a verb.\n"
-        "- Describe direction, focus, or target.\n"
+        "- Focus on the next useful direction, object, or constraint.\n"
+        "- Stay grounded in the observation only.\n"
+        "- Do not emit the final environment response.\n"
         "- Do not output the exact environment action.\n"
         "- Do not explain.\n"
-        "- Do not hedge.\n"
-        "- Do not narrate the scene.\n"
-        "- Do not output role labels or sections such as:\n"
-        "  [PLANNER], [EXECUTOR], Planner:, Executor:, Thought:, Action:\n\n"
-        "Never start with filler openers such as:\n"
-        "- Given\n"
-        "- Given that\n"
-        "- Since\n"
-        "- In this environment\n"
-        "- It seems\n"
-        "- You should\n"
-        "- You might\n"
-        "- Because\n\n"
-        "Good examples:\n"
-        "- Approach the red key\n"
-        "- Face the blue door\n"
-        "- Search left side\n"
-        "- Check options for door\n"
-        "- Focus on purple box\n\n"
-        "Bad examples:\n"
-        "- turn right\n"
-        "- move forward\n"
-        "- Given that the key is nearby, you should move right first.\n"
-        "- In this environment, it seems exploration is needed.\n"
-        "- Thought: turn right\n"
-        "- Action: move forward\n\n"
-        "Output only the phrase."
+        "- Do not use role labels, Thought:, or Action:.\n\n"
+        "Output only the guidance phrase."
     )
+
 
 
 def build_planner_retry_prompt(
@@ -180,9 +160,11 @@ def build_planner_retry_prompt(
         f"{invalid_planner_output}\n\n"
         "Respond again.\n\n"
         "Rules:\n"
+        "- The original task instruction and action surface remain unchanged.\n"
         "- Output exactly one phrase.\n"
         f"- Output {PLANNER_MIN_WORDS} to {PLANNER_MAX_WORDS} words only.\n"
         "- Start with a verb.\n"
+        "- Help the Executor produce the next valid single-agent response.\n"
         "- Give intent-level guidance, not the exact environment action.\n"
         "- No explanation.\n"
         "- No filler openers.\n"
@@ -203,33 +185,28 @@ def build_planner_retry_prompt(
     )
 
 
+
 def build_long_planner_turn_prompt(observation: str, task_profile: Optional[TaskProfile] = None) -> str:
     return (
         "[Planner Turn]\n"
         "[Environment Observation]\n"
         f"{observation}\n\n"
         "You are the Planner.\n\n"
-        "Think through the next useful move for the team.\n"
+        "The original task instruction, action surface, and final response format remain unchanged.\n"
+        "Think through the next useful move so the Executor can produce the next valid single-agent response.\n"
         "You may use grounded natural-language reasoning, but keep it concise.\n\n"
         "Rules:\n"
         "- Stay grounded in the observation only.\n"
         "- Output at most 64 tokens.\n"
         "- Explain the next useful direction, focus, or target.\n"
-        "- Do not output BabyAI environment syntax.\n"
+        "- Do not emit the final environment response.\n"
+        "- Do not emit exact BabyAI environment syntax.\n"
         "- Do not output role labels or sections such as [PLANNER], [EXECUTOR], Planner:, Executor:, Thought:, Action:.\n"
         "- Do not emit garbage characters or punctuation spam.\n"
         "- Mention only objects, doors, directions, or actions that are supported by the observation.\n\n"
-        "Good examples:\n"
-        "- The red key is nearby, so focus on reaching it before exploring farther.\n"
-        "- Face the blue door first, then see whether the key is reachable.\n"
-        "- Check the available actions to verify which nearby object can be approached safely.\n\n"
-        "Bad examples:\n"
-        "- [PLANNER]\n"
-        "- Thought: move forward\n"
-        "- Action: turn right\n"
-        "- !!!!!!!!!!!!!!!!!!!!!\n\n"
         "Output only the planner draft."
     )
+
 
 
 def build_long_planner_retry_prompt(
@@ -250,15 +227,18 @@ def build_long_planner_retry_prompt(
         f"{invalid_planner_output}\n\n"
         "Respond again.\n\n"
         "Rules:\n"
+        "- The original task instruction and action surface remain unchanged.\n"
         "- Stay grounded in the observation only.\n"
         "- Output at most 64 tokens.\n"
         "- Give useful planner-level guidance for the next step.\n"
+        "- Help the Executor produce the next valid single-agent response.\n"
         "- Do not emit exact BabyAI env actions.\n"
         "- Do not emit role labels, Thought:, or Action:.\n"
         "- Do not emit garbage characters or punctuation spam.\n"
         "- Prefer concrete, grounded guidance over generic filler.\n\n"
         "Output only the planner draft."
     )
+
 
 
 def build_planner_reviewer_prompt(
@@ -284,7 +264,7 @@ def build_planner_reviewer_prompt(
         f"{planner_draft}\n\n"
         f"{review_reason_block}"
         "You are the Planner Reviewer.\n"
-        "Judge whether the planner draft is grounded, non-garbage, and useful for the Executor.\n\n"
+        "Judge whether the planner draft is grounded, non-garbage, and useful for helping the Executor produce the next valid single-agent response.\n\n"
         "Output exactly this schema:\n"
         "Verdict: PASS | RETRY | REPAIR\n"
         "Reason: <short reason>\n"
@@ -321,7 +301,7 @@ def build_executor_reviewer_prompt(
         f"{executor_output}\n\n"
         f"{review_reason_block}"
         "You are the Executor Reviewer.\n"
-        "Judge whether the executor output satisfies the task-native format and can be checked by deterministic validation.\n\n"
+        "Judge whether the executor output matches the original single-agent task-native format and can be checked by deterministic validation.\n\n"
         "Output exactly this schema:\n"
         "Verdict: PASS | RETRY\n"
         "Reason: <short reason>\n\n"
@@ -342,21 +322,16 @@ def build_executor_turn_prompt(
         if task_profile is not None
         else "Use the original task-native format exactly."
     )
-    strict_executor_rules = ""
+    executor_rules = ""
     if task_profile is not None and task_profile.task_name == "babyai":
-        available_actions = extract_available_actions_from_observation(observation)
-        action_list = ", ".join(available_actions) if available_actions else "(read from observation)"
-        strict_executor_rules = (
-            "\nBabyAI strict rules:\n"
-            "- Your response must be exactly this structure:\n"
+        executor_rules = (
+            "\nBabyAI reminder:\n"
+            "- Keep the original single-agent structure:\n"
             "Thought:\n"
-            "<one short sentence>\n\n"
+            "<brief thought>\n\n"
             "Action:\n"
-            "<exactly one action>\n"
-            f"- Action must be exactly one of: {action_list}\n"
-            "- Do not output bare words like Go, Up, Left, or Right.\n"
-            "- Do not output multiple Action lines.\n"
-            "- Do not copy prompt headers such as [Executor Response] or [Planner Message].\n"
+            "<one action>\n"
+            "- Output exactly one Action line.\n"
         )
 
     return (
@@ -365,11 +340,15 @@ def build_executor_turn_prompt(
         f"{observation}\n\n"
         "[Latest Planner Message]\n"
         f"{planner_message}\n\n"
-        "Produce exactly one next environment response in the original task-native format.\n"
+        "You are the Executor.\n"
+        "Produce the next environment response exactly as the original single-agent agent would.\n"
+        "The original task instruction, action surface, and response format remain unchanged.\n"
+        "Use the planner message as guidance only; if it conflicts with the observation, follow the observation and the original task instruction.\n"
         f"Format requirement: {format_hint}\n"
         "Do not prepend role labels like Planner: or Executor:."
-        f"{strict_executor_rules}"
+        f"{executor_rules}"
     )
+
 
 
 def build_executor_retry_prompt(
@@ -397,7 +376,7 @@ def build_executor_retry_prompt(
             f"{planner_message}\n\n"
             "[Previous Invalid Executor Output]\n"
             f"{invalid_executor_output}\n\n"
-            "Respond again with exactly one valid BabyAI response.\n"
+            "Respond again with exactly one valid BabyAI response in the original single-agent format.\n"
             "Your response must be exactly this structure:\n"
             "Thought:\n"
             "<one short sentence>\n\n"

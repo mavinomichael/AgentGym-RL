@@ -14,7 +14,7 @@ export DATA_ROOT="${DATA_ROOT:-$(dirname "$TRAIN_ROOT")}"
 export ENV_SERVER_URL="${ENV_SERVER_URL:-http://127.0.0.1:36005}"
 export SAVE_ROOT="${SAVE_ROOT:-/dev/shm/agentgym_saves}"
 export LOG_ROOT="${LOG_ROOT:-/dev/shm/agentgym_logs}"
-export EXP_NAME="${EXP_NAME:-babyai_reviewers_200_8gpu}"
+export EXP_NAME="${EXP_NAME:-babyai_2agent_scaling_200_8gpu}"
 export N_GPUS="${N_GPUS:-8}"
 export NNODES="${NNODES:-1}"
 export TP_SIZE="${TP_SIZE:-1}"
@@ -29,8 +29,8 @@ export PYTHON_BIN="${PYTHON_BIN:-python3}"
 export TOTAL_TRAINING_STEPS="${TOTAL_TRAINING_STEPS:-201}"
 export SAVE_FREQ="${SAVE_FREQ:-50}"
 export CHECKPOINT_STEPS="${CHECKPOINT_STEPS:-50 100 150 200}"
-export ROUNDS_CTRL_TYPE="${ROUNDS_CTRL_TYPE:-fixed}"
-export ROUNDS_CTRL_ROUNDS="${ROUNDS_CTRL_ROUNDS:-20}"
+export ROUNDS_CTRL_TYPE="${ROUNDS_CTRL_TYPE:-scaling_inter_stepwise}"
+export ROUNDS_CTRL_ROUNDS="${ROUNDS_CTRL_ROUNDS:-[6,13,20]}"
 export ROUNDS_CTRL_STEPS="${ROUNDS_CTRL_STEPS:-100}"
 
 RUN_DIR="$SAVE_ROOT/agentgym_multi_agent/$EXP_NAME"
@@ -94,25 +94,21 @@ run_eval() {
       rollout.gpu_memory_utilization=0.55 \
       rollout.max_num_batched_tokens=1024 \
       rollout.max_num_seqs=16 \
-      multi_agent.topology=planner_executor_reviewers \
-      multi_agent.invalid_output.max_retries=5 \
+      multi_agent.topology=planner_executor \
+      multi_agent.invalid_output.max_retries=2 \
       multi_agent.invalid_output.retry_temperature=0.2 \
       multi_agent.invalid_output.retry_max_tokens=80 \
-      multi_agent.invalid_output.planner_max_retries=5 \
+      multi_agent.invalid_output.planner_max_retries=3 \
       multi_agent.invalid_output.planner_retry_temperature=0.1 \
-      multi_agent.invalid_output.planner_retry_max_tokens=64 \
-      multi_agent.roles.planner.max_tokens=64 \
-      multi_agent.roles.planner.temperature=0.7 \
-      multi_agent.roles.planner_reviewer.max_tokens=96 \
-      multi_agent.roles.planner_reviewer.temperature=0.2 \
-      multi_agent.roles.executor_reviewer.max_tokens=64 \
-      multi_agent.roles.executor_reviewer.temperature=0.2 \
+      multi_agent.invalid_output.planner_retry_max_tokens=16 \
+      multi_agent.roles.planner.max_tokens=16 \
+      multi_agent.roles.planner.temperature=0.2 \
       multi_agent.debug.trace_executor_payload=false
   ) 2>&1 | tee "$LOG_DIR/eval_step${step}.log"
 }
 
 cleanup_old_ray_sessions
-multi_agent::print_run_header "babyai-reviewers-200-8gpu" "$TASK_NAME"
+multi_agent::print_run_header "babyai-2agent-scaling-200-8gpu" "$TASK_NAME"
 printf '  %-18s %s\n' "RUN_DIR" "$RUN_DIR"
 printf '  %-18s %s\n' "TRACE_DIR" "$TRACE_DIR"
 printf '  %-18s %s\n' "TOTAL_STEPS" "$TOTAL_TRAINING_STEPS"
@@ -121,6 +117,7 @@ printf '  %-18s %s\n' "CHECKPOINTS" "$CHECKPOINT_STEPS"
 printf '  %-18s %s\n' "ROUNDS_CTRL" "$ROUNDS_CTRL_TYPE"
 printf '  %-18s %s\n' "ROUNDS" "$ROUNDS_CTRL_ROUNDS"
 printf '  %-18s %s\n' "ROUND_STEP" "$ROUNDS_CTRL_STEPS"
+
 (
   cd "$TRAIN_ROOT"
   HYDRA_FULL_ERROR=1 \
@@ -162,21 +159,18 @@ printf '  %-18s %s\n' "ROUND_STEP" "$ROUNDS_CTRL_STEPS"
     trainer.save_freq=$SAVE_FREQ \
     algo.use_kl_loss=true \
     algo.kl_coef=0.001 \
-    multi_agent.topology=planner_executor_reviewers \
-    multi_agent.roles.planner.max_tokens=64 \
-    multi_agent.roles.planner.temperature=0.7 \
-    multi_agent.roles.planner_reviewer.max_tokens=96 \
-    multi_agent.roles.planner_reviewer.temperature=0.2 \
-    multi_agent.roles.executor_reviewer.max_tokens=64 \
-    multi_agent.roles.executor_reviewer.temperature=0.2 \
+    multi_agent.topology=planner_executor \
+    multi_agent.roles.planner.max_tokens=16 \
+    multi_agent.roles.planner.temperature=0.2 \
+    actor_rollout_ref.actor.planner_kl_weight=4.0 \
     multi_agent.invalid_output.policy=terminate_with_penalty \
     multi_agent.invalid_output.penalty=-0.2 \
-    multi_agent.invalid_output.max_retries=5 \
+    multi_agent.invalid_output.max_retries=2 \
     multi_agent.invalid_output.retry_temperature=0.2 \
     multi_agent.invalid_output.retry_max_tokens=80 \
-    multi_agent.invalid_output.planner_max_retries=5 \
+    multi_agent.invalid_output.planner_max_retries=3 \
     multi_agent.invalid_output.planner_retry_temperature=0.1 \
-    multi_agent.invalid_output.planner_retry_max_tokens=64 \
+    multi_agent.invalid_output.planner_retry_max_tokens=16 \
     multi_agent.debug.trace_executor_payload=true \
     multi_agent.debug.trace_dir="$TRACE_DIR" \
     multi_agent.debug.trace_max_chars=800 \
@@ -193,4 +187,4 @@ for step in $CHECKPOINT_STEPS; do
   run_eval "$step"
 done
 
-printf '4-agent reviewer run complete.\n'
+printf '2-agent scaling run complete.\n'
