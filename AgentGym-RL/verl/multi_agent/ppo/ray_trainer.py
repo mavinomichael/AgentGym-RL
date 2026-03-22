@@ -3,6 +3,7 @@
 # Original file left untouched for comparison.
 
 from copy import deepcopy
+import re
 import uuid
 
 import numpy as np
@@ -24,6 +25,23 @@ from verl.agent_trainer.ppo.ray_trainer import compute_data_metrics as compute_s
 from verl.multi_agent.utils.agent_dataset.rl_dataset import RLHFDataset, collate_fn
 
 
+def _parse_save_steps(raw_value):
+    if raw_value is None:
+        return set()
+    if isinstance(raw_value, str):
+        return {int(token) for token in re.findall(r"\d+", raw_value)}
+
+    save_steps = set()
+    try:
+        for item in raw_value:
+            if item is None:
+                continue
+            save_steps.add(int(item))
+    except TypeError:
+        return set()
+    return save_steps
+
+
 def _infer_task_name(batch) -> str:
     try:
         item_ids = batch.non_tensor_batch.get("item_id")
@@ -41,15 +59,7 @@ def compute_data_metrics(batch, use_critic=True):
 
     task_name = _infer_task_name(batch)
     planner_tokens = batch.batch["planner_response_mask"].sum(-1).float()
-    planner_reviewer_tokens = batch.batch.get(
-        "planner_reviewer_response_mask",
-        torch.zeros_like(batch.batch["planner_response_mask"]),
-    ).sum(-1).float()
     executor_tokens = batch.batch["executor_response_mask"].sum(-1).float()
-    executor_reviewer_tokens = batch.batch.get(
-        "executor_reviewer_response_mask",
-        torch.zeros_like(batch.batch["executor_response_mask"]),
-    ).sum(-1).float()
     reward_events = batch.batch["reward_event_mask"].sum(-1).float()
     env_rounds = batch.batch.get("team_env_rounds", batch.batch["task_rounds"]).float()
     valid_actions = batch.batch.get("executor_action_valid", torch.ones_like(env_rounds, dtype=torch.float32)).float()
@@ -65,33 +75,12 @@ def compute_data_metrics(batch, use_critic=True):
     planner_output_valid = batch.batch.get(
         "planner_output_valid", torch.ones_like(env_rounds, dtype=torch.float32)
     ).float()
-    planner_fallback_used = batch.batch.get(
-        "planner_fallback_used", torch.zeros_like(env_rounds, dtype=torch.float32)
-    ).float()
-    planner_rewrite_used = batch.batch.get(
-        "planner_rewrite_used", torch.zeros_like(env_rounds, dtype=torch.float32)
-    ).float()
-    planner_tag_only = batch.batch.get("planner_tag_only", torch.zeros_like(env_rounds, dtype=torch.float32)).float()
-    planner_review_retry_count = batch.batch.get(
-        "planner_review_retry_count", torch.zeros_like(env_rounds, dtype=torch.float32)
-    ).float()
-    planner_review_repair_count = batch.batch.get(
-        "planner_review_repair_count", torch.zeros_like(env_rounds, dtype=torch.float32)
-    ).float()
-    executor_review_retry_count = batch.batch.get(
-        "executor_review_retry_count", torch.zeros_like(env_rounds, dtype=torch.float32)
-    ).float()
-    executor_review_passed = batch.batch.get(
-        "executor_review_passed", torch.ones_like(env_rounds, dtype=torch.float32)
-    ).float()
     invalid_terminated = invalid_format_terminated + invalid_action_terminated
 
     metrics.update(
         {
             "planner_tokens/mean": torch.mean(planner_tokens).detach().item(),
-            "planner_reviewer_tokens/mean": torch.mean(planner_reviewer_tokens).detach().item(),
             "executor_tokens/mean": torch.mean(executor_tokens).detach().item(),
-            "executor_reviewer_tokens/mean": torch.mean(executor_reviewer_tokens).detach().item(),
             "planner_to_executor_ratio": (
                 (torch.mean(planner_tokens) / (torch.mean(executor_tokens) + 1e-6)).detach().item()
             ),
@@ -103,18 +92,38 @@ def compute_data_metrics(batch, use_critic=True):
             f"timeout_rate/{task_name}": torch.mean(timeout_occurred).detach().item(),
             f"executor_native_format_violations/{task_name}": (1.0 - torch.mean(valid_format)).detach().item(),
             f"planner_invalid_format_rate/{task_name}": (1.0 - torch.mean(planner_output_valid)).detach().item(),
-            f"planner_fallback_rate/{task_name}": torch.mean(planner_fallback_used).detach().item(),
-            f"planner_rewrite_rate/{task_name}": torch.mean(planner_rewrite_used).detach().item(),
-            f"planner_tag_only_rate/{task_name}": torch.mean(planner_tag_only).detach().item(),
-            f"planner_reviewer_retry_mean/{task_name}": torch.mean(planner_review_retry_count).detach().item(),
-            f"planner_reviewer_repair_rate/{task_name}": torch.mean(planner_review_repair_count).detach().item(),
-            f"executor_reviewer_retry_mean/{task_name}": torch.mean(executor_review_retry_count).detach().item(),
-            f"executor_reviewer_pass_rate/{task_name}": torch.mean(executor_review_passed).detach().item(),
             f"invalid_format_termination_rate/{task_name}": torch.mean(invalid_format_terminated).detach().item(),
             f"invalid_action_termination_rate/{task_name}": torch.mean(invalid_action_terminated).detach().item(),
             f"invalid_termination_rate/{task_name}": torch.mean(invalid_terminated).detach().item(),
         }
     )
+    if "planner_fallback_used" in batch.batch.keys():
+        planner_fallback_used = batch.batch["planner_fallback_used"].float()
+        metrics[f"planner_fallback_rate/{task_name}"] = torch.mean(planner_fallback_used).detach().item()
+    if "planner_tag_only" in batch.batch.keys():
+        planner_tag_only = batch.batch["planner_tag_only"].float()
+        metrics[f"planner_tag_only_rate/{task_name}"] = torch.mean(planner_tag_only).detach().item()
+    if "planner_rewrite_used" in batch.batch.keys():
+        planner_rewrite_used = batch.batch["planner_rewrite_used"].float()
+        metrics[f"planner_rewrite_rate/{task_name}"] = torch.mean(planner_rewrite_used).detach().item()
+    if "planner_reviewer_response_mask" in batch.batch.keys():
+        planner_reviewer_tokens = batch.batch["planner_reviewer_response_mask"].sum(-1).float()
+        metrics["planner_reviewer_tokens/mean"] = torch.mean(planner_reviewer_tokens).detach().item()
+    if "executor_reviewer_response_mask" in batch.batch.keys():
+        executor_reviewer_tokens = batch.batch["executor_reviewer_response_mask"].sum(-1).float()
+        metrics["executor_reviewer_tokens/mean"] = torch.mean(executor_reviewer_tokens).detach().item()
+    if "planner_review_retry_count" in batch.batch.keys():
+        planner_review_retry_count = batch.batch["planner_review_retry_count"].float()
+        metrics[f"planner_reviewer_retry_mean/{task_name}"] = torch.mean(planner_review_retry_count).detach().item()
+    if "planner_review_repair_count" in batch.batch.keys():
+        planner_review_repair_count = batch.batch["planner_review_repair_count"].float()
+        metrics[f"planner_reviewer_repair_rate/{task_name}"] = torch.mean(planner_review_repair_count).detach().item()
+    if "executor_review_retry_count" in batch.batch.keys():
+        executor_review_retry_count = batch.batch["executor_review_retry_count"].float()
+        metrics[f"executor_reviewer_retry_mean/{task_name}"] = torch.mean(executor_review_retry_count).detach().item()
+    if "executor_review_passed" in batch.batch.keys():
+        executor_review_passed = batch.batch["executor_review_passed"].float()
+        metrics[f"executor_reviewer_pass_rate/{task_name}"] = torch.mean(executor_review_passed).detach().item()
     return metrics
 
 
@@ -185,6 +194,12 @@ class RayPPOTrainer(BaseRayPPOTrainer):
 
         self.global_steps = 0
         self._load_checkpoint()
+        explicit_save_steps = _parse_save_steps(self.config.trainer.get("save_steps", []))
+
+        def should_save_checkpoint(step: int) -> bool:
+            if step in explicit_save_steps:
+                return True
+            return self.config.trainer.save_freq > 0 and step % self.config.trainer.save_freq == 0
 
         if self.config.trainer.storage_mode == "aistudio":
             self._save_checkpoint()
@@ -273,7 +288,7 @@ class RayPPOTrainer(BaseRayPPOTrainer):
                         actor_output_metrics = reduce_metrics(actor_output.meta_info["metrics"])
                         metrics.update(actor_output_metrics)
 
-                    if self.config.trainer.save_freq > 0 and self.global_steps % self.config.trainer.save_freq == 0:
+                    if should_save_checkpoint(self.global_steps):
                         with _timer("save_checkpoint", timing_raw):
                             self._save_checkpoint()
 
@@ -285,7 +300,7 @@ class RayPPOTrainer(BaseRayPPOTrainer):
                 self.rounds_scheduler.step()
 
                 if self.global_steps >= self.total_training_steps:
-                    if self.config.trainer.save_freq > 0 and (self.global_steps - 1) % self.config.trainer.save_freq != 0:
+                    if should_save_checkpoint(self.global_steps) and not should_save_checkpoint(self.global_steps - 1):
                         with _timer("save_checkpoint", timing_raw):
                             self._save_checkpoint()
                     return

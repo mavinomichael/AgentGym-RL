@@ -71,6 +71,9 @@ class vLLMRollout(BaseVLLMRollout):
         self.multi_agent_config = multi_agent_config
         self.task_profile = get_task_profile(agentgym_config.task_name)
         self.topology = str(self._multi_agent_get("topology", "planner_executor"))
+        self.use_plain_babyai_two_agent = (
+            self.task_profile.task_name == "babyai" and self.topology == "planner_executor"
+        )
         super().__init__(
             actor_module=actor_module,
             rollout_config=rollout_config,
@@ -131,6 +134,9 @@ class vLLMRollout(BaseVLLMRollout):
         )
         self.planner_retry_temperature = float(self._multi_agent_get("invalid_output.planner_retry_temperature", 0.1))
         self.planner_retry_max_tokens = int(self._multi_agent_get("invalid_output.planner_retry_max_tokens", 16))
+        if self.use_plain_babyai_two_agent:
+            self.invalid_output_max_retries = 0
+            self.planner_max_retries = 0
         self.trace_executor_payload = self._as_bool(self._multi_agent_get("debug.trace_executor_payload", False))
         self.trace_dir = str(self._multi_agent_get("debug.trace_dir", "/mnt/data/logs"))
         self.trace_max_chars = int(self._multi_agent_get("debug.trace_max_chars", 800))
@@ -447,6 +453,7 @@ class vLLMRollout(BaseVLLMRollout):
         max_rounds = prompts.meta_info.get("max_rounds", self.task_profile.default_max_rounds)
         cur_device = prompts.batch["input_ids"].device
         do_sample = prompts.meta_info.get("do_sample", True)
+        plain_babyai_two_agent = self.use_plain_babyai_two_agent
 
         base_batch_size = prompts.batch["input_ids"].size(0)
         batch_size = base_batch_size * self.config.n
@@ -460,7 +467,8 @@ class vLLMRollout(BaseVLLMRollout):
                 env_clients[idx].reset(rollout_handler.item_id)
                 observation = env_clients[idx].observe()
                 rollout_handler.latest_observation = observation
-                rollout_handler.add_user_message(self.tokenizer, observation)
+                if not plain_babyai_two_agent:
+                    rollout_handler.add_user_message(self.tokenizer, observation)
             except TimeoutError:
                 rollout_handler.done = True
                 self._mark_timeout(rollout_handler)
@@ -520,63 +528,68 @@ class vLLMRollout(BaseVLLMRollout):
                 planner_rewrite_used = False
                 planner_rewritten_output = ""
                 planner_context_source = "original"
-                while (
-                    not planner_validation.valid
-                    and self.planner_max_retries > 0
-                    and planner_retry_count_total < self.planner_max_retries
-                ):
-                    planner_retry_count_total += 1
-                    planner_retry_prompt = build_planner_retry_prompt(
-                        observation=handler.latest_observation,
-                        invalid_planner_output=planner_normalized,
-                        validation_reason=planner_validation.reason,
-                        task_profile=self.task_profile,
-                    )
-                    handler.add_user_message(self.tokenizer, planner_retry_prompt)
-                    retry_prompt_ids = [handler.get_generation_prompt(self.tokenizer)]
-                    with self.update_sampling_params(
-                        **self._planner_retry_sampling_overrides(do_sample, kwargs.copy())
+                if not plain_babyai_two_agent:
+                    while (
+                        not planner_validation.valid
+                        and self.planner_max_retries > 0
+                        and planner_retry_count_total < self.planner_max_retries
                     ):
-                        planner_retry_output = self.inference_engine.generate(
-                            prompts=None,
-                            prompt_token_ids=retry_prompt_ids,
-                            sampling_params=self.sampling_params,
-                            use_tqdm=False,
+                        planner_retry_count_total += 1
+                        planner_retry_prompt = build_planner_retry_prompt(
+                            observation=handler.latest_observation,
+                            invalid_planner_output=planner_normalized,
+                            validation_reason=planner_validation.reason,
+                            task_profile=self.task_profile,
                         )
-                    planner_retry_ids = self._extract_response_token_ids(planner_retry_output)
-                    planner_raw_text = (
-                        self.tokenizer.decode(planner_retry_ids[0], skip_special_tokens=True)
-                        if planner_retry_ids
-                        else ""
-                    )
-                    planner_normalized = normalize_planner_payload(planner_raw_text)
-                    planner_validation = validate_planner_payload(
-                        planner_normalized,
-                        observation=handler.latest_observation,
-                        task_profile=self.task_profile,
-                    )
-                    if planner_validation.valid:
-                        planner_resolved_after_retry = True
-                        planner_context_source = "retry"
-                        break
-
-                planner_context_text = planner_validation.message if planner_validation.valid else None
-                if planner_context_text is None:
-                    planner_rewritten_output = (
-                        rewrite_planner_payload(
+                        handler.add_user_message(self.tokenizer, planner_retry_prompt)
+                        retry_prompt_ids = [handler.get_generation_prompt(self.tokenizer)]
+                        with self.update_sampling_params(
+                            **self._planner_retry_sampling_overrides(do_sample, kwargs.copy())
+                        ):
+                            planner_retry_output = self.inference_engine.generate(
+                                prompts=None,
+                                prompt_token_ids=retry_prompt_ids,
+                                sampling_params=self.sampling_params,
+                                use_tqdm=False,
+                            )
+                        planner_retry_ids = self._extract_response_token_ids(planner_retry_output)
+                        planner_raw_text = (
+                            self.tokenizer.decode(planner_retry_ids[0], skip_special_tokens=True)
+                            if planner_retry_ids
+                            else ""
+                        )
+                        planner_normalized = normalize_planner_payload(planner_raw_text)
+                        planner_validation = validate_planner_payload(
                             planner_normalized,
                             observation=handler.latest_observation,
                             task_profile=self.task_profile,
                         )
-                        or ""
-                    )
-                    if planner_rewritten_output:
-                        planner_context_text = planner_rewritten_output
-                        planner_rewrite_used = True
-                        planner_context_source = "rewrite"
-                    else:
+                        if planner_validation.valid:
+                            planner_resolved_after_retry = True
+                            planner_context_source = "retry"
+                            break
+
+                planner_context_text = planner_validation.message if planner_validation.valid else None
+                if planner_context_text is None:
+                    if plain_babyai_two_agent:
                         planner_context_text = planner_fallback_message()
                         planner_context_source = "fallback"
+                    else:
+                        planner_rewritten_output = (
+                            rewrite_planner_payload(
+                                planner_normalized,
+                                observation=handler.latest_observation,
+                                task_profile=self.task_profile,
+                            )
+                            or ""
+                        )
+                        if planner_rewritten_output:
+                            planner_context_text = planner_rewritten_output
+                            planner_rewrite_used = True
+                            planner_context_source = "rewrite"
+                        else:
+                            planner_context_text = planner_fallback_message()
+                            planner_context_source = "fallback"
 
                 handler.latest_planner_raw_output = planner_raw_text
                 handler.latest_planner_normalized_output = planner_normalized
@@ -660,6 +673,7 @@ class vLLMRollout(BaseVLLMRollout):
                 should_retry = (
                     self.task_profile.task_name == "babyai"
                     and not validation.valid
+                    and validation.reason in {"invalid_format", "action_not_in_available"}
                     and self.invalid_output_policy == "terminate_with_penalty"
                     and self.invalid_output_max_retries > 0
                 )
@@ -827,7 +841,8 @@ class vLLMRollout(BaseVLLMRollout):
                     handler.score = reward
                     handler.done = done
                     handler.latest_observation = state
-                    handler.add_user_message(self.tokenizer, state)
+                    if not plain_babyai_two_agent:
+                        handler.add_user_message(self.tokenizer, state)
                     return done, trace_event
                 except TimeoutError:
                     self._mark_timeout(handler)
@@ -968,35 +983,37 @@ class vLLMRollout(BaseVLLMRollout):
             except Exception:
                 pass
 
-        batch = TensorDict(
-            {
-                "prompts": prompt_input_ids,
-                "responses": response_ids,
-                "input_ids": seq,
-                "attention_mask": attention_mask,
-                "position_ids": position_ids,
-                "response_mask": response_loss_mask,
-                "scores": response_scores,
-                "task_rounds": torch.tensor(team_env_rounds, dtype=torch.float32, device=cur_device),
-                "task_scores": response_scores,
-                "speaker_ids": speaker_ids,
-                "planner_response_mask": response_planner_mask,
-                "executor_response_mask": response_executor_mask,
-                "reward_event_mask": response_reward_event_mask,
-                "team_env_rounds": torch.tensor(team_env_rounds, dtype=torch.float32, device=cur_device),
-                "executor_action_valid": torch.tensor(executor_action_valid, dtype=torch.float32, device=cur_device),
-                "executor_native_format_valid": torch.tensor(executor_native_format_valid, dtype=torch.float32, device=cur_device),
-                "env_step_failed": torch.tensor(env_step_failed, dtype=torch.float32, device=cur_device),
-                "timeout_occurred": torch.tensor(timeout_occurred, dtype=torch.float32, device=cur_device),
-                "invalid_format_terminated": torch.tensor(invalid_format_terminated, dtype=torch.float32, device=cur_device),
-                "invalid_action_terminated": torch.tensor(invalid_action_terminated, dtype=torch.float32, device=cur_device),
-                "planner_output_valid": torch.tensor(planner_output_valid, dtype=torch.float32, device=cur_device),
-                "planner_fallback_used": torch.tensor(planner_fallback_used, dtype=torch.float32, device=cur_device),
-                "planner_rewrite_used": torch.tensor(planner_rewrite_used, dtype=torch.float32, device=cur_device),
-                "planner_tag_only": torch.tensor(planner_tag_only, dtype=torch.float32, device=cur_device),
-            },
-            batch_size=batch_size,
-        )
+        batch_tensors = {
+            "prompts": prompt_input_ids,
+            "responses": response_ids,
+            "input_ids": seq,
+            "attention_mask": attention_mask,
+            "position_ids": position_ids,
+            "response_mask": response_loss_mask,
+            "scores": response_scores,
+            "task_rounds": torch.tensor(team_env_rounds, dtype=torch.float32, device=cur_device),
+            "task_scores": response_scores,
+            "speaker_ids": speaker_ids,
+            "planner_response_mask": response_planner_mask,
+            "executor_response_mask": response_executor_mask,
+            "reward_event_mask": response_reward_event_mask,
+            "team_env_rounds": torch.tensor(team_env_rounds, dtype=torch.float32, device=cur_device),
+            "executor_action_valid": torch.tensor(executor_action_valid, dtype=torch.float32, device=cur_device),
+            "executor_native_format_valid": torch.tensor(executor_native_format_valid, dtype=torch.float32, device=cur_device),
+            "env_step_failed": torch.tensor(env_step_failed, dtype=torch.float32, device=cur_device),
+            "timeout_occurred": torch.tensor(timeout_occurred, dtype=torch.float32, device=cur_device),
+            "invalid_format_terminated": torch.tensor(invalid_format_terminated, dtype=torch.float32, device=cur_device),
+            "invalid_action_terminated": torch.tensor(invalid_action_terminated, dtype=torch.float32, device=cur_device),
+            "planner_output_valid": torch.tensor(planner_output_valid, dtype=torch.float32, device=cur_device),
+            "planner_fallback_used": torch.tensor(planner_fallback_used, dtype=torch.float32, device=cur_device),
+            "planner_tag_only": torch.tensor(planner_tag_only, dtype=torch.float32, device=cur_device),
+        }
+        if not plain_babyai_two_agent:
+            batch_tensors["planner_rewrite_used"] = torch.tensor(
+                planner_rewrite_used, dtype=torch.float32, device=cur_device
+            )
+
+        batch = TensorDict(batch_tensors, batch_size=batch_size)
 
         if self.config.free_cache_engine:
             self.inference_engine.free_cache_engine()

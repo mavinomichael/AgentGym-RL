@@ -28,7 +28,9 @@ export CONDA_ENV_NAME="${CONDA_ENV_NAME:-agentgym-rl}"
 export PYTHON_BIN="${PYTHON_BIN:-python3}"
 export TOTAL_TRAINING_STEPS="${TOTAL_TRAINING_STEPS:-201}"
 export SAVE_FREQ="${SAVE_FREQ:-50}"
+export SAVE_STEPS="${SAVE_STEPS:-[]}"
 export CHECKPOINT_STEPS="${CHECKPOINT_STEPS:-50 100 150 200}"
+export PLANNER_MAX_TOKENS="${PLANNER_MAX_TOKENS:-96}"
 export ROUNDS_CTRL_TYPE="${ROUNDS_CTRL_TYPE:-scaling_inter_stepwise}"
 export ROUNDS_CTRL_ROUNDS="${ROUNDS_CTRL_ROUNDS:-[6,13,20]}"
 export ROUNDS_CTRL_STEPS="${ROUNDS_CTRL_STEPS:-100}"
@@ -100,8 +102,8 @@ run_eval() {
       multi_agent.invalid_output.retry_max_tokens=80 \
       multi_agent.invalid_output.planner_max_retries=3 \
       multi_agent.invalid_output.planner_retry_temperature=0.1 \
-      multi_agent.invalid_output.planner_retry_max_tokens=16 \
-      multi_agent.roles.planner.max_tokens=16 \
+      multi_agent.invalid_output.planner_retry_max_tokens=$PLANNER_MAX_TOKENS \
+      multi_agent.roles.planner.max_tokens=$PLANNER_MAX_TOKENS \
       multi_agent.roles.planner.temperature=0.2 \
       multi_agent.debug.trace_executor_payload=false
   ) 2>&1 | tee "$LOG_DIR/eval_step${step}.log"
@@ -113,7 +115,9 @@ printf '  %-18s %s\n' "RUN_DIR" "$RUN_DIR"
 printf '  %-18s %s\n' "TRACE_DIR" "$TRACE_DIR"
 printf '  %-18s %s\n' "TOTAL_STEPS" "$TOTAL_TRAINING_STEPS"
 printf '  %-18s %s\n' "SAVE_FREQ" "$SAVE_FREQ"
+printf '  %-18s %s\n' "SAVE_STEPS" "$SAVE_STEPS"
 printf '  %-18s %s\n' "CHECKPOINTS" "$CHECKPOINT_STEPS"
+printf '  %-18s %s\n' "PLANNER_TOKENS" "$PLANNER_MAX_TOKENS"
 printf '  %-18s %s\n' "ROUNDS_CTRL" "$ROUNDS_CTRL_TYPE"
 printf '  %-18s %s\n' "ROUNDS" "$ROUNDS_CTRL_ROUNDS"
 printf '  %-18s %s\n' "ROUND_STEP" "$ROUNDS_CTRL_STEPS"
@@ -157,10 +161,11 @@ printf '  %-18s %s\n' "ROUND_STEP" "$ROUNDS_CTRL_STEPS"
     trainer.total_training_steps=$TOTAL_TRAINING_STEPS \
     trainer.resume_mode=disable \
     trainer.save_freq=$SAVE_FREQ \
+    trainer.save_steps=$SAVE_STEPS \
     algo.use_kl_loss=true \
     algo.kl_coef=0.001 \
     multi_agent.topology=planner_executor \
-    multi_agent.roles.planner.max_tokens=16 \
+    multi_agent.roles.planner.max_tokens=$PLANNER_MAX_TOKENS \
     multi_agent.roles.planner.temperature=0.2 \
     actor_rollout_ref.actor.planner_kl_weight=4.0 \
     multi_agent.invalid_output.policy=terminate_with_penalty \
@@ -170,7 +175,7 @@ printf '  %-18s %s\n' "ROUND_STEP" "$ROUNDS_CTRL_STEPS"
     multi_agent.invalid_output.retry_max_tokens=80 \
     multi_agent.invalid_output.planner_max_retries=3 \
     multi_agent.invalid_output.planner_retry_temperature=0.1 \
-    multi_agent.invalid_output.planner_retry_max_tokens=16 \
+    multi_agent.invalid_output.planner_retry_max_tokens=$PLANNER_MAX_TOKENS \
     multi_agent.debug.trace_executor_payload=true \
     multi_agent.debug.trace_dir="$TRACE_DIR" \
     multi_agent.debug.trace_max_chars=800 \

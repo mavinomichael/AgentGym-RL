@@ -164,6 +164,14 @@ class DataParallelPPOCritic(BasePPOCritic):
 
                 vpreds = self._forward_micro_batch(data)
 
+                if not (vpreds.shape[-1] == values.shape[-1] == returns.shape[-1] == eos_mask.shape[-1]):
+                    # Align to the response tail if prompt positions leaked into one of the tensors.
+                    target_len = min(vpreds.shape[-1], values.shape[-1], returns.shape[-1], eos_mask.shape[-1])
+                    vpreds = vpreds[:, -target_len:]
+                    values = values[:, -target_len:]
+                    returns = returns[:, -target_len:]
+                    eos_mask = eos_mask[:, -target_len:]
+
                 # assert not torch.any(torch.isnan(vpreds)).item()
 
                 vf_loss, vf_clipfrac = core_algos.compute_value_loss(vpreds=vpreds,

@@ -88,7 +88,16 @@ class ExecutorReviewerDecision:
     reason: str
 
 
-def build_multi_agent_instruction(base_instruction: str) -> str:
+def build_multi_agent_instruction(
+        base_instruction: str,
+        task_profile: Optional[TaskProfile] = None,
+) -> str:
+    if task_profile is not None and task_profile.task_name == "babyai":
+        return (
+            "You are part of an exploration team that works together to finish every goal it is given.\n"
+            "Work with the team and follow the role-specific instructions in the current prompt."
+        )
+
     return (
         f"{base_instruction}\n\n"
         "You will now solve the same task as a cooperative multi-agent team with shared reward.\n"
@@ -104,11 +113,10 @@ def build_multi_agent_instruction(base_instruction: str) -> str:
     )
 
 
-
 def build_multi_agent_bootstrap(env_client, task_profile: Optional[TaskProfile] = None) -> Tuple[List[dict], str]:
     base_instruction = env_client.conversation_start[0]["value"]
     assistant_ack = env_client.conversation_start[1]["value"]
-    wrapped_instruction = build_multi_agent_instruction(base_instruction)
+    wrapped_instruction = build_multi_agent_instruction(base_instruction, task_profile=task_profile)
     messages = [
         {"role": "user", "content": wrapped_instruction},
         {"role": "assistant", "content": assistant_ack},
@@ -122,9 +130,26 @@ def build_multi_agent_bootstrap(env_client, task_profile: Optional[TaskProfile] 
 
 
 def build_planner_turn_prompt(observation: str, task_profile: Optional[TaskProfile] = None) -> str:
+    if task_profile is not None and task_profile.task_name == "babyai":
+        available_actions_block = _format_available_actions_block(observation)
+        return (
+            "You are part of an exploration team, and you are the planner that wants to finish every goal you are given.\n\n"
+            "Every round you will be given an observation, and you must reason about the situation and provide your reasoning, plan, hint, or suggestion based on the observation to help another agent finish the task.\n\n"
+            "Another agent will be responsible for taking the final action. Your job is to help that agent choose the next useful move.\n\n"
+            f"You can use the following actions:\n\n{available_actions_block}\n\n"
+            "Guidance:\n"
+            "- Stay grounded in the observation only.\n"
+            "- Use the available actions to reason about what can be done next.\n"
+            "- You may describe one action, several actions, or a short sequence if that is the best guidance.\n"
+            "- You may mention exact environment actions if they are the clearest guidance.\n"
+            "- Do not use the final response format.\n"
+            "- Do not write brackets or role labels.\n"
+            "- Keep the reasoning clear and useful for the executor.\n\n"
+            f"Observation:\n{observation}\n\n"
+            "Output only your reasoning, plan, hint, or suggestion."
+        )
+
     return (
-        "[Planner Turn]\n"
-        "[Environment Observation]\n"
         f"{observation}\n\n"
         "You are the Planner.\n\n"
         "The original task instruction, action surface, and final response format remain unchanged.\n"
@@ -143,12 +168,11 @@ def build_planner_turn_prompt(observation: str, task_profile: Optional[TaskProfi
     )
 
 
-
 def build_planner_retry_prompt(
-    observation: str,
-    invalid_planner_output: str,
-    validation_reason: str,
-    task_profile: Optional[TaskProfile] = None,
+        observation: str,
+        invalid_planner_output: str,
+        validation_reason: str,
+        task_profile: Optional[TaskProfile] = None,
 ) -> str:
     return (
         "[Planner Retry]\n"
@@ -185,7 +209,6 @@ def build_planner_retry_prompt(
     )
 
 
-
 def build_long_planner_turn_prompt(observation: str, task_profile: Optional[TaskProfile] = None) -> str:
     return (
         "[Planner Turn]\n"
@@ -208,13 +231,12 @@ def build_long_planner_turn_prompt(observation: str, task_profile: Optional[Task
     )
 
 
-
 def build_long_planner_retry_prompt(
-    observation: str,
-    invalid_planner_output: str,
-    reviewer_reason: str,
-    retry_count: int,
-    task_profile: Optional[TaskProfile] = None,
+        observation: str,
+        invalid_planner_output: str,
+        reviewer_reason: str,
+        retry_count: int,
+        task_profile: Optional[TaskProfile] = None,
 ) -> str:
     return (
         "[Planner Retry]\n"
@@ -240,14 +262,13 @@ def build_long_planner_retry_prompt(
     )
 
 
-
 def build_planner_reviewer_prompt(
-    observation: str,
-    planner_draft: str,
-    retry_count: int = 0,
-    allow_repair: bool = False,
-    review_reason: Optional[str] = None,
-    task_profile: Optional[TaskProfile] = None,
+        observation: str,
+        planner_draft: str,
+        retry_count: int = 0,
+        allow_repair: bool = False,
+        review_reason: Optional[str] = None,
+        task_profile: Optional[TaskProfile] = None,
 ) -> str:
     retry_note = f"Planner retries already used: {retry_count}\n" if retry_count else ""
     repair_rule = (
@@ -283,12 +304,12 @@ def build_planner_reviewer_prompt(
 
 
 def build_executor_reviewer_prompt(
-    observation: str,
-    reviewed_plan: str,
-    executor_output: str,
-    retry_count: int = 0,
-    review_reason: Optional[str] = None,
-    task_profile: Optional[TaskProfile] = None,
+        observation: str,
+        reviewed_plan: str,
+        executor_output: str,
+        retry_count: int = 0,
+        review_reason: Optional[str] = None,
+        task_profile: Optional[TaskProfile] = None,
 ) -> str:
     review_reason_block = f"Previous review reason: {review_reason}\n\n" if review_reason else ""
     return (
@@ -315,8 +336,26 @@ def build_executor_reviewer_prompt(
 
 
 def build_executor_turn_prompt(
-    observation: str, planner_message: str, task_profile: Optional[TaskProfile] = None
+        observation: str, planner_message: str, task_profile: Optional[TaskProfile] = None
 ) -> str:
+    if task_profile is not None and task_profile.task_name == "babyai":
+        available_actions_block = _format_available_actions_block(observation)
+        return (
+            "You are part of an exploration team, and you are the executor that wants to finish every goal you are given.\n\n"
+            "Every round you will be given an observation, and you have to respond with an action and your thought based on the observation to finish the given task.\n\n"
+            f"You can use the following actions:\n\n{available_actions_block}\n\n"
+            "A planner agent has already reasoned about the task for you and provided this suggestion:\n\n"
+            f"{planner_message}\n\n"
+            "Use the planner suggestion if it is helpful. If it conflicts with the current observation or with the available actions, ignore it and follow the observation instead.\n\n"
+            "Your response should use the following format:\n"
+            "Thought:\n"
+            "<Your Thought>\n\n"
+            "Action:\n"
+            "<Your Action>\n\n"
+            f"Observation:\n{observation}\n"
+            "Output exactly one Action line."
+        )
+
     format_hint = (
         task_profile.executor_native_format_hint
         if task_profile is not None
@@ -350,13 +389,12 @@ def build_executor_turn_prompt(
     )
 
 
-
 def build_executor_retry_prompt(
-    observation: str,
-    planner_message: str,
-    invalid_executor_output: str,
-    validation_reason: str,
-    task_profile: Optional[TaskProfile] = None,
+        observation: str,
+        planner_message: str,
+        invalid_executor_output: str,
+        validation_reason: str,
+        task_profile: Optional[TaskProfile] = None,
 ) -> str:
     format_hint = (
         task_profile.executor_native_format_hint
@@ -366,16 +404,23 @@ def build_executor_retry_prompt(
     if task_profile is not None and task_profile.task_name == "babyai":
         available_actions = extract_available_actions_from_observation(observation)
         action_list = ", ".join(available_actions) if available_actions else "(read from observation)"
+        normalized_invalid = normalize_executor_payload(invalid_executor_output, task_profile)
+        bare_action_hint = _normalize_action_text(normalized_invalid)
+        keep_action_note = ""
+        if bare_action_hint and bare_action_hint in available_actions:
+            keep_action_note = (
+                f"\nThe previous response already contains the valid action '{bare_action_hint}'. "
+                "Keep that action if it still fits, but rewrite the full response in the required format.\n"
+            )
         return (
-            "[Executor Retry]\n"
             "Your previous response was invalid and was not sent to the environment.\n"
             f"Failure reason: {validation_reason}\n\n"
-            "[Environment Observation]\n"
-            f"{observation}\n\n"
-            "[Latest Planner Message]\n"
+            f"Observation:\n{observation}\n\n"
+            "A planner agent has already reasoned about the task for you and provided this suggestion:\n\n"
             f"{planner_message}\n\n"
-            "[Previous Invalid Executor Output]\n"
-            f"{invalid_executor_output}\n\n"
+            "Previous invalid response:\n"
+            f"{invalid_executor_output}\n"
+            f"{keep_action_note}\n"
             "Respond again with exactly one valid BabyAI response in the original single-agent format.\n"
             "Your response must be exactly this structure:\n"
             "Thought:\n"
@@ -434,9 +479,9 @@ def normalize_reviewer_payload(raw_text: str) -> str:
 
 
 def rewrite_planner_payload(
-    raw_text: str,
-    observation: str,
-    task_profile: Optional[TaskProfile] = None,
+        raw_text: str,
+        observation: str,
+        task_profile: Optional[TaskProfile] = None,
 ) -> Optional[str]:
     normalized = normalize_planner_payload(raw_text)
     if not normalized:
@@ -474,9 +519,9 @@ def rewrite_planner_payload(
 
 
 def rewrite_reviewed_planner_plan(
-    raw_text: str,
-    observation: str,
-    task_profile: Optional[TaskProfile] = None,
+        raw_text: str,
+        observation: str,
+        task_profile: Optional[TaskProfile] = None,
 ) -> Optional[str]:
     rewritten = rewrite_planner_payload(raw_text, observation=observation, task_profile=task_profile)
     if rewritten:
@@ -491,16 +536,44 @@ def rewrite_reviewed_planner_plan(
 
 
 def _strip_control_headers(text: str) -> str:
-    header_pattern = re.compile(
-        r"^(?:\[(?:executor response|planner message|executor|planner)\]\s*)+",
-        re.IGNORECASE,
-    )
+    header_line_pattern = re.compile(r"^\s*(?:\[[^\[\]\n]+\]\s*)+\s*$")
+    inline_header_pattern = re.compile(r"^(?:\s*\[[^\[\]\n]+\]\s*)+")
     while True:
-        updated = header_pattern.sub("", text).lstrip()
+        updated = text.lstrip()
+        lines = updated.splitlines()
+        while lines and (not lines[0].strip() or header_line_pattern.match(lines[0])):
+            lines.pop(0)
+        updated = "\n".join(lines).lstrip()
+        updated = inline_header_pattern.sub("", updated).lstrip()
         if updated == text:
             break
         text = updated
     return text
+
+
+def _format_available_actions_block(observation: str) -> str:
+    available_actions = extract_available_actions_from_observation(observation)
+    if not available_actions:
+        return "- Use the available actions described in the observation."
+    return "\n".join(f"- {action}" for action in available_actions)
+
+
+def _planner_min_words(task_profile: Optional[TaskProfile]) -> int:
+    if task_profile is not None and task_profile.task_name == "babyai":
+        return 3
+    return PLANNER_MIN_WORDS
+
+
+def _planner_max_words(task_profile: Optional[TaskProfile]) -> int:
+    if task_profile is not None and task_profile.task_name == "babyai":
+        return 10
+    return PLANNER_MAX_WORDS
+
+
+def _planner_max_chars(task_profile: Optional[TaskProfile]) -> int:
+    if task_profile is not None and task_profile.task_name == "babyai":
+        return 80
+    return PLANNER_MAX_CHARS
 
 
 def _normalize_action_text(action: str) -> str:
@@ -511,7 +584,7 @@ def _normalize_action_text(action: str) -> str:
 def _contains_disallowed_planner_tokens(text: str) -> bool:
     return bool(
         re.search(
-            r"\[(planner|executor|pl|ex)\]|(?:^|\s)(planner|executor)\s*:|Thought:|Action:",
+            r"\[(planner|executor|reviewer|pl|ex)\]|(?:^|\s)(planner|executor|reviewer)\s*:|Thought:|Action:",
             text,
             re.IGNORECASE,
         )
@@ -556,11 +629,11 @@ def _candidate_planner_targets(available_actions: List[str]) -> List[str]:
     for action in available_actions:
         target = ""
         if action.startswith("go to "):
-            target = action[len("go to ") :]
+            target = action[len("go to "):]
         elif action.startswith("pickup "):
-            target = action[len("pickup ") :]
+            target = action[len("pickup "):]
         elif action.startswith("toggle and go through "):
-            target = action[len("toggle and go through ") :]
+            target = action[len("toggle and go through "):]
         if target:
             cleaned = _clean_planner_target(target)
             if cleaned and cleaned not in targets:
@@ -599,28 +672,29 @@ def _planner_guidance_from_exact_action(text: str, available_actions: List[str])
     if action == "check available actions":
         return "Check options now"
     if action.startswith("go to "):
-        target = _clean_planner_target(action[len("go to ") :])
+        target = _clean_planner_target(action[len("go to "):])
         return f"Approach {target}" if target else None
     if action.startswith("pickup "):
-        target = _clean_planner_target(action[len("pickup ") :])
+        target = _clean_planner_target(action[len("pickup "):])
         return f"Approach {target}" if target else None
     if action.startswith("toggle and go through "):
-        target = _clean_planner_target(action[len("toggle and go through ") :])
+        target = _clean_planner_target(action[len("toggle and go through "):])
         return f"Face {target}" if target else None
     return None
 
 
 def _validated_rewritten_planner_phrase(
-    phrase: str,
-    observation: str,
-    task_profile: Optional[TaskProfile],
+        phrase: str,
+        observation: str,
+        task_profile: Optional[TaskProfile],
 ) -> Optional[str]:
     phrase = _collapse_planner_text(phrase)
     if not phrase:
         return None
     words = phrase.split()
-    if len(words) > PLANNER_MAX_WORDS:
-        phrase = " ".join(words[:PLANNER_MAX_WORDS])
+    planner_max_words = _planner_max_words(task_profile)
+    if len(words) > planner_max_words:
+        phrase = " ".join(words[:planner_max_words])
     if phrase:
         phrase = phrase[0].upper() + phrase[1:]
     validation = validate_planner_payload(phrase, observation=observation, task_profile=task_profile)
@@ -651,9 +725,9 @@ def _looks_like_garbage(text: str) -> bool:
 
 
 def validate_reviewed_planner_plan(
-    reviewed_plan: str,
-    observation: str,
-    task_profile: Optional[TaskProfile] = None,
+        reviewed_plan: str,
+        observation: str,
+        task_profile: Optional[TaskProfile] = None,
 ) -> PlannerReviewerDecision:
     normalized = normalize_reviewer_payload(reviewed_plan)
     collapsed = _collapse_planner_text(normalized)
@@ -662,10 +736,12 @@ def validate_reviewed_planner_plan(
     if _looks_like_garbage(collapsed):
         return PlannerReviewerDecision(valid=False, verdict="RETRY", reason="garbage_reviewed_plan", reviewed_plan=None)
     if _contains_disallowed_planner_tokens(collapsed):
-        return PlannerReviewerDecision(valid=False, verdict="RETRY", reason="contains_role_or_schema_tokens", reviewed_plan=None)
+        return PlannerReviewerDecision(valid=False, verdict="RETRY", reason="contains_role_or_schema_tokens",
+                                       reviewed_plan=None)
     words = collapsed.split()
     if len(words) > PLANNER_REVIEW_MAX_WORDS or len(collapsed) > PLANNER_REVIEW_MAX_CHARS:
-        return PlannerReviewerDecision(valid=False, verdict="RETRY", reason="reviewed_plan_too_long", reviewed_plan=None)
+        return PlannerReviewerDecision(valid=False, verdict="RETRY", reason="reviewed_plan_too_long",
+                                       reviewed_plan=None)
     if task_profile is not None and task_profile.task_name == "babyai":
         available_actions = extract_available_actions_from_observation(observation)
         if _normalize_action_text(collapsed) in available_actions:
@@ -674,26 +750,30 @@ def validate_reviewed_planner_plan(
 
 
 def parse_planner_reviewer_output(
-    raw_text: str,
-    observation: str,
-    task_profile: Optional[TaskProfile] = None,
+        raw_text: str,
+        observation: str,
+        task_profile: Optional[TaskProfile] = None,
 ) -> PlannerReviewerDecision:
     normalized = normalize_reviewer_payload(raw_text)
     if not normalized or _looks_like_garbage(normalized):
-        return PlannerReviewerDecision(valid=False, verdict="RETRY", reason="invalid_reviewer_schema", reviewed_plan=None)
+        return PlannerReviewerDecision(valid=False, verdict="RETRY", reason="invalid_reviewer_schema",
+                                       reviewed_plan=None)
     verdict_match = re.search(r"Verdict:\s*(PASS|RETRY|REPAIR)\b", normalized, re.IGNORECASE)
     if not verdict_match:
-        return PlannerReviewerDecision(valid=False, verdict="RETRY", reason="invalid_reviewer_schema", reviewed_plan=None)
+        return PlannerReviewerDecision(valid=False, verdict="RETRY", reason="invalid_reviewer_schema",
+                                       reviewed_plan=None)
     verdict = verdict_match.group(1).upper()
     reason = _extract_labeled_value(normalized, "Reason") or "unspecified"
     reviewed_plan = _extract_labeled_value(normalized, "ReviewedPlan")
     if verdict in {"PASS", "REPAIR"}:
         if reviewed_plan is None:
-            return PlannerReviewerDecision(valid=False, verdict="RETRY", reason="missing_reviewed_plan", reviewed_plan=None)
+            return PlannerReviewerDecision(valid=False, verdict="RETRY", reason="missing_reviewed_plan",
+                                           reviewed_plan=None)
         validation = validate_reviewed_planner_plan(reviewed_plan, observation=observation, task_profile=task_profile)
         if not validation.valid:
             return PlannerReviewerDecision(valid=False, verdict="RETRY", reason=validation.reason, reviewed_plan=None)
-        return PlannerReviewerDecision(valid=True, verdict=verdict, reason=reason, reviewed_plan=validation.reviewed_plan)
+        return PlannerReviewerDecision(valid=True, verdict=verdict, reason=reason,
+                                       reviewed_plan=validation.reviewed_plan)
     return PlannerReviewerDecision(valid=True, verdict=verdict, reason=reason, reviewed_plan=None)
 
 
@@ -710,31 +790,36 @@ def parse_executor_reviewer_output(raw_text: str) -> ExecutorReviewerDecision:
 
 
 def validate_planner_payload(
-    raw_text: str,
-    observation: str = "",
-    task_profile: Optional[TaskProfile] = None,
+        raw_text: str,
+        observation: str = "",
+        task_profile: Optional[TaskProfile] = None,
 ) -> PlannerPayloadValidation:
+    if _is_tag_only_planner_text(raw_text):
+        return PlannerPayloadValidation(valid=False, reason="tag_only", message=None)
     normalized = normalize_planner_payload(raw_text)
     if not normalized:
         return PlannerPayloadValidation(valid=False, reason="empty", message=None)
-    if _is_tag_only_planner_text(normalized):
-        return PlannerPayloadValidation(valid=False, reason="tag_only", message=None)
     if _contains_disallowed_planner_tokens(normalized):
         return PlannerPayloadValidation(valid=False, reason="contains_role_or_schema_tokens", message=None)
+    if task_profile is not None and task_profile.task_name == "babyai" and re.search(r"\[[^\]]+\]", normalized):
+        return PlannerPayloadValidation(valid=False, reason="contains_role_or_schema_tokens", message=None)
     collapsed = _collapse_planner_text(normalized)
+    if _looks_like_garbage(collapsed):
+        return PlannerPayloadValidation(valid=False, reason="garbage", message=None)
+    if task_profile is not None and task_profile.task_name == "babyai":
+        return PlannerPayloadValidation(valid=True, reason="ok", message=collapsed)
     if _starts_with_filler_opener(collapsed):
         return PlannerPayloadValidation(valid=False, reason="filler_opener", message=None)
     words = collapsed.split()
-    if len(words) < PLANNER_MIN_WORDS:
+    planner_min_words = _planner_min_words(task_profile)
+    planner_max_words = _planner_max_words(task_profile)
+    planner_max_chars = _planner_max_chars(task_profile)
+    if len(words) < planner_min_words:
         return PlannerPayloadValidation(valid=False, reason="not_intent_phrase", message=None)
-    if len(collapsed) > PLANNER_MAX_CHARS or len(words) > PLANNER_MAX_WORDS:
+    if len(collapsed) > planner_max_chars or len(words) > planner_max_words:
         return PlannerPayloadValidation(valid=False, reason="too_long", message=None)
     if _starts_with_non_imperative_token(collapsed):
         return PlannerPayloadValidation(valid=False, reason="not_intent_phrase", message=None)
-    if task_profile is not None and task_profile.task_name == "babyai":
-        available_actions = extract_available_actions_from_observation(observation)
-        if _normalize_action_text(collapsed) in available_actions:
-            return PlannerPayloadValidation(valid=False, reason="exact_env_action", message=None)
     return PlannerPayloadValidation(valid=True, reason="ok", message=collapsed)
 
 
@@ -782,9 +867,9 @@ def is_executor_payload_valid(raw_text: str, task_profile: TaskProfile) -> bool:
 
 
 def validate_executor_payload(
-    raw_text: str,
-    observation: str,
-    task_profile: TaskProfile,
+        raw_text: str,
+        observation: str,
+        task_profile: TaskProfile,
 ) -> ExecutorPayloadValidation:
     normalized = normalize_executor_payload(raw_text, task_profile)
     valid_format = is_executor_payload_valid(normalized, task_profile)

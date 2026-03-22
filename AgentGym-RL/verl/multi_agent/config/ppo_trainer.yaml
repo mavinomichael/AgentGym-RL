@@ -240,6 +240,7 @@ trainer:
   nnodes: ${runtime.nnodes}
   n_gpus_per_node: ${runtime.n_gpus_per_node}
   save_freq: ${runtime.save_freq}
+  save_steps: []
   resume_mode: auto
   resume_from_path: False
   test_freq: -1

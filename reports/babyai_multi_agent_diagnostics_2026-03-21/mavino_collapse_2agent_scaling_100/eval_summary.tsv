@@ -1,0 +1,3 @@
+step	Avg@1	Pass@1	ExecutorNativeFormatViolations	InvalidFormatTerminationRate	InvalidActionTerminationRate	PlannerInvalidFormatRate	PlannerFallbackRate	PlannerTagOnlyRate
+50	0.7442706210745705	0.8	0.0	0.0	0.06666666666666667	0.0	0.0	0.0
+100	-0.16204471704032686	0.03333333333333333	0.8	0.8	0.16666666666666666	0.9888888888888889	0.0	0.0

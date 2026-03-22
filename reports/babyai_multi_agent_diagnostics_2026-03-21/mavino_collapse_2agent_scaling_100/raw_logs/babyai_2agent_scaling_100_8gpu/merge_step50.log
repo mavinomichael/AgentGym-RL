@@ -1,0 +1,27 @@
+/home/mavinomichael/AgentGym-RL/AgentGym-RL/scripts/model_merger.py:55: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  state_dict = torch.load(os.path.join(local_dir, f'model_world_size_{world_size}_rank_{rank}.pt'), map_location='cpu')
+`torch_dtype` is deprecated! Use `dtype` instead!
+Got device mesh tensor([0, 1, 2, 3, 4, 5, 6, 7], dtype=torch.int32), mesh_dim_names ('fsdp',)
+Processing model shards with 8 (8,) in total
+Writing to local disk
+Saving model to /dev/shm/agentgym_saves/agentgym_multi_agent/babyai_2agent_scaling_100_8gpu/global_step_50/actor/huggingface
+Traceback (most recent call last):
+  File "/home/mavinomichael/AgentGym-RL/AgentGym-RL/scripts/model_merger.py", line 151, in <module>
+    model.save_pretrained(hf_path, state_dict=state_dict)
+  File "/home/mavinomichael/miniconda/envs/agentgym-rl/lib/python3.10/site-packages/transformers/modeling_utils.py", line 3897, in save_pretrained
+    model_to_save = unwrap_model(self)
+  File "/home/mavinomichael/miniconda/envs/agentgym-rl/lib/python3.10/site-packages/transformers/modeling_utils.py", line 5994, in unwrap_model
+    return extract_model_from_parallel(model, **kwargs)
+  File "/home/mavinomichael/miniconda/envs/agentgym-rl/lib/python3.10/site-packages/accelerate/utils/other.py", line 258, in extract_model_from_parallel
+    from deepspeed import DeepSpeedEngine
+  File "/home/mavinomichael/miniconda/envs/agentgym-rl/lib/python3.10/site-packages/deepspeed/__init__.py", line 25, in <module>
+    from . import ops
+  File "/home/mavinomichael/miniconda/envs/agentgym-rl/lib/python3.10/site-packages/deepspeed/ops/__init__.py", line 15, in <module>
+    from ..git_version_info import compatible_ops as __compatible_ops__
+  File "/home/mavinomichael/miniconda/envs/agentgym-rl/lib/python3.10/site-packages/deepspeed/git_version_info.py", line 29, in <module>
+    op_compatible = builder.is_compatible()
+  File "/home/mavinomichael/miniconda/envs/agentgym-rl/lib/python3.10/site-packages/deepspeed/ops/op_builder/fp_quantizer.py", line 35, in is_compatible
+    sys_cuda_major, _ = installed_cuda_version()
+  File "/home/mavinomichael/miniconda/envs/agentgym-rl/lib/python3.10/site-packages/deepspeed/ops/op_builder/builder.py", line 51, in installed_cuda_version
+    raise MissingCUDAException("CUDA_HOME does not exist, unable to compile CUDA op(s)")
+deepspeed.ops.op_builder.builder.MissingCUDAException: CUDA_HOME does not exist, unable to compile CUDA op(s)

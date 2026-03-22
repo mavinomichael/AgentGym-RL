@@ -39,12 +39,12 @@ def test_multi_agent_instruction_wraps_original_prompt():
     assert base_prompt in wrapped
 
 
-def test_turn_prompts_are_role_specific_without_role_prefixes():
+def test_non_babyai_turn_prompts_keep_generic_multi_agent_shape():
     observation = "obs"
     profile = planner_executor.get_task_profile("webarena")
     planner_prompt = planner_executor.build_planner_turn_prompt(observation, profile)
     executor_prompt = planner_executor.build_executor_turn_prompt(observation, "Use the search box.", profile)
-    assert "Planner Turn" in planner_prompt
+    assert planner_prompt.startswith(observation)
     assert "original task instruction, action surface, and final response format remain unchanged" in planner_prompt
     assert "next valid single-agent response" in planner_prompt
     assert "Output 2 to 6 words only." in planner_prompt
@@ -55,17 +55,72 @@ def test_turn_prompts_are_role_specific_without_role_prefixes():
     assert "Do not prepend role labels" in executor_prompt
 
 
+def test_babyai_turn_prompts_are_plain_and_tag_free():
+    observation = 'Your goal: go to the red ball\nAvailable actions: ["turn left", "turn right", "move forward"]'
+    profile = planner_executor.get_task_profile("babyai")
+    planner_prompt = planner_executor.build_planner_turn_prompt(observation, profile)
+    executor_prompt = planner_executor.build_executor_turn_prompt(observation, "Check room for ball.", profile)
+
+    assert planner_prompt.startswith("You are part of an exploration team, and you are the planner")
+    assert "[Planner" not in planner_prompt
+    assert "[Environment" not in planner_prompt
+    assert "Thought:" not in planner_prompt
+    assert "Action:" not in planner_prompt
+    assert "provide your reasoning, plan, hint, or suggestion" in planner_prompt
+    assert "You can use the following actions:" in planner_prompt
+    assert "- turn left" in planner_prompt
+    assert "You may describe one action, several actions, or a short sequence if that is the best guidance." in planner_prompt
+    assert "You may mention exact environment actions if they are the clearest guidance." in planner_prompt
+    assert f"Observation:\n{observation}" in planner_prompt
+
+    assert executor_prompt.startswith("You are part of an exploration team, and you are the executor")
+    assert "[Executor" not in executor_prompt
+    assert "[Latest Planner Message]" not in executor_prompt
+    assert "A planner agent has already reasoned about the task for you and provided this suggestion:" in executor_prompt
+    assert "Check room for ball." in executor_prompt
+    assert "You can use the following actions:" in executor_prompt
+    assert "Thought:" in executor_prompt
+    assert "Action:" in executor_prompt
+    assert f"Observation:\n{observation}" in executor_prompt
+
+
 def test_planner_payload_validation_accepts_short_intent_phrase():
     observation = 'obs\nAvailable actions: ["turn left", "turn right", "move forward", "go to red key 1"]'
     profile = planner_executor.get_task_profile("babyai")
     valid = planner_executor.validate_planner_payload(
-        "Approach the red key",
+        "Turn toward the red key",
         observation=observation,
         task_profile=profile,
     )
     assert valid.valid
     assert valid.reason == "ok"
-    assert valid.message == "Approach the red key"
+    assert valid.message == "Turn toward the red key"
+
+
+def test_planner_payload_validation_accepts_exact_environment_action_for_babyai():
+    observation = 'obs\nAvailable actions: ["turn left", "turn right", "move forward"]'
+    profile = planner_executor.get_task_profile("babyai")
+    valid = planner_executor.validate_planner_payload(
+        "move forward",
+        observation=observation,
+        task_profile=profile,
+    )
+    assert valid.valid
+    assert valid.reason == "ok"
+    assert valid.message == "move forward"
+
+
+def test_planner_payload_validation_accepts_longer_reasoning_for_babyai():
+    observation = 'obs\nAvailable actions: ["turn left", "turn right", "move forward", "pickup red ball 1"]'
+    profile = planner_executor.get_task_profile("babyai")
+    valid = planner_executor.validate_planner_payload(
+        "The red ball is the goal, so turn toward it and then move closer.",
+        observation=observation,
+        task_profile=profile,
+    )
+    assert valid.valid
+    assert valid.reason == "ok"
+    assert valid.message == "The red ball is the goal, so turn toward it and then move closer"
 
 
 def test_long_planner_prompt_and_retry_prompt_support_reviewer_topology():
@@ -154,7 +209,7 @@ def test_reviewed_planner_rewrite_produces_executor_guidance():
     assert reviewed.reviewed_plan == rewritten
 
 
-def test_planner_payload_validation_rejects_tags_fillers_and_exact_actions():
+def test_planner_payload_validation_rejects_tags_and_schema_tokens():
     observation = 'obs\nAvailable actions: ["turn left", "turn right", "move forward"]'
     profile = planner_executor.get_task_profile("babyai")
 
@@ -174,50 +229,35 @@ def test_planner_payload_validation_rejects_tags_fillers_and_exact_actions():
     assert not with_schema.valid
     assert with_schema.reason == "contains_role_or_schema_tokens"
 
-    filler = planner_executor.validate_planner_payload(
-        "Given that the key is nearby, you should move right first.",
-        observation=observation,
-        task_profile=profile,
-    )
-    assert not filler.valid
-    assert filler.reason == "filler_opener"
 
-    too_long = planner_executor.validate_planner_payload(
-        "Search for the red ball in the room and then decide what to do next."
-        ,
-        observation=observation,
-        task_profile=profile,
-    )
-    assert not too_long.valid
-    assert too_long.reason == "too_long"
-
-    exact_action = planner_executor.validate_planner_payload(
-        "turn right",
-        observation=observation,
-        task_profile=profile,
-    )
-    assert not exact_action.valid
-    assert exact_action.reason == "exact_env_action"
-
-
-def test_planner_retry_prompt_restates_short_sentence_constraint():
-    retry_prompt = planner_executor.build_planner_retry_prompt(
-        observation="goal obs",
-        invalid_planner_output="Given that the key is nearby, you should move right first.",
-        validation_reason="too_long",
-        task_profile=planner_executor.get_task_profile("babyai"),
-    )
-    assert "[Planner Retry]" in retry_prompt
-    assert "Failure reason: too_long" in retry_prompt
-    assert "will not be shown to the Executor" in retry_prompt
-    assert "Output 2 to 6 words only." in retry_prompt
-    assert "Good examples:" in retry_prompt
-    assert "Bad examples:" in retry_prompt
-
-
-def test_planner_normalization_strips_control_headers_only():
+def test_planner_normalization_strips_generic_bracket_headers():
     payload = "[Planner Message]\n[PLANNER]\nTurn left and inspect the doorway."
     assert planner_executor.normalize_planner_payload(payload) == "Turn left and inspect the doorway."
+
+    payload = "[Planner]\n[Executor Check]\n[Environment Observation]\nCheck room for ball."
+    assert planner_executor.normalize_planner_payload(payload) == "Check room for ball."
+
+
+def test_first_header_leak_shape_normalizes_to_valid_babyai_hint():
+    observation = 'obs\nAvailable actions: ["turn left", "turn right", "move forward", "go to red ball 1"]'
+    profile = planner_executor.get_task_profile("babyai")
+    normalized = planner_executor.normalize_planner_payload("[Planner] Check room for ball.")
+    validation = planner_executor.validate_planner_payload(normalized, observation=observation, task_profile=profile)
+    assert normalized == "Check room for ball."
+    assert validation.valid
+    assert validation.message == "Check room for ball"
+
+
+def test_babyai_planner_payload_can_reference_likely_action_context_without_exact_action():
+    observation = 'obs\nAvailable actions: ["turn left", "turn right", "move forward", "check available actions"]'
+    profile = planner_executor.get_task_profile("babyai")
+    validation = planner_executor.validate_planner_payload(
+        "Check room for ball by turning left",
+        observation=observation,
+        task_profile=profile,
+    )
+    assert validation.valid
+    assert validation.message == "Check room for ball by turning left"
 
 
 def test_planner_rewrite_turns_long_prose_into_short_intent_phrase():
@@ -248,34 +288,35 @@ def test_babyai_executor_prompt_stays_close_to_single_agent_contract():
     observation = 'obs\nAvailable actions: ["turn left", "turn right", "move forward"]'
     profile = planner_executor.get_task_profile("babyai")
     executor_prompt = planner_executor.build_executor_turn_prompt(observation, "Go near the key.", profile)
-    assert "BabyAI reminder" in executor_prompt
-    assert "original single-agent agent would" in executor_prompt
+    assert executor_prompt.startswith("You are part of an exploration team, and you are the executor")
+    assert "respond with an action and your thought" in executor_prompt
+    assert "A planner agent has already reasoned about the task for you and provided this suggestion:" in executor_prompt
+    assert "Go near the key." in executor_prompt
     assert "Action must be exactly one of" not in executor_prompt
-    assert "[Executor Response]" not in executor_prompt
+    assert "[Executor Turn]" not in executor_prompt
 
 
-def test_babyai_executor_retry_prompt_restates_schema_and_allowed_actions():
+def test_babyai_executor_retry_prompt_repairs_bare_valid_action():
     observation = 'obs\nAvailable actions: ["turn left", "turn right", "move forward"]'
     profile = planner_executor.get_task_profile("babyai")
     retry_prompt = planner_executor.build_executor_retry_prompt(
         observation=observation,
-        planner_message="[PLANNER]\nAction:\nturn right",
-        invalid_executor_output="Go",
+        planner_message="move forward",
+        invalid_executor_output="move forward",
         validation_reason="invalid_format",
         task_profile=profile,
     )
-    assert "[Executor Retry]" in retry_prompt
-    assert "Failure reason: invalid_format" in retry_prompt
-    assert "Thought:" in retry_prompt
-    assert "Action:" in retry_prompt
+    assert "[Executor Retry]" not in retry_prompt
+    assert "The previous response already contains the valid action 'move forward'." in retry_prompt
     assert "Action must be exactly one of: turn left, turn right, move forward" in retry_prompt
-    assert "Do not output bare words like Go, Up, Left, or Right." in retry_prompt
-    assert "[Executor Response]" in retry_prompt
 
 
-def test_executor_normalization_strips_control_headers_only():
+def test_executor_normalization_strips_generic_bracket_headers():
     profile = planner_executor.get_task_profile("babyai")
     payload = "[Executor Response]\n[Executor]\nThought:\nTurn right.\n\nAction:\nturn right"
+    assert planner_executor.normalize_executor_payload(payload, profile) == "Thought:\nTurn right.\n\nAction:\nturn right"
+
+    payload = "[Executor Turn]\n[Environment Observation]\n[Reviewers Turn]\nThought:\nTurn right.\n\nAction:\nturn right"
     assert planner_executor.normalize_executor_payload(payload, profile) == "Thought:\nTurn right.\n\nAction:\nturn right"
 
 

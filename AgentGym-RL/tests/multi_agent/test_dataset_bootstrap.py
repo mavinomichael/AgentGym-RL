@@ -23,5 +23,20 @@ def test_bootstrap_preserves_original_instruction_and_assistant_acknowledgement(
     assert "Planner" in messages[0]["content"]
     assert "Executor" in messages[0]["content"]
     assert messages[1]["content"] == "Ok."
-    assert "The Executor must respond in the original task format exactly." in prompt
+    assert "Planner" in prompt
     assert "Original task instruction." in prompt
+
+
+def test_babyai_bootstrap_uses_plain_two_agent_instruction_without_reviewers():
+    env_client = SimpleNamespace(
+        conversation_start=(
+            {"from": "human", "loss": None, "value": "Original BabyAI instruction."},
+            {"from": "gpt", "loss": False, "value": "Ok."},
+        )
+    )
+    profile = planner_executor.get_task_profile("babyai")
+    messages, prompt = planner_executor.build_multi_agent_bootstrap(env_client, profile)
+    assert "Original BabyAI instruction." not in messages[0]["content"]
+    assert "part of an exploration team" in messages[0]["content"]
+    assert "role-specific instructions" in messages[0]["content"]
+    assert "[" not in prompt

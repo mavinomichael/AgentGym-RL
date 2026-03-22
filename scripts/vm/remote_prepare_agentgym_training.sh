@@ -45,7 +45,10 @@ python -m pip install -e "$REPO_ROOT/AgentGym-RL"
 python -m pip install -e "$REPO_ROOT/AgentGym/agentenv"
 
 python - <<PY
+import os
+import shutil
 from huggingface_hub import snapshot_download
+
 snapshot_download(
     repo_id='${MODEL_HUB_ID}',
     local_dir='${MODEL_PATH}',
@@ -56,8 +59,47 @@ snapshot_download(
     repo_type='dataset',
     local_dir='${DATA_ROOT}',
     local_dir_use_symlinks=False,
-    allow_patterns=['AgentItemId/*', 'AgentItemId/**/*', 'AgentEval/*', 'AgentEval/**/*'],
+    allow_patterns=[
+        'train/*', 'train/**/*',
+        'eval/*', 'eval/**/*',
+        'AgentItemId/*', 'AgentItemId/**/*',
+        'AgentEval/*', 'AgentEval/**/*',
+    ],
 )
+
+# Current Hugging Face dataset layout uses top-level train/eval folders, while
+# the training scripts in this project still expect AgentItemId plus nested
+# AgentEval/<task>/<task>_test.json directories.
+for src_name, dst_name in [('train', 'AgentItemId/train'), ('eval', 'AgentEval')]:
+    src = os.path.join('${DATA_ROOT}', src_name)
+    dst = os.path.join('${DATA_ROOT}', dst_name)
+    if not os.path.isdir(src):
+        continue
+    os.makedirs(dst, exist_ok=True)
+    for entry in os.listdir(src):
+        src_path = os.path.join(src, entry)
+        dst_path = os.path.join(dst, entry)
+        if os.path.isdir(src_path):
+            if os.path.exists(dst_path):
+                shutil.rmtree(dst_path)
+            shutil.copytree(src_path, dst_path)
+        else:
+            shutil.copy2(src_path, dst_path)
+
+# Mirror flat eval files such as AgentEval/babyai_test.json into the nested
+# task-specific directories consumed by the multi-agent generation config.
+agent_eval_root = os.path.join('${DATA_ROOT}', 'AgentEval')
+if os.path.isdir(agent_eval_root):
+    for entry in os.listdir(agent_eval_root):
+        if not entry.endswith('_test.json'):
+            continue
+        task_name = entry[:-10]  # strip "_test.json"
+        nested_dir = os.path.join(agent_eval_root, task_name)
+        os.makedirs(nested_dir, exist_ok=True)
+        shutil.copy2(
+            os.path.join(agent_eval_root, entry),
+            os.path.join(nested_dir, entry),
+        )
 PY
 
 touch "$HOME/.agentgym_training_env_ready"

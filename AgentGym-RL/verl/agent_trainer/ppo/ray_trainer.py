@@ -23,6 +23,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import List, Type, Dict
 from copy import deepcopy
+from collections import Counter
 
 import numpy as np
 from codetiming import Timer
@@ -64,13 +65,14 @@ class ResourcePoolManager:
     resource_pool_dict: dict[str, RayResourcePool] = field(default_factory=dict)
 
     def create_resource_pool(self):
+        pool_to_role_count = Counter(self.mapping.values())
         for resource_pool_name, process_on_nodes in self.resource_pool_spec.items():
             # max_colocate_count means the number of WorkerGroups (i.e. processes) in each RayResourcePool
             # For FSDP backend, we recommend using max_colocate_count=1 that merge all WorkerGroups into one.
             # For Megatron backend, we recommend using max_colocate_count>1 that can utilize different WorkerGroup for differnt models
             resource_pool = RayResourcePool(process_on_nodes=process_on_nodes,
                                             use_gpu=True,
-                                            max_colocate_count=1,
+                                            max_colocate_count=max(1, pool_to_role_count.get(resource_pool_name, 1)),
                                             name_prefix=resource_pool_name)
             self.resource_pool_dict[resource_pool_name] = resource_pool
 
@@ -141,6 +143,12 @@ def compute_advantage(data: DataProto, adv_estimator, gamma=1.0, lam=1.0, num_re
         values = data.batch['values']
         response_mask = data.batch['response_mask']
         token_level_rewards = data.batch['token_level_rewards']
+        if values.shape[-1] != token_level_rewards.shape[-1]:
+            # Critic values can include prompt positions; align all tensors to the response tail.
+            target_len = min(values.shape[-1], response_mask.shape[-1], token_level_rewards.shape[-1])
+            values = values[:, -target_len:]
+            response_mask = response_mask[:, -target_len:]
+            token_level_rewards = token_level_rewards[:, -target_len:]
         advantages, returns = core_algos.compute_gae_advantage_return(token_level_rewards=token_level_rewards,
                                                                       values=values,
                                                                       eos_mask=response_mask,
@@ -265,12 +273,25 @@ def compute_data_metrics(batch, use_critic=True):
     returns = batch.batch['returns']
 
     response_mask = batch.batch['response_mask'].bool()
+    if not (advantages.shape[-1] == returns.shape[-1] == response_mask.shape[-1]):
+        target_len = min(advantages.shape[-1], returns.shape[-1], response_mask.shape[-1])
+        advantages = advantages[:, -target_len:]
+        returns = returns[:, -target_len:]
+        response_mask = response_mask[:, -target_len:]
 
     valid_adv = torch.masked_select(advantages, response_mask)
     valid_returns = torch.masked_select(returns, response_mask)
 
     if use_critic:
         values = batch.batch['values']
+        if values.shape[-1] != response_mask.shape[-1]:
+            target_len = min(values.shape[-1], returns.shape[-1], advantages.shape[-1], response_mask.shape[-1])
+            values = values[:, -target_len:]
+            response_mask = response_mask[:, -target_len:]
+            returns = returns[:, -target_len:]
+            advantages = advantages[:, -target_len:]
+            valid_adv = torch.masked_select(advantages, response_mask)
+            valid_returns = torch.masked_select(returns, response_mask)
         valid_values = torch.masked_select(values, response_mask)
         return_diff_var = torch.var(valid_returns - valid_values)
         return_var = torch.var(valid_returns)
@@ -591,12 +612,23 @@ class RayPPOTrainer(object):
         all_wg = {}
         self.wg_dicts = []
         for resource_pool, class_dict in self.resource_pool_to_cls.items():
-            worker_dict_cls = create_colocated_worker_cls(class_dict=class_dict)
-            wg_dict = self.ray_worker_group_cls(resource_pool=resource_pool, ray_cls_with_init=worker_dict_cls)
-            spawn_wg = wg_dict.spawn(prefix_set=class_dict.keys())
-            all_wg.update(spawn_wg)
-            # keep the referece of WorkerDict to support ray >= 2.31. Ref: https://github.com/ray-project/ray/pull/45699
-            self.wg_dicts.append(wg_dict)
+            worker_bases = {
+                cls.cls.__ray_actor_class__.__base__
+                for cls in class_dict.values()
+            }
+            if len(worker_bases) == 1:
+                worker_dict_cls = create_colocated_worker_cls(class_dict=class_dict)
+                wg_dict = self.ray_worker_group_cls(resource_pool=resource_pool, ray_cls_with_init=worker_dict_cls)
+                spawn_wg = wg_dict.spawn(prefix_set=class_dict.keys())
+                all_wg.update(spawn_wg)
+                # keep the reference of WorkerDict to support ray >= 2.31.
+                self.wg_dicts.append(wg_dict)
+                continue
+
+            for key, cls in class_dict.items():
+                wg = self.ray_worker_group_cls(resource_pool=resource_pool, ray_cls_with_init=cls, name_prefix=key)
+                all_wg[key] = wg
+                self.wg_dicts.append(wg)
 
         if self.use_critic:
             self.critic_wg = all_wg['critic']
