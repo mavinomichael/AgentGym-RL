@@ -71,6 +71,9 @@ class PlannerPayloadValidation:
     valid: bool
     reason: str
     message: Optional[str] = None
+    exact_action: bool = False
+    degenerate_fragment: bool = False
+    token_count: int = 0
 
 
 @dataclass(frozen=True)
@@ -347,6 +350,7 @@ def build_executor_turn_prompt(
             "A planner agent has already reasoned about the task for you and provided this suggestion:\n\n"
             f"{planner_message}\n\n"
             "Use the planner suggestion if it is helpful. If it conflicts with the current observation or with the available actions, ignore it and follow the observation instead.\n\n"
+            "Do not copy the planner suggestion verbatim as your final answer.\n\n"
             "Your response should use the following format:\n"
             "Thought:\n"
             "<Your Thought>\n\n"
@@ -428,6 +432,7 @@ def build_executor_retry_prompt(
             "Action:\n"
             "<exactly one action>\n"
             f"Action must be exactly one of: {action_list}\n"
+            "Do not repeat the planner suggestion verbatim.\n"
             "Do not output bare words like Go, Up, Left, or Right.\n"
             "Do not output multiple Action lines.\n"
             "Do not include role labels.\n"
@@ -488,6 +493,14 @@ def rewrite_planner_payload(
         return None
 
     available_actions = extract_available_actions_from_observation(observation)
+    stripped_action = _strip_use_action_wrapper(normalized, available_actions)
+    if stripped_action:
+        return _validated_rewritten_planner_phrase(stripped_action, observation, task_profile)
+
+    target_action = _planner_action_from_bare_target_label(normalized, available_actions)
+    if target_action:
+        return _validated_rewritten_planner_phrase(target_action, observation, task_profile)
+
     exact_action_rewrite = _planner_guidance_from_exact_action(normalized, available_actions)
     if exact_action_rewrite:
         return _validated_rewritten_planner_phrase(exact_action_rewrite, observation, task_profile)
@@ -683,6 +696,47 @@ def _planner_guidance_from_exact_action(text: str, available_actions: List[str])
     return None
 
 
+def _strip_use_action_wrapper(text: str, available_actions: List[str]) -> Optional[str]:
+    normalized = _normalize_action_text(text)
+    if not normalized.startswith("use "):
+        return None
+    candidate = normalized[len("use "):].strip()
+    return candidate if candidate in available_actions else None
+
+
+def _action_targets_with_preferences(available_actions: List[str]) -> List[Tuple[str, str]]:
+    targets: List[Tuple[str, str]] = []
+    prefixes = (
+        "go to ",
+        "pickup ",
+        "toggle and go through ",
+        "go through ",
+    )
+    for prefix in prefixes:
+        for action in available_actions:
+            if action.startswith(prefix):
+                targets.append((action[len(prefix):].strip(), action))
+    return targets
+
+
+def _planner_action_from_bare_target_label(text: str, available_actions: List[str]) -> Optional[str]:
+    normalized = _normalize_action_text(text)
+    if not normalized:
+        return None
+    for target, action in _action_targets_with_preferences(available_actions):
+        if normalized == target:
+            return action
+    return None
+
+
+def _planner_degenerate_fragment_reason(text: str, available_actions: List[str]) -> Optional[str]:
+    if _strip_use_action_wrapper(text, available_actions):
+        return "use_action_wrapper"
+    if _planner_action_from_bare_target_label(text, available_actions):
+        return "bare_target_label"
+    return None
+
+
 def _validated_rewritten_planner_phrase(
         phrase: str,
         observation: str,
@@ -807,7 +861,27 @@ def validate_planner_payload(
     if _looks_like_garbage(collapsed):
         return PlannerPayloadValidation(valid=False, reason="garbage", message=None)
     if task_profile is not None and task_profile.task_name == "babyai":
-        return PlannerPayloadValidation(valid=True, reason="ok", message=collapsed)
+        available_actions = extract_available_actions_from_observation(observation)
+        token_count = len(collapsed.split())
+        exact_action = _normalize_action_text(collapsed) in available_actions
+        if exact_action:
+            return PlannerPayloadValidation(
+                valid=True,
+                reason="ok",
+                message=collapsed,
+                exact_action=True,
+                token_count=token_count,
+            )
+        degenerate_reason = _planner_degenerate_fragment_reason(collapsed, available_actions)
+        if degenerate_reason is not None:
+            return PlannerPayloadValidation(
+                valid=False,
+                reason=degenerate_reason,
+                message=None,
+                degenerate_fragment=True,
+                token_count=token_count,
+            )
+        return PlannerPayloadValidation(valid=True, reason="ok", message=collapsed, token_count=token_count)
     if _starts_with_filler_opener(collapsed):
         return PlannerPayloadValidation(valid=False, reason="filler_opener", message=None)
     words = collapsed.split()
@@ -870,6 +944,7 @@ def validate_executor_payload(
         raw_text: str,
         observation: str,
         task_profile: TaskProfile,
+        planner_message: Optional[str] = None,
 ) -> ExecutorPayloadValidation:
     normalized = normalize_executor_payload(raw_text, task_profile)
     valid_format = is_executor_payload_valid(normalized, task_profile)
@@ -880,6 +955,8 @@ def validate_executor_payload(
         return ExecutorPayloadValidation(valid=False, reason="invalid_format")
 
     if not valid_format:
+        if planner_message and _looks_like_copied_planner_text(normalized, planner_message):
+            return ExecutorPayloadValidation(valid=False, reason="copied_planner_text")
         return ExecutorPayloadValidation(valid=False, reason="invalid_format")
 
     action = extract_executor_action(normalized, task_profile)
@@ -894,6 +971,26 @@ def validate_executor_payload(
             action=action,
         )
     return ExecutorPayloadValidation(valid=True, reason="ok", action=action)
+
+
+def _canonicalize_text_for_copy_check(text: str) -> str:
+    lowered = text.lower()
+    lowered = re.sub(r"thought:\s*", " ", lowered)
+    lowered = re.sub(r"action:\s*", " ", lowered)
+    lowered = re.sub(r"[^a-z0-9]+", " ", lowered)
+    return " ".join(lowered.split()).strip()
+
+
+def _looks_like_copied_planner_text(executor_text: str, planner_message: str) -> bool:
+    executor_canonical = _canonicalize_text_for_copy_check(executor_text)
+    planner_canonical = _canonicalize_text_for_copy_check(normalize_planner_payload(planner_message))
+    if not executor_canonical or not planner_canonical:
+        return False
+    if executor_canonical == planner_canonical:
+        return True
+    if len(planner_canonical) < 12:
+        return False
+    return executor_canonical.startswith(planner_canonical) or planner_canonical.startswith(executor_canonical)
 
 
 def detect_invalid_action(observation: str, task_profile: TaskProfile) -> bool:

@@ -1,0 +1,122 @@
+[
+  {
+    "step": 50,
+    "log_path": "/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/2026-03-23_dense500_eval_and_traces/logs/eval_step50.log",
+    "Avg@1": 0.11229634351200528,
+    "Pass@1": 0.12222222222222222,
+    "ExecutorNativeFormatViolations": 0.0,
+    "InvalidFormatTerminationRate": 0.0,
+    "InvalidActionTerminationRate": 0.011111111111111112,
+    "PlannerInvalidFormatRate": 0.1333333333333333,
+    "PlannerFallbackRate": 0.0,
+    "PlannerTagOnlyRate": 0.0
+  },
+  {
+    "step": 100,
+    "log_path": "/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/2026-03-23_dense500_eval_and_traces/logs/eval_step100.log",
+    "Avg@1": 0.08722239252593782,
+    "Pass@1": 0.1,
+    "ExecutorNativeFormatViolations": 0.24444444444444446,
+    "InvalidFormatTerminationRate": 0.24444444444444444,
+    "InvalidActionTerminationRate": 0.03333333333333333,
+    "PlannerInvalidFormatRate": 0.4111111111111111,
+    "PlannerFallbackRate": 0.0,
+    "PlannerTagOnlyRate": 0.0
+  },
+  {
+    "step": 150,
+    "log_path": "/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/2026-03-23_dense500_eval_and_traces/logs/eval_step150.log",
+    "Avg@1": 0.2660583183169365,
+    "Pass@1": 0.28888888888888886,
+    "ExecutorNativeFormatViolations": 0.1444444444444445,
+    "InvalidFormatTerminationRate": 0.14444444444444443,
+    "InvalidActionTerminationRate": 0.044444444444444446,
+    "PlannerInvalidFormatRate": 0.5555555555555556,
+    "PlannerFallbackRate": 0.011111111111111112,
+    "PlannerTagOnlyRate": 0.011111111111111112
+  },
+  {
+    "step": 200,
+    "log_path": "/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/2026-03-23_dense500_eval_and_traces/logs/eval_step200.log",
+    "Avg@1": 0.4405287702878316,
+    "Pass@1": 0.4777777777777778,
+    "ExecutorNativeFormatViolations": 0.1444444444444445,
+    "InvalidFormatTerminationRate": 0.14444444444444443,
+    "InvalidActionTerminationRate": 0.011111111111111112,
+    "PlannerInvalidFormatRate": 0.3555555555555555,
+    "PlannerFallbackRate": 0.0,
+    "PlannerTagOnlyRate": 0.0
+  },
+  {
+    "step": 250,
+    "log_path": "/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/2026-03-23_dense500_eval_and_traces/logs/eval_step250.log",
+    "Avg@1": 0.5340208869841364,
+    "Pass@1": 0.5888888888888889,
+    "ExecutorNativeFormatViolations": 0.21111111111111114,
+    "InvalidFormatTerminationRate": 0.2111111111111111,
+    "InvalidActionTerminationRate": 0.13333333333333333,
+    "PlannerInvalidFormatRate": 0.43333333333333335,
+    "PlannerFallbackRate": 0.0,
+    "PlannerTagOnlyRate": 0.0
+  },
+  {
+    "step": 300,
+    "log_path": "/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/2026-03-23_dense500_eval_and_traces/logs/eval_step300.log",
+    "Avg@1": 0.7743132756816016,
+    "Pass@1": 0.8222222222222222,
+    "ExecutorNativeFormatViolations": 0.033333333333333326,
+    "InvalidFormatTerminationRate": 0.03333333333333333,
+    "InvalidActionTerminationRate": 0.0,
+    "PlannerInvalidFormatRate": 0.0,
+    "PlannerFallbackRate": 0.0,
+    "PlannerTagOnlyRate": 0.0
+  },
+  {
+    "step": 350,
+    "log_path": "/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/2026-03-23_dense500_eval_and_traces/logs/eval_step350.log",
+    "Avg@1": 0.6813135902086894,
+    "Pass@1": 0.7222222222222222,
+    "ExecutorNativeFormatViolations": 0.0,
+    "InvalidFormatTerminationRate": 0.0,
+    "InvalidActionTerminationRate": 0.011111111111111112,
+    "PlannerInvalidFormatRate": 0.011111111111111072,
+    "PlannerFallbackRate": 0.0,
+    "PlannerTagOnlyRate": 0.0
+  },
+  {
+    "step": 400,
+    "log_path": "/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/2026-03-23_dense500_eval_and_traces/logs/eval_step400.log",
+    "Avg@1": 0.331187428202894,
+    "Pass@1": 0.4,
+    "ExecutorNativeFormatViolations": 0.2222222222222222,
+    "InvalidFormatTerminationRate": 0.2222222222222222,
+    "InvalidActionTerminationRate": 0.03333333333333333,
+    "PlannerInvalidFormatRate": 0.18888888888888888,
+    "PlannerFallbackRate": 0.0,
+    "PlannerTagOnlyRate": 0.0
+  },
+  {
+    "step": 450,
+    "log_path": "/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/2026-03-23_dense500_eval_and_traces/logs/eval_step450.log",
+    "Avg@1": -0.1756770862473382,
+    "Pass@1": 0.022222222222222223,
+    "ExecutorNativeFormatViolations": 0.9777777777777777,
+    "InvalidFormatTerminationRate": 0.9777777777777777,
+    "InvalidActionTerminationRate": 0.0,
+    "PlannerInvalidFormatRate": 0.0,
+    "PlannerFallbackRate": 0.0,
+    "PlannerTagOnlyRate": 0.0
+  },
+  {
+    "step": 500,
+    "log_path": "/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/2026-03-23_dense500_eval_and_traces/logs/eval_step500.log",
+    "Avg@1": -0.20000000298023224,
+    "Pass@1": 0.0,
+    "ExecutorNativeFormatViolations": 1.0,
+    "InvalidFormatTerminationRate": 1.0,
+    "InvalidActionTerminationRate": 0.0,
+    "PlannerInvalidFormatRate": 0.0,
+    "PlannerFallbackRate": 0.0,
+    "PlannerTagOnlyRate": 0.0
+  }
+]

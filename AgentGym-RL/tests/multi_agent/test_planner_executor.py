@@ -292,6 +292,7 @@ def test_babyai_executor_prompt_stays_close_to_single_agent_contract():
     assert "respond with an action and your thought" in executor_prompt
     assert "A planner agent has already reasoned about the task for you and provided this suggestion:" in executor_prompt
     assert "Go near the key." in executor_prompt
+    assert "Do not copy the planner suggestion verbatim as your final answer." in executor_prompt
     assert "Action must be exactly one of" not in executor_prompt
     assert "[Executor Turn]" not in executor_prompt
 
@@ -309,6 +310,7 @@ def test_babyai_executor_retry_prompt_repairs_bare_valid_action():
     assert "[Executor Retry]" not in retry_prompt
     assert "The previous response already contains the valid action 'move forward'." in retry_prompt
     assert "Action must be exactly one of: turn left, turn right, move forward" in retry_prompt
+    assert "Do not repeat the planner suggestion verbatim." in retry_prompt
 
 
 def test_executor_normalization_strips_generic_bracket_headers():
@@ -371,6 +373,21 @@ def test_babyai_action_not_in_available_list_is_invalid():
     assert result.action == "pick up key 1"
 
 
+def test_babyai_copied_planner_text_is_invalid():
+    profile = planner_executor.get_task_profile("babyai")
+    observation = 'obs\nAvailable actions: ["turn left", "turn right", "move forward"]'
+    payload = "Turn left to look for the ball"
+    result = planner_executor.validate_executor_payload(
+        payload,
+        observation,
+        profile,
+        planner_message="Turn left to look for the ball",
+    )
+    assert not result.valid
+    assert result.reason == "copied_planner_text"
+    assert result.action is None
+
+
 def test_non_babyai_validation_path_is_unchanged():
     profile = planner_executor.get_task_profile("searchqa")
     payload = "<search>water cycle</search>"
@@ -385,6 +402,49 @@ def test_invalid_action_detection_and_reward_delta():
     assert planner_executor.detect_invalid_action("Invalid Action. Try again.", sciworld_profile)
     assert planner_executor.detect_invalid_action("TimeoutError while stepping browser env", webarena_profile)
     assert planner_executor.compute_reward_delta(1.5, 3.0) == 1.5
+
+
+def test_babyai_planner_validation_rejects_degenerate_fragments_and_rewrite_repairs_them():
+    profile = planner_executor.get_task_profile("babyai")
+    observation = (
+        'obs\nAvailable actions: ["turn left", "turn right", "move forward", '
+        '"pickup green box 1", "go to red ball 1"]'
+    )
+
+    bare_target = planner_executor.validate_planner_payload(
+        "red ball 1",
+        observation=observation,
+        task_profile=profile,
+    )
+    assert not bare_target.valid
+    assert bare_target.reason == "bare_target_label"
+    assert bare_target.degenerate_fragment
+
+    wrapped_action = planner_executor.validate_planner_payload(
+        "use pickup green box 1",
+        observation=observation,
+        task_profile=profile,
+    )
+    assert not wrapped_action.valid
+    assert wrapped_action.reason == "use_action_wrapper"
+    assert wrapped_action.degenerate_fragment
+
+    assert (
+        planner_executor.rewrite_planner_payload(
+            "use pickup green box 1",
+            observation=observation,
+            task_profile=profile,
+        )
+        == "Pickup green box 1"
+    )
+    assert (
+        planner_executor.rewrite_planner_payload(
+            "red ball 1",
+            observation=observation,
+            task_profile=profile,
+        )
+        == "Go to red ball 1"
+    )
 
 
 def test_rollout_handler_tracks_four_role_masks_and_weights():

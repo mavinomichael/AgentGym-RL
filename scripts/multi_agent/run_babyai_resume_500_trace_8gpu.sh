@@ -184,7 +184,7 @@ run_eval() {
       multi_agent.invalid_output.max_retries=2 \
       multi_agent.invalid_output.retry_temperature=0.2 \
       multi_agent.invalid_output.retry_max_tokens=80 \
-      multi_agent.invalid_output.planner_max_retries=2 \
+      multi_agent.invalid_output.planner_max_retries=0 \
       multi_agent.invalid_output.planner_retry_temperature=0.1 \
       multi_agent.invalid_output.planner_retry_max_tokens=20 \
       multi_agent.debug.trace_executor_payload=false \
@@ -246,10 +246,10 @@ cleanup_old_ray_sessions
     actor_rollout_ref.actor.planner_kl_weight=4.0 \
     multi_agent.invalid_output.policy=terminate_with_penalty \
     multi_agent.invalid_output.penalty=-0.2 \
-    multi_agent.invalid_output.max_retries=2 \
+    multi_agent.invalid_output.max_retries=3 \
     multi_agent.invalid_output.retry_temperature=0.2 \
     multi_agent.invalid_output.retry_max_tokens=80 \
-    multi_agent.invalid_output.planner_max_retries=2 \
+    multi_agent.invalid_output.planner_max_retries=0 \
     multi_agent.invalid_output.planner_retry_temperature=0.1 \
     multi_agent.invalid_output.planner_retry_max_tokens=20 \
     multi_agent.debug.trace_executor_payload=true \

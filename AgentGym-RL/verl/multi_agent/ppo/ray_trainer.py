@@ -106,6 +106,34 @@ def compute_data_metrics(batch, use_critic=True):
     if "planner_rewrite_used" in batch.batch.keys():
         planner_rewrite_used = batch.batch["planner_rewrite_used"].float()
         metrics[f"planner_rewrite_rate/{task_name}"] = torch.mean(planner_rewrite_used).detach().item()
+    if "planner_exact_action" in batch.batch.keys():
+        planner_exact_action = batch.batch["planner_exact_action"].float()
+        metrics[f"planner_exact_action_rate/{task_name}"] = torch.mean(planner_exact_action).detach().item()
+    if "planner_degenerate_fragment" in batch.batch.keys():
+        planner_degenerate_fragment = batch.batch["planner_degenerate_fragment"].float()
+        metrics[f"planner_degenerate_fragment_rate/{task_name}"] = (
+            torch.mean(planner_degenerate_fragment).detach().item()
+        )
+    if "planner_message_token_count" in batch.batch.keys():
+        planner_message_token_count = batch.batch["planner_message_token_count"].float()
+        metrics[f"planner_avg_token_length/{task_name}"] = torch.mean(planner_message_token_count).detach().item()
+    if "executor_first_pass_valid" in batch.batch.keys():
+        executor_first_pass_valid = batch.batch["executor_first_pass_valid"].float()
+        metrics[f"executor_first_pass_valid_rate/{task_name}"] = torch.mean(executor_first_pass_valid).detach().item()
+    if "executor_retry_used" in batch.batch.keys():
+        executor_retry_used = batch.batch["executor_retry_used"].float()
+        metrics[f"executor_retry_used_rate/{task_name}"] = torch.mean(executor_retry_used).detach().item()
+    if "executor_retry_resolved" in batch.batch.keys():
+        executor_retry_resolved = batch.batch["executor_retry_resolved"].float()
+        metrics[f"executor_retry_resolved_rate/{task_name}"] = torch.mean(executor_retry_resolved).detach().item()
+    if "executor_retry_count" in batch.batch.keys():
+        executor_retry_count = batch.batch["executor_retry_count"].float()
+        metrics[f"executor_retry_count_mean/{task_name}"] = torch.mean(executor_retry_count).detach().item()
+    if "executor_action_changed_after_retry" in batch.batch.keys():
+        executor_action_changed_after_retry = batch.batch["executor_action_changed_after_retry"].float()
+        metrics[f"executor_action_changed_after_retry_rate/{task_name}"] = (
+            torch.mean(executor_action_changed_after_retry).detach().item()
+        )
     if "planner_reviewer_response_mask" in batch.batch.keys():
         planner_reviewer_tokens = batch.batch["planner_reviewer_response_mask"].sum(-1).float()
         metrics["planner_reviewer_tokens/mean"] = torch.mean(planner_reviewer_tokens).detach().item()

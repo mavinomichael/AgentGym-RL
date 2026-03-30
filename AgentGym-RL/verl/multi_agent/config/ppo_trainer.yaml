@@ -31,10 +31,10 @@ multi_agent:
   invalid_output:
     policy: terminate_with_penalty
     penalty: -0.2
-    max_retries: 2
+    max_retries: 3
     retry_temperature: 0.2
     retry_max_tokens: 80
-    planner_max_retries: 3
+    planner_max_retries: 0
     planner_retry_temperature: 0.1
     planner_retry_max_tokens: 16
   debug:
