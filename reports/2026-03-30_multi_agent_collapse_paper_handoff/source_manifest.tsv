@@ -1,0 +1,12 @@
+category	path	note
+comparison_report	/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-09/babyai_eval_comparison_report.txt	Historical composite comparison including single-agent baseline and fixed-round 2-agent checkpoints.
+comparison_plot	/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-09/babyai_eval_comparison.png	Existing historical comparison figure from March 9.
+fixed_round_4agent_metrics	/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-14/reviewer_stage_metrics.tsv	Fixed-round 4-agent reviewer checkpoint metrics.
+tagged_scaling_metrics	/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-21/mavino_collapse_2agent_scaling_100/eval_summary.tsv	Tagged 2-agent ScalingRL checkpoint eval summary.
+tagged_scaling_report	/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-21/mavino_collapse_2agent_scaling_100/MAVINO_COLLAPSE_REPORT.md	Narrative report for tagged prompt collapse run.
+tagged_scaling_traces	/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/babyai_multi_agent_diagnostics_2026-03-21/mavino_collapse_2agent_scaling_100/representative_trace_examples.md	Representative trace excerpts for tagged prompt collapse.
+plain_split_scaling_metrics	/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/2026-03-23_plain_split_retry_v2_deep_research/checkpoint_metrics.tsv	No-tag ScalingRL run with plain split prompts and retry v2.
+plain_split_scaling_report	/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/2026-03-23_plain_split_retry_v2_deep_research/DEEP_RESEARCH_ANALYSIS.md	Narrative analysis for no-tag ScalingRL run.
+dense_scaling_metrics	/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/2026-03-23_dense500_eval_and_traces/checkpoint_metrics.tsv	No-tag dense-curriculum ScalingRL run with 500-step horizon.
+dense_scaling_report	/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/2026-03-23_dense500_eval_and_traces/SUMMARY.md	Narrative summary for dense-curriculum run.
+dense_scaling_traces	/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/2026-03-23_dense500_eval_and_traces/selected_trace_examples.md	Selected trace excerpts for dense-curriculum run.
