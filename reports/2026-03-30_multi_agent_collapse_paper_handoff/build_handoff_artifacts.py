@@ -353,6 +353,13 @@ LABELS = {
     'plain_split_scaling_2agent': 'ScalingRL 2-agent no tags [6,13,20]',
     'dense_scaling_2agent': 'ScalingRL 2-agent no tags [6,8,10,13,16,20]',
 }
+TWO_AGENT_FAMILIES = [
+    'fixed_round_2agent_tagged',
+    'tagged_scaling_2agent',
+    'plain_split_scaling_2agent',
+    'dense_scaling_2agent',
+]
+MISSING_FIXED_NO_TAG_FAMILY = 'fixed_round_2agent_no_tags'
 
 try:
     FONT = ImageFont.truetype('/System/Library/Fonts/Supplemental/Arial.ttf', 22)
@@ -412,38 +419,38 @@ def draw_series(draw, pts, color, x0, y0, x1, y1, ymin, ymax, width=4):
     for x, y, s, v in mapped:
         draw.ellipse((x-5, y-5, x+5, y+5), fill=color)
 
-# Figure 1: Pass@1 primary comparison
+# Figure 1: Pass@1 primary comparison (2-agent only)
 img = Image.new('RGB', (1500, 900), 'white')
 d = ImageDraw.Draw(img)
 plot = (110, 120, 980, 760)
 xt = [(scale_x(v, plot[0], plot[2]), v) for v in [0,50,100,150,200,250,300,350,400,450,500]]
 yt = [(scale_y(v, 0, 0.9, plot[1], plot[3]), f'{v:.1f}') for v in [0.0,0.2,0.4,0.6,0.8]]
-draw_axes(d, *plot, xt, yt, 'Pass@1', 'Pass@1 across multi-agent regimes', 'Baseline single-agent line included for reference')
+draw_axes(d, *plot, xt, yt, 'Pass@1', 'Pass@1 across 2-agent regimes', '4-agent reviewer runs intentionally omitted; no fixed-round 2-agent no-tag run was found locally')
 # baseline
 base_y = scale_y(single_agent_baseline['Pass@1'], 0, 0.9, plot[1], plot[3])
 d.line((plot[0], base_y, plot[2], base_y), fill=COLORS['baseline'], width=3)
 d.text((plot[2]-120, base_y-20), 'single-agent baseline', fill=COLORS['baseline'], font=SMALL)
-for fam in ['fixed_round_2agent_tagged','fixed_round_4agent_reviewers','tagged_scaling_2agent','plain_split_scaling_2agent','dense_scaling_2agent']:
+for fam in TWO_AGENT_FAMILIES:
     draw_series(d, series(fam, 'Pass@1'), COLORS[fam], *plot, 0, 0.9)
-draw_legend(d, [(LABELS[f], COLORS[f]) for f in ['fixed_round_2agent_tagged','fixed_round_4agent_reviewers','tagged_scaling_2agent','plain_split_scaling_2agent','dense_scaling_2agent']], 1020, 160)
+draw_legend(d, [(LABELS[f], COLORS[f]) for f in TWO_AGENT_FAMILIES], 1020, 160)
 img.save(FIG / 'fig_pass1_comparison.png')
 
-# Figure 2: Failure comparison, two panels
+# Figure 2: Failure comparison, two panels (2-agent only)
 img = Image.new('RGB', (1500, 1100), 'white')
 d = ImageDraw.Draw(img)
 top = (110, 120, 980, 470)
 bot = (110, 600, 980, 950)
 xt_top = [(scale_x(v, top[0], top[2]), v) for v in [0,50,100,150,200,250,300,350,400,450,500]]
 yt01_top = [(scale_y(v, 0, 1.0, top[1], top[3]), f'{v:.1f}') for v in [0,0.25,0.5,0.75,1.0]]
-draw_axes(d, *top, xt_top, yt01_top, 'Rate', 'Executor format violations over training')
-for fam in ['fixed_round_2agent_tagged','fixed_round_4agent_reviewers','tagged_scaling_2agent','plain_split_scaling_2agent','dense_scaling_2agent']:
+draw_axes(d, *top, xt_top, yt01_top, 'Rate', 'Executor format violations over training (2-agent only)')
+for fam in TWO_AGENT_FAMILIES:
     draw_series(d, series(fam, 'ExecutorNativeFormatViolations'), COLORS[fam], *top, 0, 1.0)
 xt_bot = [(scale_x(v, bot[0], bot[2]), v) for v in [0,50,100,150,200,250,300,350,400,450,500]]
 yt01_bot = [(scale_y(v, 0, 1.0, bot[1], bot[3]), f'{v:.1f}') for v in [0,0.25,0.5,0.75,1.0]]
-draw_axes(d, *bot, xt_bot, yt01_bot, 'Rate', 'Planner invalid-format rate over training')
-for fam in ['fixed_round_2agent_tagged','fixed_round_4agent_reviewers','tagged_scaling_2agent','plain_split_scaling_2agent','dense_scaling_2agent']:
+draw_axes(d, *bot, xt_bot, yt01_bot, 'Rate', 'Planner invalid-format rate over training (2-agent only)')
+for fam in TWO_AGENT_FAMILIES:
     draw_series(d, series(fam, 'PlannerInvalidFormatRate'), COLORS[fam], *bot, 0, 1.0)
-draw_legend(d, [(LABELS[f], COLORS[f]) for f in ['fixed_round_2agent_tagged','fixed_round_4agent_reviewers','tagged_scaling_2agent','plain_split_scaling_2agent','dense_scaling_2agent']], 1020, 220)
+draw_legend(d, [(LABELS[f], COLORS[f]) for f in TWO_AGENT_FAMILIES], 1020, 220)
 img.save(FIG / 'fig_failure_comparison.png')
 
 # Figure 3: Dense500 detail
@@ -475,7 +482,7 @@ d = ImageDraw.Draw(img)
 plot = (110, 120, 980, 760)
 xt = [(scale_x(v, plot[0], plot[2]), v) for v in [0,50,100,150,200,250,300,350,400,450,500]]
 yt = [(scale_y(v, 0, 1.0, plot[1], plot[3]), f'{v:.1f}') for v in [0,0.25,0.5,0.75,1.0]]
-draw_axes(d, *plot, xt, yt, 'Pass@1', 'Tagged prompts vs no-tag prompts under ScalingRL')
+draw_axes(d, *plot, xt, yt, 'Pass@1', 'Tagged prompts vs no-tag prompts under ScalingRL (2-agent only)')
 for fam in ['tagged_scaling_2agent','plain_split_scaling_2agent','dense_scaling_2agent']:
     draw_series(d, series(fam, 'Pass@1'), COLORS[fam], *plot, 0, 1.0)
 draw_legend(d, [(LABELS[f], COLORS[f]) for f in ['tagged_scaling_2agent','plain_split_scaling_2agent','dense_scaling_2agent']], 1020, 180)
@@ -518,16 +525,14 @@ with main_md.open('w') as f:
     f.write(f'- Existing plain-split ScalingRL report: `{PLAIN100_DIR / "DEEP_RESEARCH_ANALYSIS.md"}`\n')
     f.write(f'- Existing dense-curriculum report: `{DENSE500_DIR / "SUMMARY.md"}`\n\n')
     f.write('## Experimental Regimes To Emphasize\n')
-    f.write('1. **Tagged planner/executor prompts**\n')
+    f.write('1. **2-agent tagged prompts**\n')
     f.write('   - Fixed-round 2-agent tagged runs (historical composite evidence).\n')
-    f.write('   - Fixed-round 4-agent reviewer runs.\n')
     f.write('   - ScalingRL 2-agent tagged run (`Mavino Collapse`).\n')
-    f.write('2. **No ScalingRL (fixed-round) multi-agent training**\n')
-    f.write('   - 2-agent tagged composite checkpoints.\n')
-    f.write('   - 4-agent reviewer fixed-round run.\n')
-    f.write('3. **ScalingRL without tags**\n')
+    f.write('2. **2-agent no-tag ScalingRL**\n')
     f.write('   - Plain-split retry v2 with `[6,13,20]`.\n')
-    f.write('   - Dense-curriculum run with `[6,8,10,13,16,20]`.\n\n')
+    f.write('   - Dense-curriculum run with `[6,8,10,13,16,20]`.\n')
+    f.write('3. **Missing ablation**\n')
+    f.write('   - A fixed-round 2-agent no-tag run is **not present** in the local archived reports and therefore cannot be plotted yet.\n\n')
     f.write('## Figures\n')
     f.write(f'![Pass@1 comparison](figures/fig_pass1_comparison.png)\n\n')
     f.write(f'![Failure comparison](figures/fig_failure_comparison.png)\n\n')
@@ -535,10 +540,14 @@ with main_md.open('w') as f:
     f.write(f'![Tagged vs no-tags scaling](figures/fig_tagged_vs_notags_scaling.png)\n\n')
     f.write('## High-Level Quantitative Summary\n')
     f.write(f'- Single-agent baseline: `Avg@1={single_agent_baseline["Avg@1"]:.6f}`, `Pass@1={single_agent_baseline["Pass@1"]:.6f}`.\n')
-    for fam in ['fixed_round_2agent_tagged','fixed_round_4agent_reviewers','tagged_scaling_2agent','plain_split_scaling_2agent','dense_scaling_2agent']:
+    for fam in TWO_AGENT_FAMILIES:
         s = family_summary[fam]
         f.write(f'- {LABELS[fam]}: best checkpoint `step {s["best"]["step"]}` with `Pass@1={s["best"]["Pass@1"]:.6f}`, final checkpoint `step {s["final"]["step"]}` with `Pass@1={s["final"]["Pass@1"]:.6f}`.\n')
     f.write('\n')
+    f.write('## Scope Note\n')
+    f.write('- The figures in this handoff were updated to exclude 4-agent reviewer runs.\n')
+    f.write('- I did **not** find a confirmed fixed-round 2-agent no-tag training run in the local report archive.\n')
+    f.write('- The current 2-agent comparison therefore uses: fixed-round tagged, tagged ScalingRL, and no-tag ScalingRL.\n\n')
     f.write('## Supported Claims\n')
     f.write('1. **Prompt tags created a distinct recursive scaffold-copying collapse mode.**\n')
     f.write(f'   - Evidence: `{MAVINO_DIR / "MAVINO_COLLAPSE_REPORT.md"}` and `{MAVINO_DIR / "representative_trace_examples.md"}`.\n')
@@ -554,7 +563,7 @@ with main_md.open('w') as f:
     f.write('   - At `450-500`, planner metrics remain formally clean while executor format violations approach `1.0`.\n\n')
     f.write('## Important Caveats\n')
     f.write('- The fixed-round 2-agent curve is a **composite evidence pool**, not a single uninterrupted run. Use it to describe the historical debugging trajectory, not as a single clean learning curve.\n')
-    f.write('- The 4-agent reviewer runs change both topology and validation/retry structure, so they are useful for mechanism comparison but not a pure ablation against 2-agent runs.\n')
+    f.write('- A fixed-round 2-agent no-tag ablation is missing from the local archive, so the current no-tag evidence is entirely ScalingRL-based.\n')
     f.write('- The strongest paper claims should therefore focus on **failure modes and stability**, not on a single winner number.\n\n')
     f.write('## Failure Taxonomy\n')
     f.write('### A. Tagged prompt scaffold collapse\n')

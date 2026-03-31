@@ -21,16 +21,14 @@ Generated on 2026-03-30. This packet is designed so ChatGPT Deep Research can in
 - Existing dense-curriculum report: `/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/2026-03-23_dense500_eval_and_traces/SUMMARY.md`
 
 ## Experimental Regimes To Emphasize
-1. **Tagged planner/executor prompts**
+1. **2-agent tagged prompts**
    - Fixed-round 2-agent tagged runs (historical composite evidence).
-   - Fixed-round 4-agent reviewer runs.
    - ScalingRL 2-agent tagged run (`Mavino Collapse`).
-2. **No ScalingRL (fixed-round) multi-agent training**
-   - 2-agent tagged composite checkpoints.
-   - 4-agent reviewer fixed-round run.
-3. **ScalingRL without tags**
+2. **2-agent no-tag ScalingRL**
    - Plain-split retry v2 with `[6,13,20]`.
    - Dense-curriculum run with `[6,8,10,13,16,20]`.
+3. **Missing ablation**
+   - A fixed-round 2-agent no-tag run is **not present** in the local archived reports and therefore cannot be plotted yet.
 
 ## Figures
 ![Pass@1 comparison](figures/fig_pass1_comparison.png)
@@ -44,10 +42,14 @@ Generated on 2026-03-30. This packet is designed so ChatGPT Deep Research can in
 ## High-Level Quantitative Summary
 - Single-agent baseline: `Avg@1=0.672827`, `Pass@1=0.733333`.
 - Fixed-round 2-agent (tagged, composite): best checkpoint `step 15` with `Pass@1=0.766667`, final checkpoint `step 350` with `Pass@1=0.000000`.
-- Fixed-round 4-agent reviewers: best checkpoint `step 50` with `Pass@1=0.777778`, final checkpoint `step 150` with `Pass@1=0.144444`.
 - ScalingRL 2-agent with tags: best checkpoint `step 50` with `Pass@1=0.800000`, final checkpoint `step 100` with `Pass@1=0.033333`.
 - ScalingRL 2-agent no tags [6,13,20]: best checkpoint `step 200` with `Pass@1=0.811111`, final checkpoint `step 500` with `Pass@1=0.000000`.
 - ScalingRL 2-agent no tags [6,8,10,13,16,20]: best checkpoint `step 300` with `Pass@1=0.822222`, final checkpoint `step 500` with `Pass@1=0.000000`.
+
+## Scope Note
+- The figures in this handoff were updated to exclude 4-agent reviewer runs.
+- I did **not** find a confirmed fixed-round 2-agent no-tag training run in the local report archive.
+- The current 2-agent comparison therefore uses: fixed-round tagged, tagged ScalingRL, and no-tag ScalingRL.
 
 ## Supported Claims
 1. **Prompt tags created a distinct recursive scaffold-copying collapse mode.**
@@ -65,7 +67,7 @@ Generated on 2026-03-30. This packet is designed so ChatGPT Deep Research can in
 
 ## Important Caveats
 - The fixed-round 2-agent curve is a **composite evidence pool**, not a single uninterrupted run. Use it to describe the historical debugging trajectory, not as a single clean learning curve.
-- The 4-agent reviewer runs change both topology and validation/retry structure, so they are useful for mechanism comparison but not a pure ablation against 2-agent runs.
+- A fixed-round 2-agent no-tag ablation is missing from the local archive, so the current no-tag evidence is entirely ScalingRL-based.
 - The strongest paper claims should therefore focus on **failure modes and stability**, not on a single winner number.
 
 ## Failure Taxonomy
