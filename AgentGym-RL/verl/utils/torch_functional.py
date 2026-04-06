@@ -127,12 +127,12 @@ def masked_var(values, mask, unbiased=True):
     variance = masked_mean(centered_values**2, mask)
     if unbiased:
         mask_sum = mask.sum()
-        if mask_sum == 0:
-            raise ValueError("At least one element in the mask has to be 1.")
-        # note that if mask_sum == 1, then there is a division by zero issue
-        # to avoid it you just need to use a larger minibatch_size
-        if mask_sum == 1:
-            raise ValueError("The sum of the mask is one, which can cause a division by zero.")
+        if mask_sum <= 1:
+            # In small or fully-collapsed batches we can end up with an empty or
+            # singleton effective mask. Returning zero variance keeps whitening
+            # numerically stable and lets the trainer skip learning signal rather
+            # than crashing the whole run.
+            return torch.zeros_like(variance)
         bessel_correction = mask_sum / (mask_sum - 1)
         variance = variance * bessel_correction
     return variance

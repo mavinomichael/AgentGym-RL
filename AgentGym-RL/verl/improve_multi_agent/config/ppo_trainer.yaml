@@ -1,0 +1,203 @@
+defaults:
+  - task: babyai
+  - runtime: qwen2_5_7b_8gpu
+  - _self_
+
+data:
+  tokenizer: null
+  train_file: ${oc.env:DATA_ROOT,.}/${task.train_file}
+  val_files: null
+  prompt_key: item_id
+  max_prompt_length: ${task.max_prompt_length}
+  max_response_length: ${task.max_response_length}
+  train_batch_size: ${task.train_batch_size}
+  val_batch_size: null
+  return_raw_input_ids: False
+  return_raw_chat: True
+  shuffle: True
+
+improve_multi_agent:
+  enabled: true
+  planner_interval: 3
+  features:
+    role_local_optimization: true
+    role_local_advantage: true
+    role_aux_rewards: true
+    milestone_rewards: true
+  invalid_output:
+    policy: terminate_with_penalty
+    penalty: -0.2
+    max_retries: 0
+    planner_max_retries: 0
+  roles:
+    planner:
+      max_tokens: ${task.planner_max_tokens}
+      temperature: ${runtime.temperature}
+      ppo_weight: 1.0
+      kl_weight: 1.5
+    executor:
+      max_tokens: ${task.executor_max_tokens}
+      temperature: ${runtime.temperature}
+      ppo_weight: 1.0
+      kl_weight: 1.0
+
+actor_rollout_ref:
+  hybrid_engine: True
+  model:
+    path: ${runtime.model_path}
+    external_lib: null
+    override_config: {}
+    enable_gradient_checkpointing: True
+    use_remove_padding: False
+  actor:
+    strategy: fsdp
+    role_local_optimization: ${improve_multi_agent.features.role_local_optimization}
+    ppo_mini_batch_size: ${task.ppo_mini_batch_size}
+    ppo_micro_batch_size: null
+    ppo_micro_batch_size_per_gpu: ${task.ppo_micro_batch_size_per_gpu}
+    use_dynamic_bsz: False
+    ppo_max_token_len_per_gpu: ${runtime.actor_ppo_max_token_len_per_gpu}
+    grad_clip: 1.0
+    clip_ratio: 0.2
+    planner_clip_ratio: 0.15
+    executor_clip_ratio: 0.2
+    entropy_coeff: 0.001
+    planner_entropy_coeff: 0.0005
+    executor_entropy_coeff: 0.001
+    use_kl_loss: True
+    kl_loss_coef: 0.001
+    planner_kl_loss_coef: 0.002
+    executor_kl_loss_coef: 0.001
+    kl_loss_type: low_var_kl
+    planner_kl_weight: 1.0
+    ppo_epochs: 1
+    shuffle: False
+    ulysses_sequence_parallel_size: 1
+    optim:
+      lr: 1e-6
+      lr_warmup_steps_ratio: 0.
+      min_lr_ratio: null
+      warmup_style: constant
+      total_training_steps: -1
+    fsdp_config:
+      wrap_policy:
+        min_num_params: 0
+      param_offload: False
+      grad_offload: False
+      optimizer_offload: False
+      fsdp_size: -1
+  ref:
+    fsdp_config:
+      param_offload: False
+      wrap_policy:
+        min_num_params: 0
+    log_prob_micro_batch_size: null
+    log_prob_micro_batch_size_per_gpu: 1
+    log_prob_use_dynamic_bsz: ${actor_rollout_ref.actor.use_dynamic_bsz}
+    log_prob_max_token_len_per_gpu: ${actor_rollout_ref.actor.ppo_max_token_len_per_gpu}
+    ulysses_sequence_parallel_size: ${actor_rollout_ref.actor.ulysses_sequence_parallel_size}
+  agentgym:
+    task_name: ${task.task_name}
+    env_addr: ${runtime.env_server_url}
+    max_retries: 10
+    max_rounds: ${task.default_max_rounds}
+    timeout: ${task.default_timeout}
+  rollout:
+    name: vllm
+    temperature: ${runtime.temperature}
+    top_k: -1
+    top_p: 1
+    prompt_length: ${data.max_prompt_length}
+    response_length: ${data.max_response_length}
+    dtype: bfloat16
+    gpu_memory_utilization: ${runtime.gpu_memory_utilization}
+    ignore_eos: False
+    enforce_eager: True
+    free_cache_engine: True
+    load_format: dummy_dtensor
+    tensor_model_parallel_size: ${runtime.tensor_model_parallel_size}
+    max_num_batched_tokens: ${runtime.max_num_batched_tokens}
+    max_model_len: ${runtime.max_model_len}
+    max_num_seqs: ${runtime.max_num_seqs}
+    max_tokens: ${task.rollout_max_tokens}
+    log_prob_micro_batch_size: null
+    log_prob_micro_batch_size_per_gpu: 1
+    log_prob_use_dynamic_bsz: ${actor_rollout_ref.actor.use_dynamic_bsz}
+    log_prob_max_token_len_per_gpu: ${actor_rollout_ref.actor.ppo_max_token_len_per_gpu}
+    disable_log_stats: True
+    enable_chunked_prefill: True
+    do_sample: True
+    n: ${task.rollout_n}
+    send_interval: 1
+    rollout_log_dir: ${trainer.default_local_dir}/rollout_logs
+
+critic:
+  rollout_n: ${actor_rollout_ref.rollout.n}
+  strategy: fsdp
+  optim:
+    lr: 1e-6
+    lr_warmup_steps_ratio: 0.
+    min_lr_ratio: null
+    warmup_style: constant
+    total_training_steps: -1
+  model:
+    path: ${runtime.model_path}
+    tokenizer_path: ${actor_rollout_ref.model.path}
+    override_config: {}
+    external_lib: ${actor_rollout_ref.model.external_lib}
+    enable_gradient_checkpointing: True
+    use_remove_padding: False
+    fsdp_config:
+      param_offload: False
+      grad_offload: False
+      optimizer_offload: False
+      wrap_policy:
+        min_num_params: 0
+      fsdp_size: -1
+  ppo_mini_batch_size: ${task.ppo_mini_batch_size}
+  ppo_micro_batch_size: null
+  ppo_micro_batch_size_per_gpu: ${task.critic_ppo_micro_batch_size_per_gpu}
+  forward_micro_batch_size: ${critic.ppo_micro_batch_size}
+  forward_micro_batch_size_per_gpu: ${critic.ppo_micro_batch_size_per_gpu}
+  use_dynamic_bsz: ${actor_rollout_ref.actor.use_dynamic_bsz}
+  ppo_max_token_len_per_gpu: ${runtime.critic_ppo_max_token_len_per_gpu}
+  forward_max_token_len_per_gpu: ${critic.ppo_max_token_len_per_gpu}
+  ulysses_sequence_parallel_size: 1
+  ppo_epochs: ${actor_rollout_ref.actor.ppo_epochs}
+  shuffle: ${actor_rollout_ref.actor.shuffle}
+  grad_clip: 1.0
+  cliprange_value: 0.5
+
+algorithm:
+  gamma: 1.0
+  lam: 0.95
+  adv_estimator: gae
+  kl_penalty: low_var_kl
+  rounds_ctrl:
+    type: scaling_inter_stepwise
+    rounds: [6, 8, 10, 13, 16, 20]
+    steps_scaling_inter: 100
+  kl_ctrl:
+    type: fixed
+    kl_coef: 0.001
+
+trainer:
+  total_epochs: ${task.total_epochs}
+  total_training_steps: 601
+  project_name: improve_multi_agent
+  experiment_name: ${oc.env:EXP_NAME,improve_babyai_protocol_v1}
+  logger: ${runtime.loggers}
+  val_generations_to_log_to_wandb: 0
+  nnodes: ${runtime.nnodes}
+  n_gpus_per_node: ${runtime.n_gpus_per_node}
+  save_freq: ${runtime.save_freq}
+  save_steps: []
+  resume_mode: auto
+  resume_from_path: False
+  test_freq: -1
+  critic_warmup: 0
+  default_hdfs_dir: null
+  remove_previous_ckpt_in_save: False
+  del_local_ckpt_after_load: False
+  default_local_dir: ${oc.env:SAVE_ROOT,checkpoints}/${trainer.project_name}/${trainer.experiment_name}
+  storage_mode: local

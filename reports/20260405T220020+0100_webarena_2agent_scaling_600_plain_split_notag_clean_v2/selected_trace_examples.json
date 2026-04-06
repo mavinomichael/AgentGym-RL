@@ -1,0 +1,53 @@
+{
+  "early_valid": {
+    "training_step": 1,
+    "item_id": 330,
+    "rank": 0,
+    "round": 1,
+    "planner_validation_reason": "ok",
+    "validation_reason": "ok",
+    "planner_fallback_used": false,
+    "executor_retry_used": false,
+    "executor_retry_resolved": false,
+    "planner_raw_output": "Check the navigation menu for any option related to order history or customer account.",
+    "planner_message": "Check the navigation menu for any option related to order history or customer account",
+    "executor_raw_output": "In summary, the next action I will perform is ```click [1277]```.\n\nThis action is chosen because the 'My Account' link in the navigation menu is the most likely option to provide access to order history or customer account information.",
+    "available_actions": [],
+    "env_state_excerpt": "OBSERVATION:\nTab 0 (current): My Account\n\n[2704] RootWebArea 'My Account' focused: True\n\t[4078] link 'My Account'\n\t[4076] link 'My Wish List'\n\t[4080] link 'Sign Out'\n\t[4083] StaticText 'Welcome, Emma Lopez!'\n\t[3907] link 'Skip to Content'\n\t[3916] link 'store logo'\n\t\t[4086] img 'one_stop_market_logo'\n\t[4087] link '\\ue611 My Cart 1 1items'\n\t[5067] StaticText 'Search'\n\t[4341] combobox '\\ue615 Search' autocomplete: both hasPopup: listbox required: False expanded: False\n\t[5070] link 'Advanced Search'\n\t[4344] button 'Search' disabled: True\n\t[3769] tablist '' multiselectable: False orientation: horizontal\n\t\t[3771] tabpanel ''\n\t\t\t[2713] menu '' orientation: vertical\n\t\t\t\t[3464] menuitem '\\ue622 Beauty & Personal Care' hasPopup: menu\n\t\t\t\t[3529] menuitem '\\ue622 Sports & Outdoors' hasPopup: menu\n\t\t\t\t...[truncated]",
+    "observation_excerpt": "OBSERVATION:\nTab 0 (current): One Stop Market\n\n[1] RootWebArea 'One Stop Market' focused: True\n\t[1277] link 'My Account'\n\t[1275] link 'My Wish List'\n\t[1279] link 'Sign Out'\n\t[1282] StaticText 'Welcome, Emma Lopez!'\n\t[1188] link 'Skip to Content'\n\t[1197] link 'store logo'\n\t\t[1285] img 'one_stop_market_logo'\n\t[1286] link '\\ue611 My Cart 1 1items'\n\t[2497] StaticText 'Search'\n\t[1655] combobox '\\ue615 Search' autocomplete: both hasPopup: listbox required: False expanded: False\n\t[2500] link 'Advanced Search'\n\t[1658] button 'Search' disabled: True\n\t[1066] tablist '' multiselectable: False orientation: horizontal\n\t\t[1068] tabpanel ''\n\t\t\t[10] menu '' orientation: vertical\n\t\t\t\t[761] menuitem '\\ue622 Beauty & Personal Care' hasPopup: menu\n\t\t\t\t[826] menuitem '\\ue622 Sports & Outdoors' hasPopup: menu\n\t...[truncated]"
+  },
+  "first_tag_only_collapse": {
+    "training_step": 3,
+    "item_id": 35,
+    "rank": 0,
+    "round": 1,
+    "planner_validation_reason": "tag_only",
+    "validation_reason": "invalid_format",
+    "planner_fallback_used": true,
+    "executor_retry_used": false,
+    "executor_retry_resolved": false,
+    "planner_raw_output": "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!",
+    "planner_message": "Planner guidance unavailable. Infer the next step from the observation only.",
+    "executor_raw_output": "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!",
+    "available_actions": [],
+    "env_state_excerpt": "Terminated due to invalid executor output (invalid_format).",
+    "observation_excerpt": "OBSERVATION:\nTab 0 (current): OpenStreetMap\n\n[1] RootWebArea 'OpenStreetMap' focused: True\n\t[40] heading 'OpenStreetMap logo OpenStreetMap'\n\t\t[68] link 'OpenStreetMap logo OpenStreetMap'\n\t\t\t[71] img 'OpenStreetMap logo'\n\t[489] link 'Edit'\n\t[490] button ''\n\t[606] link 'History'\n\t[607] link 'Export'\n\t[608] link 'GPS Traces'\n\t[609] link 'User Diaries'\n\t[610] link 'Communities'\n\t[611] link 'Copyright'\n\t[612] link 'Help'\n\t[613] link 'Donate'\n\t[614] link 'About'\n\t[75] button 'Select Language'\n\t[503] link 'Log In'\n\t[504] link 'Sign Up'\n\t[10] textbox 'Search' focused: True required: False\n\t[652] button 'Where is this?'\n\t[623] button 'Go'\n\t[621] link 'Find directions between two points'\n\t[592] button 'Close'\n\t[593] heading 'Welcome to OpenStreetMap!'\n\t[626] StaticText 'OpenStreetMap is a map of the...[truncated]"
+  },
+  "late_terminal_collapse": {
+    "training_step": 553,
+    "item_id": 48,
+    "rank": 0,
+    "round": 1,
+    "planner_validation_reason": "tag_only",
+    "validation_reason": "invalid_format",
+    "planner_fallback_used": true,
+    "executor_retry_used": false,
+    "executor_retry_resolved": false,
+    "planner_raw_output": "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!",
+    "planner_message": "Planner guidance unavailable. Infer the next step from the observation only.",
+    "executor_raw_output": "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!",
+    "available_actions": [],
+    "env_state_excerpt": "Terminated due to invalid executor output (invalid_format).",
+    "observation_excerpt": "OBSERVATION:\nTab 0 (current): One Stop Market\n\n[1] RootWebArea 'One Stop Market' focused: True\n\t[1257] link 'My Account'\n\t[1255] link 'My Wish List'\n\t[1259] link 'Sign Out'\n\t[1262] StaticText 'Welcome, Emma Lopez!'\n\t[1168] link 'Skip to Content'\n\t[1177] link 'store logo'\n\t\t[1265] img 'one_stop_market_logo'\n\t[1266] link '\\ue611 My Cart'\n\t[2430] StaticText 'Search'\n\t[1588] combobox '\\ue615 Search' autocomplete: both hasPopup: listbox required: False expanded: False\n\t[2433] link 'Advanced Search'\n\t[1591] button 'Search' disabled: True\n\t[1066] tablist '' multiselectable: False orientation: horizontal\n\t\t[1068] tabpanel ''\n\t\t\t[10] menu '' orientation: vertical\n\t\t\t\t[761] menuitem '\\ue622 Beauty & Personal Care' hasPopup: menu\n\t\t\t\t[826] menuitem '\\ue622 Sports & Outdoors' hasPopup: menu\n\t\t\t\t[836] ...[truncated]"
+  }
+}

@@ -1,0 +1,13 @@
+step	status	avg_at_1	pass_at_1	exec_format_viol	invalid_format_term	invalid_action_term	planner_invalid	planner_fallback	planner_tag_only	eval_log	note
+50	complete	0.0	0.0	0.9	0.9	0.0	0.9	0.9	0.9	/home/mavinomichael/agentgym_runs/logs/webarena_2agent_scaling_600_8gpu_plain_split_notag_clean_v2/eval_logs/eval_step50.log	
+100	complete	0.0	0.0	0.9	0.9	0.0	0.9	0.9	0.9	/home/mavinomichael/agentgym_runs/logs/webarena_2agent_scaling_600_8gpu_plain_split_notag_clean_v2/eval_logs/eval_step100.log	
+150	complete	0.0	0.0	0.9	0.9	0.0	0.9	0.9	0.9	/home/mavinomichael/agentgym_runs/logs/webarena_2agent_scaling_600_8gpu_plain_split_notag_clean_v2/eval_logs/eval_step150.log	
+200	complete	0.0	0.0	0.9	0.9	0.0	0.9	0.9	0.9	/home/mavinomichael/agentgym_runs/logs/webarena_2agent_scaling_600_8gpu_plain_split_notag_clean_v2/eval_logs/eval_step200.log	
+250	complete	0.0	0.0	0.9	0.9	0.0	0.9	0.9	0.9	/home/mavinomichael/agentgym_runs/logs/webarena_2agent_scaling_600_8gpu_plain_split_notag_clean_v2/eval_logs/eval_step250.log	
+300	incomplete_stuck								/home/mavinomichael/agentgym_runs/logs/webarena_2agent_scaling_600_8gpu_plain_split_notag_clean_v2/eval_logs/eval_step300.log	Eval worker repeated Multi-agent rounds 1/15 without final aggregation during this run.
+350	complete	0.0	0.0	0.9	0.9	0.0	0.9	0.9	0.9	/home/mavinomichael/agentgym_runs/logs/webarena_2agent_scaling_600_8gpu_plain_split_notag_clean_v2/eval_logs/eval_step350.log	
+400	complete	0.0	0.0	0.9	0.9	0.0	0.9	0.9	0.9	/home/mavinomichael/agentgym_runs/logs/webarena_2agent_scaling_600_8gpu_plain_split_notag_clean_v2/eval_logs/eval_step400.log	
+450	complete	0.0	0.0	0.9	0.9	0.0	0.9	0.9	0.9	/home/mavinomichael/agentgym_runs/logs/webarena_2agent_scaling_600_8gpu_plain_split_notag_clean_v2/eval_logs/eval_step450.log	
+500	complete	0.0	0.0	0.9	0.9	0.0	0.9	0.9	0.9	/home/mavinomichael/agentgym_runs/logs/webarena_2agent_scaling_600_8gpu_plain_split_notag_clean_v2/eval_logs/eval_step500.log	
+550	complete	0.0	0.0	0.9	0.9	0.0	0.9	0.9	0.9	/home/mavinomichael/agentgym_runs/logs/webarena_2agent_scaling_600_8gpu_plain_split_notag_clean_v2/eval_logs/eval_step550.log	
+600	complete	0.0	0.0	0.9	0.9	0.0	0.9	0.9	0.9	/home/mavinomichael/agentgym_runs/logs/webarena_2agent_scaling_600_8gpu_plain_split_notag_clean_v2/eval_logs/eval_step600.log	

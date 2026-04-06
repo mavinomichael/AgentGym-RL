@@ -1,0 +1,18 @@
+{
+  "ablation_order": [
+    "protocol_only",
+    "protocol_plus_rolewise_optimization",
+    "protocol_plus_rolewise_optimization_plus_staged_training",
+    "protocol_plus_rolewise_optimization_plus_staged_training_plus_milestones"
+  ],
+  "baselines": [
+    "2agent_tagged_fixed_round",
+    "2agent_notag_fixed_round",
+    "2agent_notag_scalingrl"
+  ],
+  "promotion_gate": {
+    "beats_notag_fixed_round_best_checkpoint": true,
+    "no_collapse_before_step_200": true,
+    "executor_legal_action_rate_min": 0.98
+  }
+}

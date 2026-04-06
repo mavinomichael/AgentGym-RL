@@ -1,0 +1,442 @@
+Multi-agent eval configuration
+  task               webarena
+  MODEL_PATH         /home/mavinomichael/agentgym_runs/saves/agentgym_multi_agent/webarena_2agent_scaling_600_8gpu_plain_split_notag_clean_v2/global_step_100/actor/huggingface
+  DATA_ROOT          /home/mavinomichael/AgentGym-RL/AgentEval
+  ENV_SERVER_URL     http://127.0.0.1:36005
+  SAVE_ROOT          /home/mavinomichael/agentgym_runs/saves
+  EXP_NAME           webarena_2agent_scaling_600_8gpu_plain_split_notag_clean_v2_eval_step100
+  N_GPUS             1
+  TP_SIZE            1
+/home/mavinomichael/miniconda/envs/agentgym-rl/lib/python3.10/site-packages/vllm/connections.py:8: RuntimeWarning: Failed to read commit hash:
+No module named 'vllm._version'
+  from vllm.version import __version__ as VLLM_VERSION
+/home/mavinomichael/miniconda/envs/agentgym-rl/lib/python3.10/site-packages/omegaconf/grammar_visitor.py:253: UserWarning: In the sequence `MODEL_PATH,` some elements are missing: please replace them with empty quoted strings. See https://github.com/omry/omegaconf/issues/572 for details.
+  warnings.warn(
+2026-04-05 17:02:25,476	WARNING node.py:1794 -- The object spilling config is specified from an unstable API - system config or environment variable. This is subject to change in the future. You can use the stable API - --object-spilling-directory in ray start or object_spilling_directory in ray.init() to specify the object spilling directory instead. If you need more advanced settings, please open a github issue with the Ray team.
+2026-04-05 17:02:29,445	INFO worker.py:2013 -- Started a local Ray instance.
+/home/mavinomichael/miniconda/envs/agentgym-rl/lib/python3.10/site-packages/ray/_private/worker.py:2052: FutureWarning: Tip: In future versions of Ray, Ray will no longer override accelerator visible devices env var if num_gpus=0 or num_gpus=None (default). To enable this behavior and turn off this error message, set RAY_ACCEL_ENV_VAR_OVERRIDE_ON_ZERO=0
+  warnings.warn(
+[33m(raylet)[0m 2026-04-05 17:02:31,396	WARNING node.py:1794 -- The object spilling config is specified from an unstable API - system config or environment variable. This is subject to change in the future. You can use the stable API - --object-spilling-directory in ray start or object_spilling_directory in ray.init() to specify the object spilling directory instead. If you need more advanced settings, please open a github issue with the Ray team.
+[36m(pid=3872301)[0m /home/mavinomichael/miniconda/envs/agentgym-rl/lib/python3.10/site-packages/vllm/connections.py:8: RuntimeWarning: Failed to read commit hash:
+[36m(pid=3872301)[0m No module named 'vllm._version'
+[36m(pid=3872301)[0m   from vllm.version import __version__ as VLLM_VERSION
+[36m(ActorRolloutRefWorker pid=3872301)[0m [W405 17:02:35.225127996 CUDAAllocatorConfig.h:28] Warning: expandable_segments not supported on this platform (function operator())
+{'actor': {'clip_ratio': 0.2,
+           'entropy_coeff': 0.001,
+           'fsdp_config': {'fsdp_size': -1,
+                           'grad_offload': False,
+                           'optimizer_offload': False,
+                           'param_offload': False,
+                           'wrap_policy': {'min_num_params': 0}},
+           'grad_clip': 1.0,
+           'kl_loss_coef': 0.001,
+           'kl_loss_type': 'low_var_kl',
+           'optim': {'lr': 1e-06,
+                     'lr_warmup_steps_ratio': 0.0,
+                     'min_lr_ratio': None,
+                     'total_training_steps': -1,
+                     'warmup_style': 'constant'},
+           'ppo_epochs': 1,
+           'ppo_max_token_len_per_gpu': 16384,
+           'ppo_micro_batch_size': None,
+           'ppo_micro_batch_size_per_gpu': 1,
+           'ppo_mini_batch_size': 4,
+           'shuffle': False,
+           'strategy': 'fsdp',
+           'ulysses_sequence_parallel_size': 1,
+           'use_dynamic_bsz': False,
+           'use_kl_loss': False},
+ 'agentgym': {'env_addr': 'http://127.0.0.1:36005',
+              'max_retries': 10,
+              'max_rounds': 15,
+              'task_name': 'webarena',
+              'timeout': 600},
+ 'data': {'batch_size': 1,
+          'max_prompt_length': 1024,
+          'max_response_length': 1024,
+          'n_samples': 1,
+          'output_path': None,
+          'path': '/home/mavinomichael/AgentGym-RL/AgentEval/webarena',
+          'prompt_key': 'item_id'},
+ 'model': {'external_lib': None,
+           'path': '/home/mavinomichael/agentgym_runs/saves/agentgym_multi_agent/webarena_2agent_scaling_600_8gpu_plain_split_notag_clean_v2/global_step_100/actor/huggingface'},
+ 'multi_agent': {'centralized_critic': True,
+                 'count_rounds_as': 'env_steps',
+                 'debug': {'trace_dir': '/home/mavinomichael/agentgym_runs/logs/webarena_2agent_scaling_600_8gpu_plain_split_notag_clean_v2/trace_eval_step100',
+                           'trace_executor_payload': False,
+                           'trace_max_chars': 800},
+                 'enabled': True,
+                 'invalid_output': {'max_retries': 0,
+                                    'penalty': -0.2,
+                                    'planner_max_retries': 0,
+                                    'planner_retry_max_tokens': 64,
+                                    'planner_retry_temperature': 0.1,
+                                    'policy': 'terminate_with_penalty',
+                                    'retry_max_tokens': 128,
+                                    'retry_temperature': 0.2},
+                 'reward_mode': 'delta_per_executor_step',
+                 'roles': {'executor': {'kl_weight': 1.0,
+                                        'max_tokens': 256,
+                                        'ppo_weight': 1.0,
+                                        'temperature': 1.0},
+                           'executor_reviewer': {'kl_weight': 6.0,
+                                                 'max_tokens': 64,
+                                                 'ppo_weight': 0.5,
+                                                 'temperature': 1.0},
+                           'planner': {'kl_weight': 4.0,
+                                       'max_tokens': 64,
+                                       'ppo_weight': 1.0,
+                                       'temperature': 0.2},
+                           'planner_reviewer': {'kl_weight': 6.0,
+                                                'max_tokens': 96,
+                                                'ppo_weight': 0.5,
+                                                'temperature': 1.0}},
+                 'shared_policy': True,
+                 'topology': 'planner_executor'},
+ 'rollout': {'disable_log_stats': True,
+             'do_sample': True,
+             'dtype': 'bfloat16',
+             'enable_chunked_prefill': True,
+             'enforce_eager': True,
+             'free_cache_engine': True,
+             'gpu_memory_utilization': 0.35,
+             'ignore_eos': False,
+             'load_format': 'dummy_dtensor',
+             'log_prob_max_token_len_per_gpu': 16384,
+             'log_prob_micro_batch_size': None,
+             'log_prob_micro_batch_size_per_gpu': 1,
+             'log_prob_use_dynamic_bsz': False,
+             'max_model_len': 28000,
+             'max_num_batched_tokens': 512,
+             'max_num_seqs': 4,
+             'max_tokens': 256,
+             'n': 1,
+             'name': 'vllm',
+             'prompt_length': 1024,
+             'response_length': 1024,
+             'rollout_log_dir': '/home/mavinomichael/agentgym_runs/logs/webarena_2agent_scaling_600_8gpu_plain_split_notag_clean_v2/eval_logs/rollout_step100',
+             'send_interval': 1,
+             'temperature': 1.0,
+             'tensor_model_parallel_size': 1,
+             'top_k': -1,
+             'top_p': 1},
+ 'runtime': {'actor_ppo_max_token_len_per_gpu': 16384,
+             'critic_ppo_max_token_len_per_gpu': 32768,
+             'env_server_url': 'http://127.0.0.1:36005',
+             'eval_gpu_memory_utilization': 0.35,
+             'eval_n_samples': 1,
+             'eval_temperature': 1.0,
+             'gpu_memory_utilization': 0.7,
+             'loggers': ['console'],
+             'max_model_len': 28000,
+             'max_num_batched_tokens': 4096,
+             'max_num_seqs': 256,
+             'model_path': '/home/mavinomichael/agentgym_runs/saves/agentgym_multi_agent/webarena_2agent_scaling_600_8gpu_plain_split_notag_clean_v2/global_step_100/actor/huggingface',
+             'n_gpus_per_node': 1,
+             'nnodes': 1,
+             'save_freq': 25,
+             'temperature': 1.0,
+             'tensor_model_parallel_size': 1},
+ 'task': {'critic_ppo_micro_batch_size_per_gpu': 1,
+          'default_max_rounds': 15,
+          'default_timeout': 600,
+          'eval_batch_size': 32,
+          'eval_dir': 'AgentEval/webarena',
+          'eval_max_prompt_length': 1024,
+          'eval_max_response_length': 1024,
+          'eval_max_rounds': 15,
+          'executor_max_tokens': 256,
+          'executor_native_format_hint': 'Use the WebArena native format with '
+                                         'reasoning and exactly one '
+                                         'triple-backticked action block.',
+          'invalid_action_patterns': ['Cannot parse action from response.',
+                                      'TimeoutError',
+                                      'Error in step:'],
+          'max_prompt_length': 1024,
+          'max_response_length': 1024,
+          'planner_max_tokens': 192,
+          'ppo_micro_batch_size_per_gpu': 1,
+          'ppo_mini_batch_size': 4,
+          'rollout_max_tokens': 256,
+          'rollout_n': 4,
+          'task_name': 'webarena',
+          'total_epochs': 25,
+          'train_batch_size': 32,
+          'train_file': 'AgentItemId/webarena_train.json'},
+ 'trainer': {'n_gpus_per_node': 1, 'nnodes': 1}}
+[36m(ActorRolloutRefWorker pid=3872301)[0m Model config after override: Qwen2Config {
+[36m(ActorRolloutRefWorker pid=3872301)[0m   "_name_or_path": "/home/mavinomichael/agentgym_runs/saves/agentgym_multi_agent/webarena_2agent_scaling_600_8gpu_plain_split_notag_clean_v2/global_step_100/actor/huggingface",
+[36m(ActorRolloutRefWorker pid=3872301)[0m   "architectures": [
+[36m(ActorRolloutRefWorker pid=3872301)[0m     "Qwen2ForCausalLM"
+[36m(ActorRolloutRefWorker pid=3872301)[0m   ],
+[36m(ActorRolloutRefWorker pid=3872301)[0m   "attention_dropout": 0.0,
+[36m(ActorRolloutRefWorker pid=3872301)[0m   "eos_token_id": 151645,
+[36m(ActorRolloutRefWorker pid=3872301)[0m   "hidden_act": "silu",
+[36m(ActorRolloutRefWorker pid=3872301)[0m   "hidden_size": 3584,
+[36m(ActorRolloutRefWorker pid=3872301)[0m   "initializer_range": 0.02,
+[36m(ActorRolloutRefWorker pid=3872301)[0m   "intermediate_size": 18944,
+[36m(ActorRolloutRefWorker pid=3872301)[0m   "max_position_embeddings": 32768,
+[36m(ActorRolloutRefWorker pid=3872301)[0m   "max_window_layers": 28,
+[36m(ActorRolloutRefWorker pid=3872301)[0m   "model_type": "qwen2",
+[36m(ActorRolloutRefWorker pid=3872301)[0m You are attempting to use Flash Attention 2.0 with a model not initialized on GPU. Make sure to move the model to GPU after initializing it on CPU with `model.to('cuda')`.
+[33m(raylet)[0m 2026-04-05 17:02:36,334	WARNING node.py:1794 -- The object spilling config is specified from an unstable API - system config or environment variable. This is subject to change in the future. You can use the stable API - --object-spilling-directory in ray start or object_spilling_directory in ray.init() to specify the object spilling directory instead. If you need more advanced settings, please open a github issue with the Ray team.
+[36m(ActorRolloutRefWorker pid=3872301)[0m Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Loading checkpoint shards:  25%|██▌       | 1/4 [00:03<00:09,  3.04s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Loading checkpoint shards:  50%|█████     | 2/4 [00:06<00:06,  3.04s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Loading checkpoint shards:  75%|███████▌  | 3/4 [00:08<00:02,  2.95s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Loading checkpoint shards: 100%|██████████| 4/4 [00:09<00:00,  1.96s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:09<00:00,  2.34s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m /home/mavinomichael/miniconda/envs/agentgym-rl/lib/python3.10/site-packages/torch/distributed/fsdp/_init_utils.py:440: UserWarning: FSDP is switching to use `NO_SHARD` instead of ShardingStrategy.FULL_SHARD since the world size is 1.
+[36m(ActorRolloutRefWorker pid=3872301)[0m   warnings.warn(
+[36m(ActorRolloutRefWorker pid=3872301)[0m /home/mavinomichael/miniconda/envs/agentgym-rl/lib/python3.10/site-packages/xformers/ops/fmha/flash.py:211: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
+[36m(ActorRolloutRefWorker pid=3872301)[0m   @torch.library.impl_abstract("xformers_flash::flash_fwd")
+[36m(ActorRolloutRefWorker pid=3872301)[0m /home/mavinomichael/miniconda/envs/agentgym-rl/lib/python3.10/site-packages/xformers/ops/fmha/flash.py:344: FutureWarning: `torch.library.impl_abstract` was renamed to `torch.library.register_fake`. Please use that instead; we will remove `torch.library.impl_abstract` in a future version of PyTorch.
+[36m(ActorRolloutRefWorker pid=3872301)[0m   @torch.library.impl_abstract("xformers_flash::flash_bwd")
+[36m(ActorRolloutRefWorker pid=3872301)[0m /home/mavinomichael/miniconda/envs/agentgym-rl/lib/python3.10/site-packages/torch/distributed/fsdp/fully_sharded_data_parallel.py:689: FutureWarning: FSDP.state_dict_type() and FSDP.set_state_dict_type() are being deprecated. Please use APIs, get_state_dict() and set_state_dict(), which can support different parallelisms, FSDP1, FSDP2, DDP. API doc: https://pytorch.org/docs/stable/distributed.checkpoint.html#torch.distributed.checkpoint.state_dict.get_state_dict .Tutorial: https://pytorch.org/tutorials/recipes/distributed_checkpoint_recipe.html .
+[36m(ActorRolloutRefWorker pid=3872301)[0m   warnings.warn(
+[36m(ActorRolloutRefWorker pid=3872301)[0m /home/mavinomichael/miniconda/envs/agentgym-rl/lib/python3.10/site-packages/torch/distributed/fsdp/_state_dict_utils.py:773: UserWarning: When using ``NO_SHARD`` for ``ShardingStrategy``, full_state_dict willbe returned.
+[36m(ActorRolloutRefWorker pid=3872301)[0m   warnings.warn(
+[36m(ActorRolloutRefWorker pid=3872301)[0m /home/mavinomichael/miniconda/envs/agentgym-rl/lib/python3.10/site-packages/torch/distributed/fsdp/_state_dict_utils.py:716: UserWarning: When using ``NO_SHARD`` for ``ShardingStrategy``, full_state_dict willbe returned.
+[36m(ActorRolloutRefWorker pid=3872301)[0m   warnings.warn(
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:06<01:36,  6.91s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:06<01:36,  6.91s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:07,  4.83s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:07,  4.83s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:08,  4.90s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:08,  4.90s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:07,  4.84s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:07,  4.84s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:09,  4.94s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:09,  4.94s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:09,  4.95s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:09,  4.95s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:10,  5.00s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:10,  5.00s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:07,  4.83s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:07,  4.83s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:06<01:32,  6.60s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:06<01:32,  6.60s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:10,  5.01s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:10,  5.01s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:10,  5.01s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:10,  5.01s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:09,  4.99s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:09,  4.99s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:09,  4.94s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:09,  4.94s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:09,  4.95s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:09,  4.95s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:10,  5.01s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:10,  5.01s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:12,  5.15s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:12,  5.15s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:11,  5.10s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:11,  5.10s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:11,  5.10s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:11,  5.10s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:12,  5.17s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:12,  5.17s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:11,  5.08s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:11,  5.08s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:11,  5.13s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:11,  5.13s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:10,  5.07s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:10,  5.07s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:11,  5.08s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:11,  5.08s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:11,  5.14s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:11,  5.14s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:11,  5.10s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:11,  5.10s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:11,  5.09s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:11,  5.09s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:11,  5.09s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:11,  5.09s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:11,  5.07s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:11,  5.07s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:12,  5.15s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:12,  5.15s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:11,  5.12s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:11,  5.12s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:07,  4.83s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:07,  4.83s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:05,  4.71s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:05,  4.71s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:07,  4.84s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:07,  4.84s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:07,  4.85s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:07,  4.85s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:09,  4.95s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:09,  4.95s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:08,  4.89s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:08,  4.89s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:07,  4.84s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:07,  4.84s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:08,  4.90s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:08,  4.90s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:10,  5.01s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:10,  5.01s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:10,  5.00s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:10,  5.00s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:12,  5.19s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:12,  5.20s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:10,  5.04s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:10,  5.04s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:11,  5.08s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:05<01:11,  5.08s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:07,  4.84s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:07,  4.85s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   0%|          | 0/15 [00:00<?, ?it/s]
+[36m(ActorRolloutRefWorker pid=3872301)[0m Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:09,  4.94s/it]Multi-agent rounds 1/15 | Active episodes per gpu: 1:   7%|▋         | 1/15 [00:04<01:09,  4.94s/it]
+[36m(ActorRolloutRefWorker pid=3872301)[0m   "num_attention_heads": 28,
+[36m(ActorRolloutRefWorker pid=3872301)[0m   "num_hidden_layers": 28,
+[36m(ActorRolloutRefWorker pid=3872301)[0m   "num_key_value_heads": 4,
+[36m(ActorRolloutRefWorker pid=3872301)[0m   "pad_token_id": 151643,
+[36m(ActorRolloutRefWorker pid=3872301)[0m   "rms_norm_eps": 1e-06,
+[36m(ActorRolloutRefWorker pid=3872301)[0m   "rope_scaling": null,
+[36m(ActorRolloutRefWorker pid=3872301)[0m   "rope_theta": 1000000.0,
+[36m(ActorRolloutRefWorker pid=3872301)[0m   "sliding_window": null,
+[36m(ActorRolloutRefWorker pid=3872301)[0m   "tie_word_embeddings": false,
+[36m(ActorRolloutRefWorker pid=3872301)[0m   "torch_dtype": "bfloat16",
+[36m(ActorRolloutRefWorker pid=3872301)[0m   "transformers_version": "4.45.2",
+[36m(ActorRolloutRefWorker pid=3872301)[0m   "use_cache": true,
+[36m(ActorRolloutRefWorker pid=3872301)[0m   "use_sliding_window": false,
+[36m(ActorRolloutRefWorker pid=3872301)[0m   "vocab_size": 152064
+[36m(ActorRolloutRefWorker pid=3872301)[0m }
+[36m(ActorRolloutRefWorker pid=3872301)[0m 
+[36m(ActorRolloutRefWorker pid=3872301)[0m NCCL version 2.20.5+cuda12.4
+[36m(ActorRolloutRefWorker pid=3872301)[0m Qwen2ForCausalLM contains 7.62B parameters
+[36m(ActorRolloutRefWorker pid=3872301)[0m wrap_policy: functools.partial(<function _or_policy at 0x704a70156440>, policies=[functools.partial(<function transformer_auto_wrap_policy at 0x704a70156320>, transformer_layer_cls={<class 'transformers.models.qwen2.modeling_qwen2.Qwen2DecoderLayer'>})])
+[36m(ActorRolloutRefWorker pid=3872301)[0m Total steps: -1, num_warmup_steps: 0
+[36m(ActorRolloutRefWorker pid=3872301)[0m Before building multi-agent vllm rollout, memory allocated (GB): 14.185205459594727, memory reserved (GB): 18.693359375
+[36m(ActorRolloutRefWorker pid=3872301)[0m INFO 04-05 17:02:54 config.py:1005] Chunked prefill is enabled with max_num_batched_tokens=512.
+[36m(ActorRolloutRefWorker pid=3872301)[0m WARNING 04-05 17:02:54 config.py:380] To see benefits of async output processing, enable CUDA graph. Since, enforce-eager is enabled, async output processor cannot be used
+[36m(ActorRolloutRefWorker pid=3872301)[0m local rank 0
+[36m(ActorRolloutRefWorker pid=3872301)[0m INFO 04-05 17:02:54 selector.py:115] Using XFormers backend.
+[36m(ActorRolloutRefWorker pid=3872301)[0m no hf weight loader need to be updated
+[36m(ActorRolloutRefWorker pid=3872301)[0m INFO 04-05 17:02:55 selector.py:115] Using XFormers backend.
+[36m(ActorRolloutRefWorker pid=3872301)[0m before init cache memory allocated: 30.504428544GB, reserved: 30.536630272GB
+[36m(ActorRolloutRefWorker pid=3872301)[0m after init cache memory allocated: 48.659080192GB, reserved: 48.697966592GB
+[36m(ActorRolloutRefWorker pid=3872301)[0m kwargs: {'n': 1, 'logprobs': 1, 'max_tokens': 256, 'detokenize': False, 'temperature': 1.0, 'top_k': -1, 'top_p': 1, 'ignore_eos': False}
+[36m(ActorRolloutRefWorker pid=3872301)[0m After building multi-agent vllm rollout, memory allocated (GB): 31.132108688354492, memory reserved (GB): 45.353515625
+[36m(ActorRolloutRefWorker pid=3872301)[0m After building multi-agent sharding manager, memory allocated (GB): 31.132108688354492, memory reserved (GB): 45.353515625
+[1/50] Start to process.
+[1/50] Start to generate.
+[2/50] Start to process.
+[2/50] Start to generate.
+[3/50] Start to process.
+[3/50] Start to generate.
+[4/50] Start to process.
+[4/50] Start to generate.
+[5/50] Start to process.
+[5/50] Start to generate.
+[6/50] Start to process.
+[6/50] Start to generate.
+[7/50] Start to process.
+[7/50] Start to generate.
+[8/50] Start to process.
+[8/50] Start to generate.
+[9/50] Start to process.
+[9/50] Start to generate.
+[10/50] Start to process.
+[10/50] Start to generate.
+[11/50] Start to process.
+[11/50] Start to generate.
+[12/50] Start to process.
+[12/50] Start to generate.
+[13/50] Start to process.
+[13/50] Start to generate.
+[14/50] Start to process.
+[14/50] Start to generate.
+[15/50] Start to process.
+[15/50] Start to generate.
+[16/50] Start to process.
+[16/50] Start to generate.
+[17/50] Start to process.
+[17/50] Start to generate.
+[18/50] Start to process.
+[18/50] Start to generate.
+[19/50] Start to process.
+[19/50] Start to generate.
+[20/50] Start to process.
+[20/50] Start to generate.
+[21/50] Start to process.
+[21/50] Start to generate.
+[22/50] Start to process.
+[22/50] Start to generate.
+[23/50] Start to process.
+[23/50] Start to generate.
+[24/50] Start to process.
+[24/50] Start to generate.
+[25/50] Start to process.
+[25/50] Start to generate.
+[26/50] Start to process.
+[26/50] Start to generate.
+[27/50] Start to process.
+[27/50] Start to generate.
+[28/50] Start to process.
+[28/50] Start to generate.
+[29/50] Start to process.
+[29/50] Start to generate.
+[30/50] Start to process.
+[30/50] Start to generate.
+[31/50] Start to process.
+[31/50] Start to generate.
+[32/50] Start to process.
+[32/50] Start to generate.
+[33/50] Start to process.
+[33/50] Start to generate.
+[34/50] Start to process.
+[34/50] Start to generate.
+[35/50] Start to process.
+[35/50] Start to generate.
+[36/50] Start to process.
+[36/50] Start to generate.
+[37/50] Start to process.
+[37/50] Start to generate.
+[38/50] Start to process.
+[38/50] Start to generate.
+[39/50] Start to process.
+[39/50] Start to generate.
+[40/50] Start to process.
+[40/50] Start to generate.
+[41/50] Start to process.
+[41/50] Start to generate.
+[42/50] Start to process.
+[42/50] Start to generate.
+[43/50] Start to process.
+[43/50] Start to generate.
+[44/50] Start to process.
+[44/50] Start to generate.
+[45/50] Start to process.
+[45/50] Start to generate.
+[46/50] Start to process.
+[46/50] Start to generate.
+[47/50] Start to process.
+[47/50] Start to generate.
+[48/50] Start to process.
+[48/50] Start to generate.
+[49/50] Start to process.
+[49/50] Start to generate.
+[50/50] Start to process.
+[50/50] Start to generate.
+============Total Task Evaluation============
+Avg@1: 0.0
+Pass@1: 0.0
+ExecutorNativeFormatViolations: 0.9
+InvalidFormatTerminationRate: 0.9
+InvalidActionTerminationRate: 0.0
+PlannerInvalidFormatRate: 0.9
+PlannerFallbackRate: 0.9
+PlannerTagOnlyRate: 0.9
+============Sub Task Evaluation============
+No populated sub-task categories found for this evaluation path.

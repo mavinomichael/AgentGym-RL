@@ -71,6 +71,9 @@ class vLLMRollout(BaseVLLMRollout):
         self.multi_agent_config = multi_agent_config
         self.task_profile = get_task_profile(agentgym_config.task_name)
         self.topology = str(self._multi_agent_get("topology", "planner_executor"))
+        self.use_executor_reviewer_topology = self.topology == "planner_executor_reviewer"
+        self.use_full_reviewer_topology = self.topology == "planner_executor_reviewers"
+        self.use_any_reviewer_topology = self.use_executor_reviewer_topology or self.use_full_reviewer_topology
         self.use_plain_babyai_two_agent = (
             self.task_profile.task_name == "babyai" and self.topology == "planner_executor"
         )
@@ -117,7 +120,7 @@ class vLLMRollout(BaseVLLMRollout):
             int(
                 self._multi_agent_get(
                     "invalid_output.max_retries",
-                    5 if self.topology == "planner_executor_reviewers" else 2,
+                    5 if self.use_any_reviewer_topology else 2,
                 )
             ),
         )
@@ -128,7 +131,7 @@ class vLLMRollout(BaseVLLMRollout):
             int(
                 self._multi_agent_get(
                     "invalid_output.planner_max_retries",
-                    5 if self.topology == "planner_executor_reviewers" else 3,
+                    5 if self.use_full_reviewer_topology else 3,
                 )
             ),
         )
@@ -199,7 +202,7 @@ class vLLMRollout(BaseVLLMRollout):
         return content or ""
 
     def _role_training_weights(self, role: str) -> Tuple[float, float]:
-        if self.topology != "planner_executor_reviewers":
+        if not self.use_any_reviewer_topology:
             return 1.0, 1.0
         config = self.role_training.get(role, {})
         return float(config.get("ppo_weight", 1.0)), float(config.get("kl_weight", 1.0))
@@ -264,6 +267,9 @@ class vLLMRollout(BaseVLLMRollout):
         if any(int(event.get("executor_review_retry_count", 0)) > 0 for event in events):
             reasons.append("executor_reviewer_retry>0")
         return reasons
+
+    def _supports_invalid_output_repair(self) -> bool:
+        return self.task_profile.task_name in {"babyai", "webarena"}
 
     def _parse_item_id(self, raw_item_id: str) -> Tuple[str, int]:
         task_name, item_id = raw_item_id.split("_", 1)
@@ -439,7 +445,7 @@ class vLLMRollout(BaseVLLMRollout):
 
     @torch.no_grad()
     def generate_sequences(self, prompts: DataProto, **kwargs) -> DataProto:
-        if self.topology == "planner_executor_reviewers":
+        if self.use_full_reviewer_topology:
             return self._generate_sequences_with_reviewers(prompts, **kwargs)
 
         # ORIGINAL FLOW DIFFERENCE:
@@ -664,6 +670,10 @@ class vLLMRollout(BaseVLLMRollout):
                 last_retry_prompt = ""
                 retry_count_total = 0
                 resolved_after_retry = False
+                executor_review_raw = ""
+                executor_review_verdict = "PASS"
+                executor_review_reason = "ok"
+                executor_review_retry_count = 0
                 first_pass_raw_content = raw_content
                 first_pass_content = content
                 first_pass_validation = validation
@@ -676,20 +686,57 @@ class vLLMRollout(BaseVLLMRollout):
                     prompt_content=self._assistant_prompt_content(EXECUTOR_SPEAKER_ID, content),
                 )
 
+                reviewer_requests_retry = False
+                if self.use_executor_reviewer_topology:
+                    reviewer_prompt = build_executor_reviewer_prompt(
+                        observation=handler.latest_observation,
+                        reviewed_plan=handler.latest_planner_context_used,
+                        executor_output=content,
+                        retry_count=retry_count_total,
+                        review_reason=None,
+                        task_profile=self.task_profile,
+                    )
+                    handler.add_user_message(self.tokenizer, reviewer_prompt)
+                    executor_review_raw = self._generate_single_text(
+                        handler.get_generation_prompt(self.tokenizer),
+                        role="executor_reviewer",
+                        do_sample=do_sample,
+                        extra_kwargs=kwargs,
+                    )
+                    self._add_role_message(
+                        handler,
+                        executor_review_raw,
+                        EXECUTOR_REVIEWER_SPEAKER_ID,
+                        "executor_reviewer",
+                        prompt_content=executor_review_raw,
+                        trainable=True,
+                    )
+                    executor_review = parse_executor_reviewer_output(executor_review_raw)
+                    executor_review_verdict = executor_review.verdict
+                    executor_review_reason = executor_review.reason
+                    reviewer_requests_retry = (not executor_review.valid) or executor_review.verdict == "RETRY"
+
                 should_retry = (
-                    self.task_profile.task_name == "babyai"
-                    and not validation.valid
-                    and validation.reason in {"invalid_format", "action_not_in_available", "copied_planner_text"}
+                    self._supports_invalid_output_repair()
                     and self.invalid_output_policy == "terminate_with_penalty"
                     and self.invalid_output_max_retries > 0
+                    and (
+                        (
+                            not validation.valid
+                            and validation.reason in {"invalid_format", "action_not_in_available", "copied_planner_text"}
+                        )
+                        or reviewer_requests_retry
+                    )
                 )
                 while should_retry and retry_count_total < self.invalid_output_max_retries:
                     retry_count_total += 1
+                    executor_review_retry_count += 1 if self.use_executor_reviewer_topology else 0
+                    retry_reason = validation.reason if not validation.valid else executor_review_reason
                     last_retry_prompt = build_executor_retry_prompt(
                         observation=handler.latest_observation,
                         planner_message=handler.latest_planner_context_used,
                         invalid_executor_output=content,
-                        validation_reason=validation.reason,
+                        validation_reason=retry_reason,
                         task_profile=self.task_profile,
                     )
                     handler.add_user_message(self.tokenizer, last_retry_prompt)
@@ -720,20 +767,64 @@ class vLLMRollout(BaseVLLMRollout):
                         EXECUTOR_SPEAKER_ID,
                         prompt_content=self._assistant_prompt_content(EXECUTOR_SPEAKER_ID, content),
                     )
-                    if validation.valid:
+                    reviewer_requests_retry = False
+                    if self.use_executor_reviewer_topology:
+                        reviewer_prompt = build_executor_reviewer_prompt(
+                            observation=handler.latest_observation,
+                            reviewed_plan=handler.latest_planner_context_used,
+                            executor_output=content,
+                            retry_count=retry_count_total,
+                            review_reason=executor_review_reason,
+                            task_profile=self.task_profile,
+                        )
+                        handler.add_user_message(self.tokenizer, reviewer_prompt)
+                        executor_review_raw = self._generate_single_text(
+                            handler.get_generation_prompt(self.tokenizer),
+                            role="executor_reviewer",
+                            do_sample=do_sample,
+                            extra_kwargs=kwargs,
+                        )
+                        self._add_role_message(
+                            handler,
+                            executor_review_raw,
+                            EXECUTOR_REVIEWER_SPEAKER_ID,
+                            "executor_reviewer",
+                            prompt_content=executor_review_raw,
+                            trainable=True,
+                        )
+                        executor_review = parse_executor_reviewer_output(executor_review_raw)
+                        executor_review_verdict = executor_review.verdict
+                        executor_review_reason = executor_review.reason
+                        reviewer_requests_retry = (not executor_review.valid) or executor_review.verdict == "RETRY"
+                    if validation.valid and not reviewer_requests_retry:
                         resolved_after_retry = True
                         break
+                    should_retry = (
+                        self._supports_invalid_output_repair()
+                        and self.invalid_output_policy == "terminate_with_penalty"
+                        and (
+                            (
+                                not validation.valid
+                                and validation.reason in {"invalid_format", "action_not_in_available", "copied_planner_text"}
+                            )
+                            or reviewer_requests_retry
+                        )
+                    )
 
                 handler.executor_first_pass_valid = 1.0 if first_pass_validation.valid else 0.0
                 handler.executor_retry_used = 1.0 if retry_count_total > 0 else 0.0
                 handler.executor_retry_resolved = 1.0 if retry_count_total > 0 and validation.valid else 0.0
                 handler.executor_retry_count = float(retry_count_total)
+                handler.executor_review_retry_count = float(executor_review_retry_count)
                 if retry_count_total > 0 and (first_pass_action or validation.action):
                     handler.executor_action_changed_after_retry = (
                         1.0 if (first_pass_action or "") != (validation.action or "") else 0.0
                     )
 
-                if not validation.valid and validation.reason in {"invalid_format", "copied_planner_text"}:
+                if self.use_executor_reviewer_topology and reviewer_requests_retry and validation.valid:
+                    handler.executor_native_format_valid = 0.0
+                    handler.executor_action_valid = 0.0
+                elif not validation.valid and validation.reason in {"invalid_format", "copied_planner_text"}:
                     handler.executor_native_format_valid = 0.0
                     handler.executor_action_valid = 0.0
                 elif not validation.valid and validation.reason in {"action_not_in_available", "copied_planner_text"}:
@@ -754,6 +845,11 @@ class vLLMRollout(BaseVLLMRollout):
                         "first_pass_raw_content": first_pass_raw_content,
                         "first_pass_content": first_pass_content,
                         "first_pass_validation": first_pass_validation,
+                        "executor_review_raw": executor_review_raw,
+                        "executor_review_verdict": executor_review_verdict,
+                        "executor_review_reason": executor_review_reason,
+                        "executor_review_retry_count": executor_review_retry_count,
+                        "reviewer_requests_retry": reviewer_requests_retry,
                         "planner_result": planner_results[local_i],
                     }
                 )
@@ -799,6 +895,11 @@ class vLLMRollout(BaseVLLMRollout):
                     "executor_first_pass_action": executor_result["first_pass_validation"].action,
                     "executor_raw_output": self._clip(raw_content),
                     "executor_normalized_output": self._clip(content),
+                    "executor_reviewer_raw_output": self._clip(executor_result["executor_review_raw"]),
+                    "executor_reviewer_verdict": executor_result["executor_review_verdict"],
+                    "executor_reviewer_reason": executor_result["executor_review_reason"],
+                    "executor_review_retry_count": executor_result["executor_review_retry_count"],
+                    "executor_reviewer_requested_retry": bool(executor_result["reviewer_requests_retry"]),
                     "validation_valid": bool(validation.valid),
                     "validation_reason": validation.reason,
                     "extracted_action": validation.action,
@@ -820,14 +921,14 @@ class vLLMRollout(BaseVLLMRollout):
                 }
 
                 terminate_for_invalid = (
-                    self.task_profile.task_name == "babyai"
-                    and not validation.valid
+                    self._supports_invalid_output_repair()
+                    and (not validation.valid or executor_result["reviewer_requests_retry"])
                     and self.invalid_output_policy == "terminate_with_penalty"
                 )
                 if terminate_for_invalid:
                     handler.mark_last_executor_reward(self.invalid_output_penalty)
                     handler.done = True
-                    if validation.reason in {"invalid_format", "copied_planner_text"}:
+                    if validation.reason in {"invalid_format", "copied_planner_text"} or executor_result["reviewer_requests_retry"]:
                         handler.invalid_format_terminated = 1.0
                     else:
                         handler.invalid_action_terminated = 1.0
@@ -1552,7 +1653,7 @@ class vLLMRollout(BaseVLLMRollout):
                 }
 
                 terminate_for_invalid = (
-                    self.task_profile.task_name == "babyai"
+                    self._supports_invalid_output_repair()
                     and not validation.valid
                     and self.invalid_output_policy == "terminate_with_penalty"
                 )

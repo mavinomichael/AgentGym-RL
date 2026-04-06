@@ -28,6 +28,35 @@ multi_agent::source_env_file() {
   fi
 }
 
+multi_agent::set_webarena_default_env() {
+  export SHOPPING="${SHOPPING:-http://127.0.0.1:7770}"
+  export SHOPPING_ADMIN="${SHOPPING_ADMIN:-http://127.0.0.1:7780/admin}"
+  export REDDIT="${REDDIT:-http://127.0.0.1:9999}"
+  export GITLAB="${GITLAB:-http://127.0.0.1:8023}"
+  export MAP="${MAP:-http://127.0.0.1:3000}"
+  export WIKIPEDIA="${WIKIPEDIA:-http://127.0.0.1:8888/wikipedia_en_all_maxi_2022-05/A/User:The_other_Kiwix_guy/Landing}"
+  export HOMEPAGE="${HOMEPAGE:-http://127.0.0.1:4399}"
+}
+
+multi_agent::write_webarena_env_file() {
+  local env_file="${1:-}"
+  if [ -z "$env_file" ]; then
+    return 0
+  fi
+  mkdir -p "$(dirname "$env_file")"
+  cat >"$env_file" <<EOF
+SHOPPING=$SHOPPING
+SHOPPING_ADMIN=$SHOPPING_ADMIN
+REDDIT=$REDDIT
+GITLAB=$GITLAB
+MAP=$MAP
+WIKIPEDIA=$WIKIPEDIA
+HOMEPAGE=$HOMEPAGE
+OPENAI_API_KEY=${OPENAI_API_KEY:-}
+OPENAI_BASE_URL=${OPENAI_BASE_URL:-}
+EOF
+}
+
 multi_agent::print_run_header() {
   local mode="$1"
   local task_name="$2"

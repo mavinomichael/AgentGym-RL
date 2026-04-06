@@ -39,9 +39,10 @@ MAVINO_DIR = REPO / 'reports' / 'babyai_multi_agent_diagnostics_2026-03-21' / 'm
 FIXED2_DIR = REPO / 'reports' / 'babyai_multi_agent_diagnostics_2026-03-09'
 FIXED2_DIAG60 = REPO / 'reports' / 'babyai_multi_agent_diagnostics_2026-03-10' / 'diagnostic_step60_analysis.txt'
 FIXED2_DIAG100 = REPO / 'reports' / 'babyai_multi_agent_diagnostics_2026-03-11' / 'diagnostic_step100_trace_summary.txt'
-FIXED4_DIR = REPO / 'reports' / 'babyai_multi_agent_diagnostics_2026-03-14'
 PLAIN100_DIR = REPO / 'reports' / '2026-03-23_plain_split_retry_v2_deep_research'
 DENSE500_DIR = REPO / 'reports' / '2026-03-23_dense500_eval_and_traces'
+FIXED2_NOTAG_DIR = REPO / 'reports' / '20260402T123754Z_babyai_2agent_fixed20_8gpu_plain_split_notag_persist_v1'
+THREE_AGENT_DIR = REPO / 'reports' / '20260403_130617_babyai_3agent_executor_reviewer_scaling_600_8gpu_no_tags_v1'
 PROMPT_ALIGN = REPO / 'reports' / 'babyai_multi_agent_diagnostics_2026-03-17' / 'prompt_alignment_single_vs_multi.md'
 
 # ---------- Build run catalog ----------
@@ -105,31 +106,6 @@ for name, step, avg, p1, execfmt, invfmt, invact, planner_inv, planner_fb in fix
         'PlannerTagOnlyRate': 0.0,
         'source_file': str(FIXED2_DIR / 'babyai_eval_comparison_report.txt'),
         'notes': 'Composite fixed-round 2-agent evidence assembled from multiple historical checkpoints; not a single uninterrupted training trajectory.'
-    })
-
-# Fixed-round 4-agent reviewer run
-fixed4_tsv = read_tsv(FIXED4_DIR / 'reviewer_stage_metrics.tsv')
-add_source('fixed_round_4agent_metrics', FIXED4_DIR / 'reviewer_stage_metrics.tsv', 'Fixed-round 4-agent reviewer checkpoint metrics.')
-for r in fixed4_tsv:
-    rows.append({
-        'run_family': 'fixed_round_4agent_reviewers',
-        'run_variant': f"reviewer_step_{r['stage']}",
-        'topology': 'planner_executor_reviewers',
-        'prompt_regime': 'tagged_with_reviewers',
-        'scaling_rl': False,
-        'curriculum': 'fixed_20',
-        'evidence_kind': 'single_run_checkpoints',
-        'step': int(r['stage']),
-        'Avg@1': to_float(r['avg_at_1']),
-        'Pass@1': to_float(r['pass_at_1']),
-        'ExecutorNativeFormatViolations': to_float(r['executor_native_format_violations']),
-        'InvalidFormatTerminationRate': to_float(r['invalid_format_termination_rate']),
-        'InvalidActionTerminationRate': to_float(r['invalid_action_termination_rate']),
-        'PlannerInvalidFormatRate': to_float(r['planner_invalid_format_rate']),
-        'PlannerFallbackRate': to_float(r['planner_fallback_rate']),
-        'PlannerTagOnlyRate': to_float(r['planner_tag_only_rate']),
-        'source_file': r['eval_log'],
-        'notes': 'Fixed-round 4-agent reviewer run.'
     })
 
 # Tagged scaling run (Mavino collapse)
@@ -210,6 +186,59 @@ for r in dense500:
         'PlannerTagOnlyRate': to_float(r['PlannerTagOnlyRate']),
         'source_file': r['log_path'],
         'notes': 'No-tag ScalingRL run with denser curriculum and retries.'
+    })
+
+# Fixed-round no-tag persistent run
+fixed2_notag = read_tsv(FIXED2_NOTAG_DIR / 'checkpoint_metrics.tsv')
+add_source('fixed_round_2agent_no_tag_metrics', FIXED2_NOTAG_DIR / 'checkpoint_metrics.tsv', 'Fixed-round 2-agent no-tag checkpoint metrics.')
+add_source('fixed_round_2agent_no_tag_report', FIXED2_NOTAG_DIR / 'summary.md', 'Narrative summary for fixed-round 2-agent no-tag run.')
+for r in fixed2_notag:
+    rows.append({
+        'run_family': 'fixed_round_2agent_no_tags',
+        'run_variant': f"step_{r['step']}",
+        'topology': 'planner_executor',
+        'prompt_regime': 'plain_split_no_tags',
+        'scaling_rl': False,
+        'curriculum': 'fixed_20',
+        'evidence_kind': 'single_run_checkpoints',
+        'step': int(r['step']),
+        'Avg@1': to_float(r['Avg@1']),
+        'Pass@1': to_float(r['Pass@1']),
+        'ExecutorNativeFormatViolations': to_float(r['ExecutorNativeFormatViolations']),
+        'InvalidFormatTerminationRate': to_float(r['InvalidFormatTerminationRate']),
+        'InvalidActionTerminationRate': to_float(r['InvalidActionTerminationRate']),
+        'PlannerInvalidFormatRate': to_float(r['PlannerInvalidFormatRate']),
+        'PlannerFallbackRate': to_float(r['PlannerFallbackRate']),
+        'PlannerTagOnlyRate': to_float(r['PlannerTagOnlyRate']),
+        'source_file': r.get('eval_log') or str(FIXED2_NOTAG_DIR / 'checkpoint_metrics.tsv'),
+        'notes': 'Fixed-round 2-agent no-tag run with persistent disk-backed checkpoints.'
+    })
+
+# 3-agent no-tag scaling run with executor reviewer
+three_agent = read_tsv(THREE_AGENT_DIR / 'checkpoint_metrics.tsv')
+add_source('three_agent_scaling_metrics', THREE_AGENT_DIR / 'checkpoint_metrics.tsv', '3-agent no-tag executor-reviewer ScalingRL checkpoint metrics.')
+add_source('three_agent_scaling_report', THREE_AGENT_DIR / 'summary.md', 'Narrative summary for 3-agent executor-reviewer run.')
+add_source('three_agent_scaling_traces', THREE_AGENT_DIR / 'selected_trace_examples.md', 'Selected trace excerpts for the 3-agent executor-reviewer run.')
+for r in three_agent:
+    rows.append({
+        'run_family': 'three_agent_executor_reviewer_scaling',
+        'run_variant': f"step_{r['step']}",
+        'topology': 'planner_executor_reviewer',
+        'prompt_regime': 'plain_split_no_tags_with_executor_reviewer',
+        'scaling_rl': True,
+        'curriculum': '[6,8,10,13,16,20]',
+        'evidence_kind': 'single_run_checkpoints',
+        'step': int(r['step']),
+        'Avg@1': to_float(r['Avg@1']),
+        'Pass@1': to_float(r['Pass@1']),
+        'ExecutorNativeFormatViolations': to_float(r['ExecutorNativeFormatViolations']),
+        'InvalidFormatTerminationRate': to_float(r['InvalidFormatTerminationRate']),
+        'InvalidActionTerminationRate': to_float(r['InvalidActionTerminationRate']),
+        'PlannerInvalidFormatRate': to_float(r['PlannerInvalidFormatRate']),
+        'PlannerFallbackRate': to_float(r['PlannerFallbackRate']),
+        'PlannerTagOnlyRate': to_float(r['PlannerTagOnlyRate']),
+        'source_file': r.get('eval_log') or str(THREE_AGENT_DIR / 'checkpoint_metrics.tsv'),
+        'notes': '3-agent no-tag ScalingRL run with planner, executor, and executor-reviewer roles sharing one policy.'
     })
 
 # Persist run catalog and source manifest
@@ -314,6 +343,22 @@ for key in ['step300_peak_valid_example', 'step400_transition_example', 'step450
         'data': dense_key[key],
     }
 
+# 3-agent reviewer traces from local copied report
+three_agent_key = load_json(THREE_AGENT_DIR / 'selected_trace_examples.json')
+for key in ['step100_healthy', 'step150_reviewer_false_retry', 'step350_schema_leak', 'step400_onset', 'step450_terminal']:
+    trace_packets[f'three_agent_{key}'] = {
+        'regime': 'three_agent_executor_reviewer_scaling',
+        'description': {
+            'step100_healthy': 'Peak early 3-agent executor-reviewer example.',
+            'step150_reviewer_false_retry': 'Early instability where the reviewer requests retry even though executor validation is otherwise acceptable.',
+            'step350_schema_leak': 'Recovered-performance example with reviewer schema leaking into executor output.',
+            'step400_onset': 'Onset of the terminal collapse regime in the 3-agent reviewer run.',
+            'step450_terminal': 'Terminal format collapse in the 3-agent reviewer run.',
+        }[key],
+        'source_file': str(THREE_AGENT_DIR / 'selected_trace_examples.json'),
+        'data': three_agent_key[key],
+    }
+
 trace_json = REPORT / 'selected_trace_packets.json'
 with trace_json.open('w') as f:
     json.dump(trace_packets, f, indent=2)
@@ -341,25 +386,27 @@ with trace_md.open('w') as f:
 COLORS = {
     'baseline': (80, 80, 80),
     'fixed_round_2agent_tagged': (180, 90, 20),
-    'fixed_round_4agent_reviewers': (170, 40, 120),
+    'fixed_round_2agent_no_tags': (87, 117, 144),
     'tagged_scaling_2agent': (214, 39, 40),
     'plain_split_scaling_2agent': (44, 123, 182),
     'dense_scaling_2agent': (49, 163, 84),
+    'three_agent_executor_reviewer_scaling': (148, 103, 189),
 }
 LABELS = {
     'fixed_round_2agent_tagged': 'Fixed-round 2-agent (tagged, composite)',
-    'fixed_round_4agent_reviewers': 'Fixed-round 4-agent reviewers',
+    'fixed_round_2agent_no_tags': 'Fixed-round 2-agent (no tags)',
     'tagged_scaling_2agent': 'ScalingRL 2-agent with tags',
     'plain_split_scaling_2agent': 'ScalingRL 2-agent no tags [6,13,20]',
     'dense_scaling_2agent': 'ScalingRL 2-agent no tags [6,8,10,13,16,20]',
+    'three_agent_executor_reviewer_scaling': 'ScalingRL 3-agent no tags + executor reviewer',
 }
-TWO_AGENT_FAMILIES = [
+PRIMARY_COMPARE_FAMILIES = [
     'fixed_round_2agent_tagged',
-    'tagged_scaling_2agent',
+    'fixed_round_2agent_no_tags',
     'plain_split_scaling_2agent',
     'dense_scaling_2agent',
+    'three_agent_executor_reviewer_scaling',
 ]
-MISSING_FIXED_NO_TAG_FAMILY = 'fixed_round_2agent_no_tags'
 
 try:
     FONT = ImageFont.truetype('/System/Library/Fonts/Supplemental/Arial.ttf', 22)
@@ -397,8 +444,8 @@ def draw_legend(draw, items, x, y):
         draw.text((x+40, yy), label, fill=(0,0,0), font=SMALL)
         yy += 26
 
-def scale_x(step, x0, x1):
-    return x0 + (step / 500.0) * (x1 - x0)
+def scale_x(step, x0, x1, xmax):
+    return x0 + (step / float(xmax)) * (x1 - x0)
 
 def scale_y(val, ymin, ymax, y0, y1):
     if val is None:
@@ -411,7 +458,7 @@ def scale_y(val, ymin, ymax, y0, y1):
 def draw_series(draw, pts, color, x0, y0, x1, y1, ymin, ymax, width=4):
     mapped = []
     for s, v in pts:
-        x = scale_x(s, x0, x1)
+        x = scale_x(s, x0, x1, max(step for step, _ in pts) if pts else 1)
         y = scale_y(v, ymin, ymax, y0, y1)
         mapped.append((x, y, s, v))
     if len(mapped) >= 2:
@@ -419,38 +466,55 @@ def draw_series(draw, pts, color, x0, y0, x1, y1, ymin, ymax, width=4):
     for x, y, s, v in mapped:
         draw.ellipse((x-5, y-5, x+5, y+5), fill=color)
 
-# Figure 1: Pass@1 primary comparison (2-agent only)
+# Figure 1: Pass@1 primary comparison
 img = Image.new('RGB', (1500, 900), 'white')
 d = ImageDraw.Draw(img)
 plot = (110, 120, 980, 760)
-xt = [(scale_x(v, plot[0], plot[2]), v) for v in [0,50,100,150,200,250,300,350,400,450,500]]
+comparison_max_step = max(r['step'] for r in rows if r['run_family'] in PRIMARY_COMPARE_FAMILIES)
+comparison_ticks = [0,50,100,150,200,250,300,350,400,450,500,550,600]
+xt = [(scale_x(v, plot[0], plot[2], comparison_max_step), v) for v in comparison_ticks if v <= comparison_max_step]
 yt = [(scale_y(v, 0, 0.9, plot[1], plot[3]), f'{v:.1f}') for v in [0.0,0.2,0.4,0.6,0.8]]
-draw_axes(d, *plot, xt, yt, 'Pass@1', 'Pass@1 across 2-agent regimes', '4-agent reviewer runs intentionally omitted; no fixed-round 2-agent no-tag run was found locally')
+draw_axes(d, *plot, xt, yt, 'Pass@1', 'Pass@1 across paper comparison regimes', 'Fixed-round vs ScalingRL, with and without tags, plus the 3-agent executor-reviewer ablation')
 # baseline
 base_y = scale_y(single_agent_baseline['Pass@1'], 0, 0.9, plot[1], plot[3])
 d.line((plot[0], base_y, plot[2], base_y), fill=COLORS['baseline'], width=3)
 d.text((plot[2]-120, base_y-20), 'single-agent baseline', fill=COLORS['baseline'], font=SMALL)
-for fam in TWO_AGENT_FAMILIES:
-    draw_series(d, series(fam, 'Pass@1'), COLORS[fam], *plot, 0, 0.9)
-draw_legend(d, [(LABELS[f], COLORS[f]) for f in TWO_AGENT_FAMILIES], 1020, 160)
+for fam in PRIMARY_COMPARE_FAMILIES:
+    pts = [(s, v) for s, v in series(fam, 'Pass@1')]
+    mapped = [(scale_x(s, plot[0], plot[2], comparison_max_step), scale_y(v, 0, 0.9, plot[1], plot[3])) for s, v in pts]
+    if len(mapped) >= 2:
+        d.line(mapped, fill=COLORS[fam], width=4)
+    for x, y in mapped:
+        d.ellipse((x-5, y-5, x+5, y+5), fill=COLORS[fam])
+draw_legend(d, [(LABELS[f], COLORS[f]) for f in PRIMARY_COMPARE_FAMILIES], 1020, 160)
 img.save(FIG / 'fig_pass1_comparison.png')
 
-# Figure 2: Failure comparison, two panels (2-agent only)
+# Figure 2: Failure comparison, two panels
 img = Image.new('RGB', (1500, 1100), 'white')
 d = ImageDraw.Draw(img)
 top = (110, 120, 980, 470)
 bot = (110, 600, 980, 950)
-xt_top = [(scale_x(v, top[0], top[2]), v) for v in [0,50,100,150,200,250,300,350,400,450,500]]
+xt_top = [(scale_x(v, top[0], top[2], comparison_max_step), v) for v in comparison_ticks if v <= comparison_max_step]
 yt01_top = [(scale_y(v, 0, 1.0, top[1], top[3]), f'{v:.1f}') for v in [0,0.25,0.5,0.75,1.0]]
-draw_axes(d, *top, xt_top, yt01_top, 'Rate', 'Executor format violations over training (2-agent only)')
-for fam in TWO_AGENT_FAMILIES:
-    draw_series(d, series(fam, 'ExecutorNativeFormatViolations'), COLORS[fam], *top, 0, 1.0)
-xt_bot = [(scale_x(v, bot[0], bot[2]), v) for v in [0,50,100,150,200,250,300,350,400,450,500]]
+draw_axes(d, *top, xt_top, yt01_top, 'Rate', 'Executor format violations across paper comparison regimes')
+for fam in PRIMARY_COMPARE_FAMILIES:
+    pts = series(fam, 'ExecutorNativeFormatViolations')
+    mapped = [(scale_x(s, top[0], top[2], comparison_max_step), scale_y(v, 0, 1.0, top[1], top[3])) for s, v in pts]
+    if len(mapped) >= 2:
+        d.line(mapped, fill=COLORS[fam], width=4)
+    for x, y in mapped:
+        d.ellipse((x-5, y-5, x+5, y+5), fill=COLORS[fam])
+xt_bot = [(scale_x(v, bot[0], bot[2], comparison_max_step), v) for v in comparison_ticks if v <= comparison_max_step]
 yt01_bot = [(scale_y(v, 0, 1.0, bot[1], bot[3]), f'{v:.1f}') for v in [0,0.25,0.5,0.75,1.0]]
-draw_axes(d, *bot, xt_bot, yt01_bot, 'Rate', 'Planner invalid-format rate over training (2-agent only)')
-for fam in TWO_AGENT_FAMILIES:
-    draw_series(d, series(fam, 'PlannerInvalidFormatRate'), COLORS[fam], *bot, 0, 1.0)
-draw_legend(d, [(LABELS[f], COLORS[f]) for f in TWO_AGENT_FAMILIES], 1020, 220)
+draw_axes(d, *bot, xt_bot, yt01_bot, 'Rate', 'Planner invalid-format rate across paper comparison regimes')
+for fam in PRIMARY_COMPARE_FAMILIES:
+    pts = series(fam, 'PlannerInvalidFormatRate')
+    mapped = [(scale_x(s, bot[0], bot[2], comparison_max_step), scale_y(v, 0, 1.0, bot[1], bot[3])) for s, v in pts]
+    if len(mapped) >= 2:
+        d.line(mapped, fill=COLORS[fam], width=4)
+    for x, y in mapped:
+        d.ellipse((x-5, y-5, x+5, y+5), fill=COLORS[fam])
+draw_legend(d, [(LABELS[f], COLORS[f]) for f in PRIMARY_COMPARE_FAMILIES], 1020, 220)
 img.save(FIG / 'fig_failure_comparison.png')
 
 # Figure 3: Dense500 detail
@@ -458,34 +522,50 @@ img = Image.new('RGB', (1500, 1100), 'white')
 d = ImageDraw.Draw(img)
 top = (110, 120, 980, 470)
 bot = (110, 600, 980, 950)
-xt = [(scale_x(v, top[0], top[2]), v) for v in [50,100,150,200,250,300,350,400,450,500]]
+dense_max_step = max(r['step'] for r in rows if r['run_family'] == 'dense_scaling_2agent')
+xt = [(scale_x(v, top[0], top[2], dense_max_step), v) for v in [50,100,150,200,250,300,350,400,450,500]]
 yt_pass = [(scale_y(v, -0.2, 0.9, top[1], top[3]), f'{v:.1f}') for v in [-0.2,0.0,0.2,0.4,0.6,0.8]]
 draw_axes(d, *top, xt, yt_pass, 'Metric', 'Dense no-tag ScalingRL run: performance and collapse')
-draw_series(d, series('dense_scaling_2agent', 'Pass@1'), COLORS['dense_scaling_2agent'], *top, -0.2, 0.9)
-draw_series(d, series('dense_scaling_2agent', 'Avg@1'), (31, 119, 180), *top, -0.2, 0.9)
+for metric, color in [('Pass@1', COLORS['dense_scaling_2agent']), ('Avg@1', (31, 119, 180))]:
+    pts = series('dense_scaling_2agent', metric)
+    mapped = [(scale_x(s, top[0], top[2], dense_max_step), scale_y(v, -0.2, 0.9, top[1], top[3])) for s, v in pts]
+    if len(mapped) >= 2:
+        d.line(mapped, fill=color, width=4)
+    for x, y in mapped:
+        d.ellipse((x-5, y-5, x+5, y+5), fill=color)
 d.text((1020, 170), 'Pass@1', fill=COLORS['dense_scaling_2agent'], font=SMALL)
 d.text((1020, 200), 'Avg@1', fill=(31,119,180), font=SMALL)
-xt2 = [(scale_x(v, bot[0], bot[2]), v) for v in [50,100,150,200,250,300,350,400,450,500]]
+xt2 = [(scale_x(v, bot[0], bot[2], dense_max_step), v) for v in [50,100,150,200,250,300,350,400,450,500]]
 yt2 = [(scale_y(v, 0, 1.0, bot[1], bot[3]), f'{v:.1f}') for v in [0,0.25,0.5,0.75,1.0]]
 draw_axes(d, *bot, xt2, yt2, 'Rate', 'Dense no-tag ScalingRL run: failure metrics')
-draw_series(d, series('dense_scaling_2agent', 'ExecutorNativeFormatViolations'), (214,39,40), *bot, 0, 1.0)
-draw_series(d, series('dense_scaling_2agent', 'InvalidActionTerminationRate'), (255,127,14), *bot, 0, 1.0)
-draw_series(d, series('dense_scaling_2agent', 'PlannerInvalidFormatRate'), (148,103,189), *bot, 0, 1.0)
+for metric, color in [('ExecutorNativeFormatViolations', (214,39,40)), ('InvalidActionTerminationRate', (255,127,14)), ('PlannerInvalidFormatRate', (148,103,189))]:
+    pts = series('dense_scaling_2agent', metric)
+    mapped = [(scale_x(s, bot[0], bot[2], dense_max_step), scale_y(v, 0, 1.0, bot[1], bot[3])) for s, v in pts]
+    if len(mapped) >= 2:
+        d.line(mapped, fill=color, width=4)
+    for x, y in mapped:
+        d.ellipse((x-5, y-5, x+5, y+5), fill=color)
 d.text((1020, 660), 'Exec format violations', fill=(214,39,40), font=SMALL)
 d.text((1020, 690), 'Invalid action terminations', fill=(255,127,14), font=SMALL)
 d.text((1020, 720), 'Planner invalid format', fill=(148,103,189), font=SMALL)
 img.save(FIG / 'fig_dense500_detail.png')
 
-# Figure 4: Tagged vs no-tags
+# Figure 4: Tag removal and reviewer ablation
 img = Image.new('RGB', (1500, 900), 'white')
 d = ImageDraw.Draw(img)
 plot = (110, 120, 980, 760)
-xt = [(scale_x(v, plot[0], plot[2]), v) for v in [0,50,100,150,200,250,300,350,400,450,500]]
+xt = [(scale_x(v, plot[0], plot[2], comparison_max_step), v) for v in comparison_ticks if v <= comparison_max_step]
 yt = [(scale_y(v, 0, 1.0, plot[1], plot[3]), f'{v:.1f}') for v in [0,0.25,0.5,0.75,1.0]]
-draw_axes(d, *plot, xt, yt, 'Pass@1', 'Tagged prompts vs no-tag prompts under ScalingRL (2-agent only)')
-for fam in ['tagged_scaling_2agent','plain_split_scaling_2agent','dense_scaling_2agent']:
-    draw_series(d, series(fam, 'Pass@1'), COLORS[fam], *plot, 0, 1.0)
-draw_legend(d, [(LABELS[f], COLORS[f]) for f in ['tagged_scaling_2agent','plain_split_scaling_2agent','dense_scaling_2agent']], 1020, 180)
+draw_axes(d, *plot, xt, yt, 'Pass@1', 'Tag removal and reviewer ablation')
+tag_compare_families = ['fixed_round_2agent_tagged','fixed_round_2agent_no_tags','dense_scaling_2agent','three_agent_executor_reviewer_scaling']
+for fam in tag_compare_families:
+    pts = series(fam, 'Pass@1')
+    mapped = [(scale_x(s, plot[0], plot[2], comparison_max_step), scale_y(v, 0, 1.0, plot[1], plot[3])) for s, v in pts]
+    if len(mapped) >= 2:
+        d.line(mapped, fill=COLORS[fam], width=4)
+    for x, y in mapped:
+        d.ellipse((x-5, y-5, x+5, y+5), fill=COLORS[fam])
+draw_legend(d, [(LABELS[f], COLORS[f]) for f in tag_compare_families], 1020, 180)
 img.save(FIG / 'fig_tagged_vs_notags_scaling.png')
 
 # ---------- Main markdown ----------
@@ -508,7 +588,7 @@ for fam, rr in families.items():
 main_md = REPORT / 'PAPER_HANDOFF_DEEP_RESEARCH.md'
 with main_md.open('w') as f:
     f.write('# Multi-Agent BabyAI Collapse Investigation: Deep Research Handoff\n\n')
-    f.write('Generated on 2026-03-30. This packet is designed so ChatGPT Deep Research can inspect the repo, reuse the exact source files, and draft a paper that pivots from “multi-agent improvement” to “collapse investigation”.\n\n')
+    f.write('Updated on 2026-04-03. This packet is designed so ChatGPT Deep Research can inspect the repo, reuse the exact source files, and draft a paper that pivots from “multi-agent improvement” to “collapse investigation”.\n\n')
     f.write('## Original AgentGym-RL Reference\n')
     f.write(f'- README: `{README}`\n')
     f.write(f'- Paper link from README: [{ARXIV_URL}]({ARXIV_URL})\n')
@@ -523,16 +603,18 @@ with main_md.open('w') as f:
     f.write(f'- Selected traces: `{trace_md}` and `{trace_json}`\n')
     f.write(f'- Existing March 21 collapse report: `{MAVINO_DIR / "MAVINO_COLLAPSE_REPORT.md"}`\n')
     f.write(f'- Existing plain-split ScalingRL report: `{PLAIN100_DIR / "DEEP_RESEARCH_ANALYSIS.md"}`\n')
-    f.write(f'- Existing dense-curriculum report: `{DENSE500_DIR / "SUMMARY.md"}`\n\n')
+    f.write(f'- Existing dense-curriculum report: `{DENSE500_DIR / "SUMMARY.md"}`\n')
+    f.write(f'- New 3-agent reviewer report: `{THREE_AGENT_DIR / "summary.md"}` and `{THREE_AGENT_DIR / "selected_trace_examples.md"}`\n\n')
     f.write('## Experimental Regimes To Emphasize\n')
     f.write('1. **2-agent tagged prompts**\n')
     f.write('   - Fixed-round 2-agent tagged runs (historical composite evidence).\n')
-    f.write('   - ScalingRL 2-agent tagged run (`Mavino Collapse`).\n')
-    f.write('2. **2-agent no-tag ScalingRL**\n')
+    f.write('2. **2-agent no-tag fixed-round**\n')
+    f.write('   - Persistent fixed-round 20-round run with no visible planner/executor tags.\n')
+    f.write('3. **2-agent no-tag ScalingRL**\n')
     f.write('   - Plain-split retry v2 with `[6,13,20]`.\n')
     f.write('   - Dense-curriculum run with `[6,8,10,13,16,20]`.\n')
-    f.write('3. **Missing ablation**\n')
-    f.write('   - A fixed-round 2-agent no-tag run is **not present** in the local archived reports and therefore cannot be plotted yet.\n\n')
+    f.write('4. **3-agent no-tag ScalingRL with executor reviewer**\n')
+    f.write('   - Planner, executor, and executor-reviewer share the same policy and are trained end-to-end.\n\n')
     f.write('## Figures\n')
     f.write(f'![Pass@1 comparison](figures/fig_pass1_comparison.png)\n\n')
     f.write(f'![Failure comparison](figures/fig_failure_comparison.png)\n\n')
@@ -540,14 +622,14 @@ with main_md.open('w') as f:
     f.write(f'![Tagged vs no-tags scaling](figures/fig_tagged_vs_notags_scaling.png)\n\n')
     f.write('## High-Level Quantitative Summary\n')
     f.write(f'- Single-agent baseline: `Avg@1={single_agent_baseline["Avg@1"]:.6f}`, `Pass@1={single_agent_baseline["Pass@1"]:.6f}`.\n')
-    for fam in TWO_AGENT_FAMILIES:
+    for fam in PRIMARY_COMPARE_FAMILIES:
         s = family_summary[fam]
         f.write(f'- {LABELS[fam]}: best checkpoint `step {s["best"]["step"]}` with `Pass@1={s["best"]["Pass@1"]:.6f}`, final checkpoint `step {s["final"]["step"]}` with `Pass@1={s["final"]["Pass@1"]:.6f}`.\n')
     f.write('\n')
     f.write('## Scope Note\n')
-    f.write('- The figures in this handoff were updated to exclude 4-agent reviewer runs.\n')
-    f.write('- I did **not** find a confirmed fixed-round 2-agent no-tag training run in the local report archive.\n')
-    f.write('- The current 2-agent comparison therefore uses: fixed-round tagged, tagged ScalingRL, and no-tag ScalingRL.\n\n')
+    f.write('- The figures in this handoff omit the older 4-agent reviewer experiment and instead use the current paper comparison set.\n')
+    f.write('- The current comparison uses: fixed-round tagged 2-agent, fixed-round no-tag 2-agent, no-tag ScalingRL 2-agent, and no-tag ScalingRL 3-agent with executor reviewer.\n')
+    f.write(f'- The newly added fixed-round no-tag run is sourced from `{FIXED2_NOTAG_DIR / "checkpoint_metrics.tsv"}` and `{FIXED2_NOTAG_DIR / "summary.md"}`.\n\n')
     f.write('## Supported Claims\n')
     f.write('1. **Prompt tags created a distinct recursive scaffold-copying collapse mode.**\n')
     f.write(f'   - Evidence: `{MAVINO_DIR / "MAVINO_COLLAPSE_REPORT.md"}` and `{MAVINO_DIR / "representative_trace_examples.md"}`.\n')
@@ -555,15 +637,22 @@ with main_md.open('w') as f:
     f.write('2. **Removing visible tags removed that specific failure mode.**\n')
     f.write(f'   - Evidence: `{PLAIN100_DIR / "DEEP_RESEARCH_ANALYSIS.md"}` and `{DENSE500_DIR / "SUMMARY.md"}`.\n')
     f.write('   - In the no-tag runs, `PlannerTagOnlyRate` stays at or near zero, and the late collapse is no longer driven by bracketed scaffold leakage.\n')
-    f.write('3. **No-tag multi-agent ScalingRL runs can produce checkpoints that beat the single-agent baseline, but the gain is not robust through training.**\n')
+    f.write('3. **Removing tags alone is not sufficient to stabilize fixed-round 2-agent training.**\n')
+    f.write(f'   - Evidence: `{FIXED2_NOTAG_DIR / "checkpoint_metrics.tsv"}`.\n')
+    f.write('   - The new fixed-round no-tag run peaks at `step 100` with `Pass@1=0.677778`, then fully collapses from `step 400` onward with `PlannerTagOnlyRate=1.0` and `ExecutorNativeFormatViolations=1.0`.\n')
+    f.write('4. **No-tag multi-agent ScalingRL runs can produce checkpoints that beat the single-agent baseline, but the gain is not robust through training.**\n')
     f.write('   - Coarse no-tag ScalingRL `[6,13,20]`: best `step 200`, `Pass@1=0.811111`.\n')
     f.write('   - Dense no-tag ScalingRL `[6,8,10,13,16,20]`: best `step 300`, `Pass@1=0.822222`.\n')
     f.write('   - Both runs collapse later (`450-500`).\n')
-    f.write('4. **The dominant late no-tag collapse is executor-side, not planner-fallback-driven.**\n')
-    f.write('   - At `450-500`, planner metrics remain formally clean while executor format violations approach `1.0`.\n\n')
+    f.write('5. **Adding an executor reviewer delays but does not eliminate collapse.**\n')
+    f.write(f'   - Evidence: `{THREE_AGENT_DIR / "checkpoint_metrics.tsv"}` and `{THREE_AGENT_DIR / "selected_trace_examples.md"}`.\n')
+    f.write('   - The 3-agent reviewer run peaks at `step 100` (`Pass@1=0.722222`), recovers again at `step 350` (`Pass@1=0.711111`), but still enters full collapse by `step 450` with both planner and executor metrics saturated.\n')
+    f.write('6. **The dominant late no-tag collapse in ScalingRL remains an interaction failure between schema control and role outputs.**\n')
+    f.write('   - In the 2-agent no-tag runs, late failure is mostly executor-side.\n')
+    f.write('   - In the 3-agent reviewer run, the reviewer itself becomes part of the collapse: reviewer schema leaks into executor outputs, and malformed reviewer outputs trigger retries or terminations.\n\n')
     f.write('## Important Caveats\n')
     f.write('- The fixed-round 2-agent curve is a **composite evidence pool**, not a single uninterrupted run. Use it to describe the historical debugging trajectory, not as a single clean learning curve.\n')
-    f.write('- A fixed-round 2-agent no-tag ablation is missing from the local archive, so the current no-tag evidence is entirely ScalingRL-based.\n')
+    f.write('- The fixed-round 2-agent no-tag run is now present, but it is still only one run; treat it as an ablation datapoint, not a complete stability proof.\n')
     f.write('- The strongest paper claims should therefore focus on **failure modes and stability**, not on a single winner number.\n\n')
     f.write('## Failure Taxonomy\n')
     f.write('### A. Tagged prompt scaffold collapse\n')
@@ -580,6 +669,37 @@ with main_md.open('w') as f:
     f.write('- Mid-run performance is strong, but late in training the executor either invents invalid actions or stops emitting the required schema.\n')
     f.write('- Coarse no-tag run: degradation begins after `300`, with total schema collapse at `450-500`.\n')
     f.write('- Dense no-tag run: best checkpoint at `300`, same terminal executor-format collapse by `450-500`.\n\n')
+    f.write('### D. Fixed-round no-tag late total collapse\n')
+    f.write('- The newly added fixed-round no-tag run shows that removing visible tags alone is not enough.\n')
+    f.write('- This run is healthy through `step 350`, then flips into total failure at `step 400` with `Pass@1=0.0`, `ExecutorNativeFormatViolations=1.0`, `PlannerInvalidFormatRate=1.0`, and `PlannerTagOnlyRate=1.0`.\n')
+    f.write('- This matters because it shows a no-tag fixed-round regime can still collapse without the original tagged scaffold-copy mechanism.\n\n')
+    f.write('### E. 3-agent reviewer schema interference collapse\n')
+    f.write('- The executor reviewer helps some early checkpoints, but it introduces a new route for schema contamination.\n')
+    f.write('- At `step 150`, the reviewer already misfires: it requests retry even when deterministic executor validation can still extract a valid action.\n')
+    f.write('- At `step 350`, the run regains strong task success, but reviewer schema (`Verdict:` / `Reason:`) starts leaking into executor outputs.\n')
+    f.write('- At `step 400`, planner invalid-format rates rise sharply while the reviewer still often passes executor outputs.\n')
+    f.write('- By `step 450`, both planner and reviewer channels have collapsed into tag-only or garbage outputs, and the executor fails with `invalid_format` on every sampled case.\n\n')
+    f.write('## Collapse Questions\n')
+    f.write('### When does collapse begin?\n')
+    f.write('- For the 3-agent reviewer run, the **first warning signs** appear by `step 150`, where reviewer outputs become malformed and can trigger retries or termination even when the executor action is otherwise valid.\n')
+    f.write('- The run then **recovers** through `step 250-350`.\n')
+    f.write('- The **terminal collapse onset** begins at `step 400`, where `PlannerInvalidFormatRate` jumps to `0.700000` and trace examples show planner schema contamination.\n')
+    f.write('- The run becomes **fully collapsed** at `step 450`, where `Pass@1=0.0`, `ExecutorNativeFormatViolations=1.0`, `PlannerInvalidFormatRate=1.0`, and `PlannerTagOnlyRate=1.0`.\n\n')
+    f.write('### How do we detect that collapse has started?\n')
+    f.write('- Watch for a combination of metrics and traces:\n')
+    f.write('  - rising `PlannerInvalidFormatRate`\n')
+    f.write('  - rising `PlannerTagOnlyRate`\n')
+    f.write('  - rising `ExecutorNativeFormatViolations`\n')
+    f.write('  - reviewer outputs that stop following their own `Verdict/Reason` schema\n')
+    f.write('  - executor outputs that begin to include reviewer schema or punctuation spam\n')
+    f.write('- In the 3-agent run, `step 350` already shows reviewer-schema leakage inside the executor output even though task success is still high.\n\n')
+    f.write('### Can the run recover after instability begins?\n')
+    f.write('- **Yes, partially.** The 3-agent run dips badly at `150-200` and then recovers to strong checkpoints at `300-350`.\n')
+    f.write('- **No, not after terminal collapse has fully set in.** Once the run reaches the `450+` regime, there is no evidence of spontaneous recovery in the remaining training horizon.\n\n')
+    f.write('### How do we prevent it?\n')
+    f.write('- The current evidence suggests that prompt simplification alone is not enough.\n')
+    f.write('- The most promising direction is stronger schema control on every role, especially on the reviewer, plus explicit monitoring for reviewer-schema leakage into the executor channel.\n')
+    f.write('- A practical prevention stack from these runs would include: bounded retries, low-variance reviewer prompts, early-stop or checkpoint selection based on collapse metrics, and curriculum schedules that avoid pushing far past the last stable checkpoint.\n\n')
     f.write('## Trace Guide For Deep Research\n')
     f.write('- Tagged prompt leak onset: `selected_trace_packets.md` -> `tagged_step55_first_header_leak`\n')
     f.write('- Tagged terminal recursive contamination: `selected_trace_packets.md` -> `tagged_step100_recursive_scaffold`\n')
@@ -592,10 +712,15 @@ with main_md.open('w') as f:
     f.write('- Dense no-tag transition: `selected_trace_packets.md` -> `dense500_step400_transition_example`\n')
     f.write('- Dense no-tag retry exhaustion: `selected_trace_packets.md` -> `dense500_step450_retry_exhaustion_example`\n')
     f.write('- Dense no-tag terminal collapse: `selected_trace_packets.md` -> `dense500_step500_terminal_collapse_example`\n\n')
+    f.write('- 3-agent reviewer peak: `selected_trace_packets.md` -> `three_agent_step100_healthy`\n')
+    f.write('- 3-agent reviewer early instability: `selected_trace_packets.md` -> `three_agent_step150_reviewer_false_retry`\n')
+    f.write('- 3-agent reviewer schema leakage: `selected_trace_packets.md` -> `three_agent_step350_schema_leak`\n')
+    f.write('- 3-agent reviewer collapse onset: `selected_trace_packets.md` -> `three_agent_step400_onset`\n')
+    f.write('- 3-agent reviewer terminal collapse: `selected_trace_packets.md` -> `three_agent_step450_terminal`\n\n')
     f.write('## Suggested Paper Structure\n')
     f.write('1. Introduction: goal was to improve BabyAI long-horizon performance via multi-agent decomposition.\n')
-    f.write('2. Setup: single-agent baseline, planner/executor design, reviewer extension, ScalingInter-RL.\n')
-    f.write('3. Main result: intermediate multi-agent checkpoints can outperform baseline, but training is unstable.\n')
+    f.write('2. Setup: single-agent baseline, planner/executor design, executor-reviewer extension, ScalingInter-RL.\n')
+    f.write('3. Main result: intermediate multi-agent checkpoints can outperform baseline, but training is unstable and reviewer-based corrections do not eliminate collapse.\n')
     f.write('4. Collapse taxonomy:\n')
     f.write('   - tagged scaffold-copying collapse\n')
     f.write('   - fixed-round planner verbosity/fallback collapse\n')
@@ -603,7 +728,8 @@ with main_md.open('w') as f:
     f.write('5. Ablation discussion:\n')
     f.write('   - what removing tags fixed\n')
     f.write('   - what ScalingRL improved\n')
-    f.write('   - why denser curricula still did not prevent terminal collapse\n')
+    f.write('   - what the executor reviewer improved\n')
+    f.write('   - why denser curricula and reviewer feedback still did not prevent terminal collapse\n')
     f.write('6. Conclusion: multi-agent RL can transiently help, but stable coordination and schema retention remain unresolved.\n\n')
     f.write('## Exact Files To Read First\n')
     f.write(f'1. `{main_md}`\n')
@@ -612,6 +738,8 @@ with main_md.open('w') as f:
     f.write(f'4. `{MAVINO_DIR / "MAVINO_COLLAPSE_REPORT.md"}`\n')
     f.write(f'5. `{PLAIN100_DIR / "DEEP_RESEARCH_ANALYSIS.md"}`\n')
     f.write(f'6. `{DENSE500_DIR / "SUMMARY.md"}`\n')
-    f.write(f'7. `{PROMPT_ALIGN}`\n')
+    f.write(f'7. `{THREE_AGENT_DIR / "summary.md"}`\n')
+    f.write(f'8. `{THREE_AGENT_DIR / "selected_trace_examples.md"}`\n')
+    f.write(f'9. `{PROMPT_ALIGN}`\n')
 
 print(main_md)

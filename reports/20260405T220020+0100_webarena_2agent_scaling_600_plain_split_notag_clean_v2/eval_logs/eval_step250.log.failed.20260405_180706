@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/home/mavinomichael/AgentGym-RL/AgentGym-RL/scripts/model_merger.py", line 53, in <module>
+    assert world_size, "No model file with the proper format"
+AssertionError: No model file with the proper format

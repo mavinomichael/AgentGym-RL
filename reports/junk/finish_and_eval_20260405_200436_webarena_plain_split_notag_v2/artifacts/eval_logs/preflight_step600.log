@@ -1,0 +1,32 @@
+[PASS] python_version: current=3.10.20 recommended_server_python=3.10.13
+[PASS] cuda_visible_devices: CUDA_VISIBLE_DEVICES=<not-set>
+[PASS] gpu_count: requested=1 available=8
+[FAIL] model_path: MODEL_PATH is unset
+[FAIL] eval_dataset_dir: /home/mavinomichael/AgentGym-RL/AgentGym-RL/AgentEval/webarena
+[FAIL] eval_test_file: /home/mavinomichael/AgentGym-RL/AgentGym-RL/AgentEval/webarena/webarena_test.json
+[PASS] server_package_import: agentenv_webarena
+[PASS] server_url: http://127.0.0.1:36005 -> 200
+[PASS] env:SHOPPING: http://127.0.0.1:7770
+[PASS] env:SHOPPING:exact: http://127.0.0.1:7770
+[PASS] env:SHOPPING:reachable: http://127.0.0.1:7770 -> 200
+[PASS] env:SHOPPING_ADMIN: http://127.0.0.1:7780/admin
+[PASS] env:SHOPPING_ADMIN:exact: http://127.0.0.1:7780/admin
+[PASS] env:SHOPPING_ADMIN:reachable: http://127.0.0.1:7780/admin -> 200
+[PASS] env:REDDIT: http://127.0.0.1:9999
+[PASS] env:REDDIT:exact: http://127.0.0.1:9999
+[PASS] env:REDDIT:reachable: http://127.0.0.1:9999 -> 200
+[PASS] env:GITLAB: http://127.0.0.1:8023
+[PASS] env:GITLAB:exact: http://127.0.0.1:8023
+[PASS] env:GITLAB:reachable: http://127.0.0.1:8023 -> 200
+[PASS] env:MAP: https://www.openstreetmap.org
+[FAIL] env:MAP:exact: public fallback in use
+[PASS] env:MAP:reachable: https://www.openstreetmap.org -> 200
+[PASS] env:WIKIPEDIA: http://127.0.0.1:8888/wikipedia_en_all_maxi_2022-05/A/User:The_other_Kiwix_guy/Landing
+[PASS] env:WIKIPEDIA:exact: http://127.0.0.1:8888/wikipedia_en_all_maxi_2022-05/A/User:The_other_Kiwix_guy/Landing
+[PASS] env:WIKIPEDIA:reachable: http://127.0.0.1:8888/wikipedia_en_all_maxi_2022-05/A/User:The_other_Kiwix_guy/Landing -> 200
+[PASS] env:HOMEPAGE: http://127.0.0.1:4399
+[PASS] env:HOMEPAGE:exact: http://127.0.0.1:4399
+[PASS] env:HOMEPAGE:reachable: http://127.0.0.1:4399 -> 200
+[PASS] env:OPENAI_API_KEY: set
+[PASS] playwright: /home/mavinomichael/.cache/ms-playwright/chromium-1055/chrome-linux/chrome
+Preflight failed. Fix the FAIL items before running training or evaluation.

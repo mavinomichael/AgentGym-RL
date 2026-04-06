@@ -1,0 +1,242 @@
+[
+  {
+    "conversations": [
+      {
+        "from": "human",
+        "value": "You are the executor for a structured BabyAI team.\nUse the planner JSON as advisory context only. Choose exactly one action index.\nReturn JSON only with this schema:\n{\"schema_version\":\"v1\",\"reason\":\"one short sentence, max 20 words\",\"action_id\":0}\n\nRequirements:\n- JSON only\n- reason must be one short sentence with at most 20 words\n- action_id must be an integer index into the legal action list below\n- Do not output the final BabyAI action text yourself\n\nPrevious action: none\nObservation:\nYour goal: go to the red ball\nIn front of you in this room, you can see several objects: The room has walls around you. You are facing a wall 3 steps away. You are not carrying anything.\nAvailable actions: [\"turn left\", \"turn right\", \"move forward\", \"check available actions\"]\n\nPlanner advisory JSON:\n{\"action_hint\":\"move_forward\",\"confidence\":0.75,\"schema_version\":\"v1\",\"subgoal_id\":\"approach\",\"success_check\":\"world state moves toward target\",\"target\":{\"color\":\"none\",\"location_hint\":\"left\",\"object_type\":\"none\"}}\n\nLegal actions:\n0: turn left\n1: turn right\n2: move forward\n3: check available actions\n"
+      },
+      {
+        "from": "gpt",
+        "value": "{\"action_id\":2,\"reason\":\"Follow the grounded subgoal with a legal action.\",\"schema_version\":\"v1\"}"
+      }
+    ]
+  },
+  {
+    "conversations": [
+      {
+        "from": "human",
+        "value": "You are the executor for a structured BabyAI team.\nUse the planner JSON as advisory context only. Choose exactly one action index.\nReturn JSON only with this schema:\n{\"schema_version\":\"v1\",\"reason\":\"one short sentence, max 20 words\",\"action_id\":0}\n\nRequirements:\n- JSON only\n- reason must be one short sentence with at most 20 words\n- action_id must be an integer index into the legal action list below\n- Do not output the final BabyAI action text yourself\n\nPrevious action: none\nObservation:\nYour goal: go to the red ball\nIn front of you in this room, you can see several objects: The room has walls around you. You are facing a wall 3 steps away. You are not carrying anything.\nAvailable actions: [\"turn left\", \"turn right\", \"move forward\", \"check available actions\"]\n\nPlanner advisory JSON:\n{\"action_hint\":\"turn_left\",\"confidence\":0.75,\"schema_version\":\"v1\",\"subgoal_id\":\"explore\",\"success_check\":\"world state moves toward target\",\"target\":{\"color\":\"none\",\"location_hint\":\"left\",\"object_type\":\"none\"}}\n\nLegal actions:\n0: turn left\n1: turn right\n2: move forward\n3: check available actions\n"
+      },
+      {
+        "from": "gpt",
+        "value": "{\"action_id\":0,\"reason\":\"Follow the grounded subgoal with a legal action.\",\"schema_version\":\"v1\"}"
+      }
+    ]
+  },
+  {
+    "conversations": [
+      {
+        "from": "human",
+        "value": "You are the executor for a structured BabyAI team.\nUse the planner JSON as advisory context only. Choose exactly one action index.\nReturn JSON only with this schema:\n{\"schema_version\":\"v1\",\"reason\":\"one short sentence, max 20 words\",\"action_id\":0}\n\nRequirements:\n- JSON only\n- reason must be one short sentence with at most 20 words\n- action_id must be an integer index into the legal action list below\n- Do not output the final BabyAI action text yourself\n\nPrevious action: none\nObservation:\nIn front of you in this room, you can see several objects: The room has walls around you. You are facing a wall 2 steps away. You are not carrying anything.\nAvailable actions: [\"turn left\", \"turn right\", \"move forward\", \"check available actions\"]\n\nPlanner advisory JSON:\n{\"action_hint\":\"turn_left\",\"confidence\":0.75,\"schema_version\":\"v1\",\"subgoal_id\":\"explore\",\"success_check\":\"world state moves toward target\",\"target\":{\"color\":\"none\",\"location_hint\":\"left\",\"object_type\":\"none\"}}\n\nLegal actions:\n0: turn left\n1: turn right\n2: move forward\n3: check available actions\n"
+      },
+      {
+        "from": "gpt",
+        "value": "{\"action_id\":0,\"reason\":\"Follow the grounded subgoal with a legal action.\",\"schema_version\":\"v1\"}"
+      }
+    ]
+  },
+  {
+    "conversations": [
+      {
+        "from": "human",
+        "value": "You are the executor for a structured BabyAI team.\nUse the planner JSON as advisory context only. Choose exactly one action index.\nReturn JSON only with this schema:\n{\"schema_version\":\"v1\",\"reason\":\"one short sentence, max 20 words\",\"action_id\":0}\n\nRequirements:\n- JSON only\n- reason must be one short sentence with at most 20 words\n- action_id must be an integer index into the legal action list below\n- Do not output the final BabyAI action text yourself\n\nPrevious action: none\nObservation:\nIn front of you in this room, you can see several objects: There is a red ball 1 3 steps in front of you and 1 steps to your left.  The room has walls around you. You are facing a wall 5 steps away. You are not carrying anything.\nAvailable actions: [\"turn left\", \"turn right\", \"move forward\", \"pickup red ball 1\", \"go to red ball 1\", \"check available actions\"]\n\nPlanner advisory JSON:\n{\"action_hint\":\"move_forward\",\"confidence\":0.75,\"schema_version\":\"v1\",\"subgoal_id\":\"approach\",\"success_check\":\"world state moves toward target\",\"target\":{\"color\":\"none\",\"location_hint\":\"left\",\"object_type\":\"none\"}}\n\nLegal actions:\n0: turn left\n1: turn right\n2: move forward\n3: pickup red ball 1\n4: go to red ball 1\n5: check available actions\n"
+      },
+      {
+        "from": "gpt",
+        "value": "{\"action_id\":2,\"reason\":\"Follow the grounded subgoal with a legal action.\",\"schema_version\":\"v1\"}"
+      }
+    ]
+  },
+  {
+    "conversations": [
+      {
+        "from": "human",
+        "value": "You are the executor for a structured BabyAI team.\nUse the planner JSON as advisory context only. Choose exactly one action index.\nReturn JSON only with this schema:\n{\"schema_version\":\"v1\",\"reason\":\"one short sentence, max 20 words\",\"action_id\":0}\n\nRequirements:\n- JSON only\n- reason must be one short sentence with at most 20 words\n- action_id must be an integer index into the legal action list below\n- Do not output the final BabyAI action text yourself\n\nPrevious action: none\nObservation:\nIn front of you in this room, you can see several objects: There is a red ball 1 3 steps in front of you and 2 steps to your left.  The room has walls around you. You are facing a wall 5 steps away. You are not carrying anything.\nAvailable actions: [\"turn left\", \"turn right\", \"move forward\", \"pickup red ball 1\", \"go to red ball 1\", \"check available actions\"]\n\nPlanner advisory JSON:\n{\"action_hint\":\"move_forward\",\"confidence\":0.75,\"schema_version\":\"v1\",\"subgoal_id\":\"approach\",\"success_check\":\"world state moves toward target\",\"target\":{\"color\":\"none\",\"location_hint\":\"left\",\"object_type\":\"none\"}}\n\nLegal actions:\n0: turn left\n1: turn right\n2: move forward\n3: pickup red ball 1\n4: go to red ball 1\n5: check available actions\n"
+      },
+      {
+        "from": "gpt",
+        "value": "{\"action_id\":2,\"reason\":\"Follow the grounded subgoal with a legal action.\",\"schema_version\":\"v1\"}"
+      }
+    ]
+  },
+  {
+    "conversations": [
+      {
+        "from": "human",
+        "value": "You are the executor for a structured BabyAI team.\nUse the planner JSON as advisory context only. Choose exactly one action index.\nReturn JSON only with this schema:\n{\"schema_version\":\"v1\",\"reason\":\"one short sentence, max 20 words\",\"action_id\":0}\n\nRequirements:\n- JSON only\n- reason must be one short sentence with at most 20 words\n- action_id must be an integer index into the legal action list below\n- Do not output the final BabyAI action text yourself\n\nPrevious action: none\nObservation:\nIn front of you in this room, you can see several objects: There is a red ball 1 2 steps in front of you and 1 steps to your left.  The room has walls around you. You are facing a wall 4 steps away. You are not carrying anything.\nAvailable actions: [\"turn left\", \"turn right\", \"move forward\", \"pickup red ball 1\", \"go to red ball 1\", \"check available actions\"]\n\nPlanner advisory JSON:\n{\"action_hint\":\"turn_left\",\"confidence\":0.75,\"schema_version\":\"v1\",\"subgoal_id\":\"explore\",\"success_check\":\"world state moves toward target\",\"target\":{\"color\":\"none\",\"location_hint\":\"left\",\"object_type\":\"none\"}}\n\nLegal actions:\n0: turn left\n1: turn right\n2: move forward\n3: pickup red ball 1\n4: go to red ball 1\n5: check available actions\n"
+      },
+      {
+        "from": "gpt",
+        "value": "{\"action_id\":0,\"reason\":\"Follow the grounded subgoal with a legal action.\",\"schema_version\":\"v1\"}"
+      }
+    ]
+  },
+  {
+    "conversations": [
+      {
+        "from": "human",
+        "value": "You are the executor for a structured BabyAI team.\nUse the planner JSON as advisory context only. Choose exactly one action index.\nReturn JSON only with this schema:\n{\"schema_version\":\"v1\",\"reason\":\"one short sentence, max 20 words\",\"action_id\":0}\n\nRequirements:\n- JSON only\n- reason must be one short sentence with at most 20 words\n- action_id must be an integer index into the legal action list below\n- Do not output the final BabyAI action text yourself\n\nPrevious action: none\nObservation:\nIn front of you in this room, you can see several objects: There is a red ball 1 2 steps in front of you and 2 steps to your left.  The room has walls around you. You are facing a wall 4 steps away. You are not carrying anything.\nAvailable actions: [\"turn left\", \"turn right\", \"move forward\", \"pickup red ball 1\", \"go to red ball 1\", \"check available actions\"]\n\nPlanner advisory JSON:\n{\"action_hint\":\"move_forward\",\"confidence\":0.75,\"schema_version\":\"v1\",\"subgoal_id\":\"approach\",\"success_check\":\"world state moves toward target\",\"target\":{\"color\":\"none\",\"location_hint\":\"left\",\"object_type\":\"none\"}}\n\nLegal actions:\n0: turn left\n1: turn right\n2: move forward\n3: pickup red ball 1\n4: go to red ball 1\n5: check available actions\n"
+      },
+      {
+        "from": "gpt",
+        "value": "{\"action_id\":2,\"reason\":\"Follow the grounded subgoal with a legal action.\",\"schema_version\":\"v1\"}"
+      }
+    ]
+  },
+  {
+    "conversations": [
+      {
+        "from": "human",
+        "value": "You are the executor for a structured BabyAI team.\nUse the planner JSON as advisory context only. Choose exactly one action index.\nReturn JSON only with this schema:\n{\"schema_version\":\"v1\",\"reason\":\"one short sentence, max 20 words\",\"action_id\":0}\n\nRequirements:\n- JSON only\n- reason must be one short sentence with at most 20 words\n- action_id must be an integer index into the legal action list below\n- Do not output the final BabyAI action text yourself\n\nPrevious action: none\nObservation:\nIn front of you in this room, you can see several objects: There is a red ball 1 1 steps in front of you and 2 steps to your right.  The room has walls around you. You are facing a wall 4 steps away. You are not carrying anything.\nAvailable actions: [\"turn left\", \"turn right\", \"move forward\", \"pickup red ball 1\", \"go to red ball 1\", \"check available actions\"]\n\nPlanner advisory JSON:\n{\"action_hint\":\"turn_right\",\"confidence\":0.75,\"schema_version\":\"v1\",\"subgoal_id\":\"explore\",\"success_check\":\"world state moves toward target\",\"target\":{\"color\":\"none\",\"location_hint\":\"left\",\"object_type\":\"none\"}}\n\nLegal actions:\n0: turn left\n1: turn right\n2: move forward\n3: pickup red ball 1\n4: go to red ball 1\n5: check available actions\n"
+      },
+      {
+        "from": "gpt",
+        "value": "{\"action_id\":1,\"reason\":\"Follow the grounded subgoal with a legal action.\",\"schema_version\":\"v1\"}"
+      }
+    ]
+  },
+  {
+    "conversations": [
+      {
+        "from": "human",
+        "value": "You are the executor for a structured BabyAI team.\nUse the planner JSON as advisory context only. Choose exactly one action index.\nReturn JSON only with this schema:\n{\"schema_version\":\"v1\",\"reason\":\"one short sentence, max 20 words\",\"action_id\":0}\n\nRequirements:\n- JSON only\n- reason must be one short sentence with at most 20 words\n- action_id must be an integer index into the legal action list below\n- Do not output the final BabyAI action text yourself\n\nPrevious action: none\nObservation:\nIn front of you in this room, you can see several objects: There is a red ball 1 1 steps in front of you and 2 steps to your left.  The room has walls around you. You are facing a wall 3 steps away. You are not carrying anything.\nAvailable actions: [\"turn left\", \"turn right\", \"move forward\", \"pickup red ball 1\", \"go to red ball 1\", \"check available actions\"]\n\nPlanner advisory JSON:\n{\"action_hint\":\"move_forward\",\"confidence\":0.75,\"schema_version\":\"v1\",\"subgoal_id\":\"approach\",\"success_check\":\"world state moves toward target\",\"target\":{\"color\":\"none\",\"location_hint\":\"left\",\"object_type\":\"none\"}}\n\nLegal actions:\n0: turn left\n1: turn right\n2: move forward\n3: pickup red ball 1\n4: go to red ball 1\n5: check available actions\n"
+      },
+      {
+        "from": "gpt",
+        "value": "{\"action_id\":2,\"reason\":\"Follow the grounded subgoal with a legal action.\",\"schema_version\":\"v1\"}"
+      }
+    ]
+  },
+  {
+    "conversations": [
+      {
+        "from": "human",
+        "value": "You are the executor for a structured BabyAI team.\nUse the planner JSON as advisory context only. Choose exactly one action index.\nReturn JSON only with this schema:\n{\"schema_version\":\"v1\",\"reason\":\"one short sentence, max 20 words\",\"action_id\":0}\n\nRequirements:\n- JSON only\n- reason must be one short sentence with at most 20 words\n- action_id must be an integer index into the legal action list below\n- Do not output the final BabyAI action text yourself\n\nPrevious action: none\nObservation:\nIn front of you in this room, you can see several objects: There is a red ball 1 2 steps in front of you and 1 steps to your left.  The room has walls around you. You are facing a wall 4 steps away. You are not carrying anything.\nAvailable actions: [\"turn left\", \"turn right\", \"move forward\", \"pickup red ball 1\", \"go to red ball 1\", \"check available actions\"]\n\nPlanner advisory JSON:\n{\"action_hint\":\"turn_left\",\"confidence\":0.75,\"schema_version\":\"v1\",\"subgoal_id\":\"explore\",\"success_check\":\"world state moves toward target\",\"target\":{\"color\":\"none\",\"location_hint\":\"left\",\"object_type\":\"none\"}}\n\nLegal actions:\n0: turn left\n1: turn right\n2: move forward\n3: pickup red ball 1\n4: go to red ball 1\n5: check available actions\n"
+      },
+      {
+        "from": "gpt",
+        "value": "{\"action_id\":0,\"reason\":\"Follow the grounded subgoal with a legal action.\",\"schema_version\":\"v1\"}"
+      }
+    ]
+  },
+  {
+    "conversations": [
+      {
+        "from": "human",
+        "value": "You are the executor for a structured BabyAI team.\nUse the planner JSON as advisory context only. Choose exactly one action index.\nReturn JSON only with this schema:\n{\"schema_version\":\"v1\",\"reason\":\"one short sentence, max 20 words\",\"action_id\":0}\n\nRequirements:\n- JSON only\n- reason must be one short sentence with at most 20 words\n- action_id must be an integer index into the legal action list below\n- Do not output the final BabyAI action text yourself\n\nPrevious action: none\nObservation:\nIn front of you in this room, you can see several objects: There is a red ball 1 0 steps in front of you and 2 steps to your left.  The room has walls around you. You are facing a wall 2 steps away. You are not carrying anything.\nAvailable actions: [\"turn left\", \"turn right\", \"move forward\", \"pickup red ball 1\", \"go to red ball 1\", \"check available actions\"]\n\nPlanner advisory JSON:\n{\"action_hint\":\"move_forward\",\"confidence\":0.75,\"schema_version\":\"v1\",\"subgoal_id\":\"approach\",\"success_check\":\"world state moves toward target\",\"target\":{\"color\":\"red\",\"location_hint\":\"left\",\"object_type\":\"ball\"}}\n\nLegal actions:\n0: turn left\n1: turn right\n2: move forward\n3: pickup red ball 1\n4: go to red ball 1\n5: check available actions\n"
+      },
+      {
+        "from": "gpt",
+        "value": "{\"action_id\":3,\"reason\":\"Follow the grounded subgoal with a legal action.\",\"schema_version\":\"v1\"}"
+      }
+    ]
+  },
+  {
+    "conversations": [
+      {
+        "from": "human",
+        "value": "You are the executor for a structured BabyAI team.\nUse the planner JSON as advisory context only. Choose exactly one action index.\nReturn JSON only with this schema:\n{\"schema_version\":\"v1\",\"reason\":\"one short sentence, max 20 words\",\"action_id\":0}\n\nRequirements:\n- JSON only\n- reason must be one short sentence with at most 20 words\n- action_id must be an integer index into the legal action list below\n- Do not output the final BabyAI action text yourself\n\nPrevious action: none\nObservation:\nIn front of you in this room, you can see several objects: There is a red ball 1 1 steps in front of you and 2 steps to your right.  The room has walls around you. You are facing a wall 4 steps away. You are not carrying anything.\nAvailable actions: [\"turn left\", \"turn right\", \"move forward\", \"pickup red ball 1\", \"go to red ball 1\", \"check available actions\"]\n\nPlanner advisory JSON:\n{\"action_hint\":\"turn_right\",\"confidence\":0.75,\"schema_version\":\"v1\",\"subgoal_id\":\"explore\",\"success_check\":\"world state moves toward target\",\"target\":{\"color\":\"none\",\"location_hint\":\"left\",\"object_type\":\"none\"}}\n\nLegal actions:\n0: turn left\n1: turn right\n2: move forward\n3: pickup red ball 1\n4: go to red ball 1\n5: check available actions\n"
+      },
+      {
+        "from": "gpt",
+        "value": "{\"action_id\":1,\"reason\":\"Follow the grounded subgoal with a legal action.\",\"schema_version\":\"v1\"}"
+      }
+    ]
+  },
+  {
+    "conversations": [
+      {
+        "from": "human",
+        "value": "You are the executor for a structured BabyAI team.\nUse the planner JSON as advisory context only. Choose exactly one action index.\nReturn JSON only with this schema:\n{\"schema_version\":\"v1\",\"reason\":\"one short sentence, max 20 words\",\"action_id\":0}\n\nRequirements:\n- JSON only\n- reason must be one short sentence with at most 20 words\n- action_id must be an integer index into the legal action list below\n- Do not output the final BabyAI action text yourself\n\nPrevious action: none\nObservation:\nYour goal: go to the grey key and go to the grey key, and go to the grey ball\nIn front of you in this room, you can see several objects: There is a grey key 1 0 steps in front of you and 1 steps to your left.  The room has walls around you. You are facing a wall 1 steps away. You are not carrying anything.\nAvailable actions: [\"turn left\", \"turn right\", \"pickup grey key 1\", \"go to grey key 1\", \"check available actions\"]\n\nPlanner advisory JSON:\n{\"action_hint\":\"move_forward\",\"confidence\":0.75,\"schema_version\":\"v1\",\"subgoal_id\":\"approach\",\"success_check\":\"world state moves toward target\",\"target\":{\"color\":\"grey\",\"location_hint\":\"left\",\"object_type\":\"key\"}}\n\nLegal actions:\n0: turn left\n1: turn right\n2: pickup grey key 1\n3: go to grey key 1\n4: check available actions\n"
+      },
+      {
+        "from": "gpt",
+        "value": "{\"action_id\":3,\"reason\":\"Follow the grounded subgoal with a legal action.\",\"schema_version\":\"v1\"}"
+      }
+    ]
+  },
+  {
+    "conversations": [
+      {
+        "from": "human",
+        "value": "You are the executor for a structured BabyAI team.\nUse the planner JSON as advisory context only. Choose exactly one action index.\nReturn JSON only with this schema:\n{\"schema_version\":\"v1\",\"reason\":\"one short sentence, max 20 words\",\"action_id\":0}\n\nRequirements:\n- JSON only\n- reason must be one short sentence with at most 20 words\n- action_id must be an integer index into the legal action list below\n- Do not output the final BabyAI action text yourself\n\nPrevious action: none\nObservation:\nIn front of you in this room, you can see several objects: There is a grey key 1 right in front of you 1 steps away.  There is a green closed door 1 1 steps in front of you and 3 steps to your left.  The room has walls around you. You are facing a wall 2 steps away. You are not carrying anything.\nAvailable actions: [\"turn left\", \"turn right\", \"move forward\", \"pickup grey key 1\", \"toggle and go through green closed door 1\", \"go to grey key 1\", \"go to green closed door 1\", \"check available actions\"]\n\nPlanner advisory JSON:\n{\"action_hint\":\"move_forward\",\"confidence\":0.75,\"schema_version\":\"v1\",\"subgoal_id\":\"approach\",\"success_check\":\"world state moves toward target\",\"target\":{\"color\":\"grey\",\"location_hint\":\"left\",\"object_type\":\"key\"}}\n\nLegal actions:\n0: turn left\n1: turn right\n2: move forward\n3: pickup grey key 1\n4: toggle and go through green closed door 1\n5: go to grey key 1\n6: go to green closed door 1\n7: check available actions\n"
+      },
+      {
+        "from": "gpt",
+        "value": "{\"action_id\":3,\"reason\":\"Follow the grounded subgoal with a legal action.\",\"schema_version\":\"v1\"}"
+      }
+    ]
+  },
+  {
+    "conversations": [
+      {
+        "from": "human",
+        "value": "You are the executor for a structured BabyAI team.\nUse the planner JSON as advisory context only. Choose exactly one action index.\nReturn JSON only with this schema:\n{\"schema_version\":\"v1\",\"reason\":\"one short sentence, max 20 words\",\"action_id\":0}\n\nRequirements:\n- JSON only\n- reason must be one short sentence with at most 20 words\n- action_id must be an integer index into the legal action list below\n- Do not output the final BabyAI action text yourself\n\nPrevious action: none\nObservation:\nIn front of you in this room, you can see several objects: There is a green closed door 1 1 steps in front of you and 3 steps to your left.  The room has walls around you. You are facing a wall 2 steps away. You are carrying a grey key.\nAvailable actions: [\"turn left\", \"turn right\", \"move forward\", \"drop\", \"toggle and go through green closed door 1\", \"go to green closed door 1\", \"check available actions\"]\n\nPlanner advisory JSON:\n{\"action_hint\":\"toggle\",\"confidence\":0.75,\"schema_version\":\"v1\",\"subgoal_id\":\"open\",\"success_check\":\"world state moves toward target\",\"target\":{\"color\":\"green\",\"location_hint\":\"left\",\"object_type\":\"door\"}}\n\nLegal actions:\n0: turn left\n1: turn right\n2: move forward\n3: drop\n4: toggle and go through green closed door 1\n5: go to green closed door 1\n6: check available actions\n"
+      },
+      {
+        "from": "gpt",
+        "value": "{\"action_id\":4,\"reason\":\"Follow the grounded subgoal with a legal action.\",\"schema_version\":\"v1\"}"
+      }
+    ]
+  },
+  {
+    "conversations": [
+      {
+        "from": "human",
+        "value": "You are the executor for a structured BabyAI team.\nUse the planner JSON as advisory context only. Choose exactly one action index.\nReturn JSON only with this schema:\n{\"schema_version\":\"v1\",\"reason\":\"one short sentence, max 20 words\",\"action_id\":0}\n\nRequirements:\n- JSON only\n- reason must be one short sentence with at most 20 words\n- action_id must be an integer index into the legal action list below\n- Do not output the final BabyAI action text yourself\n\nPrevious action: none\nObservation:\nIn front of you in this room, you can see several objects: There is a grey ball 1 1 steps in front of you and 2 steps to your left.  There is a grey closed door 1 3 steps in front of you and 1 steps to your right.  There is a purple key 1 2 steps in front of you and 2 steps to your left.  The room has walls around you. You are facing a wall 4 steps away. You are carrying a grey key.\nAvailable actions: [\"turn left\", \"turn right\", \"move forward\", \"drop\", \"toggle and go through grey closed door 1\", \"go to grey ball 1\", \"go to grey closed door 1\", \"go to purple key 1\", \"check available actions\"]\n\nPlanner advisory JSON:\n{\"action_hint\":\"move_forward\",\"confidence\":0.75,\"schema_version\":\"v1\",\"subgoal_id\":\"approach\",\"success_check\":\"world state moves toward target\",\"target\":{\"color\":\"purple\",\"location_hint\":\"left\",\"object_type\":\"key\"}}\n\nLegal actions:\n0: turn left\n1: turn right\n2: move forward\n3: drop\n4: toggle and go through grey closed door 1\n5: go to grey ball 1\n6: go to grey closed door 1\n7: go to purple key 1\n8: check available actions\n"
+      },
+      {
+        "from": "gpt",
+        "value": "{\"action_id\":7,\"reason\":\"Follow the grounded subgoal with a legal action.\",\"schema_version\":\"v1\"}"
+      }
+    ]
+  },
+  {
+    "conversations": [
+      {
+        "from": "human",
+        "value": "You are the executor for a structured BabyAI team.\nUse the planner JSON as advisory context only. Choose exactly one action index.\nReturn JSON only with this schema:\n{\"schema_version\":\"v1\",\"reason\":\"one short sentence, max 20 words\",\"action_id\":0}\n\nRequirements:\n- JSON only\n- reason must be one short sentence with at most 20 words\n- action_id must be an integer index into the legal action list below\n- Do not output the final BabyAI action text yourself\n\nPrevious action: none\nObservation:\nIn front of you in this room, you can see several objects: There is a purple key 1 right in front of you 1 steps away.  There is a grey ball 1 1 steps in front of you and 1 steps to your left.  The room has walls around you. You are facing a wall 2 steps away. You are carrying a grey key.\nAvailable actions: [\"turn left\", \"turn right\", \"move forward\", \"go to purple key 1\", \"go to grey ball 1\", \"check available actions\"]\n\nPlanner advisory JSON:\n{\"action_hint\":\"move_forward\",\"confidence\":0.75,\"schema_version\":\"v1\",\"subgoal_id\":\"approach\",\"success_check\":\"world state moves toward target\",\"target\":{\"color\":\"purple\",\"location_hint\":\"left\",\"object_type\":\"key\"}}\n\nLegal actions:\n0: turn left\n1: turn right\n2: move forward\n3: go to purple key 1\n4: go to grey ball 1\n5: check available actions\n"
+      },
+      {
+        "from": "gpt",
+        "value": "{\"action_id\":3,\"reason\":\"Follow the grounded subgoal with a legal action.\",\"schema_version\":\"v1\"}"
+      }
+    ]
+  },
+  {
+    "conversations": [
+      {
+        "from": "human",
+        "value": "You are the executor for a structured BabyAI team.\nUse the planner JSON as advisory context only. Choose exactly one action index.\nReturn JSON only with this schema:\n{\"schema_version\":\"v1\",\"reason\":\"one short sentence, max 20 words\",\"action_id\":0}\n\nRequirements:\n- JSON only\n- reason must be one short sentence with at most 20 words\n- action_id must be an integer index into the legal action list below\n- Do not output the final BabyAI action text yourself\n\nPrevious action: none\nObservation:\nNo change in state.\nAvailable actions: [\"turn left\", \"turn right\", \"move forward\", \"go to purple key 1\", \"go to grey ball 1\", \"check available actions\"]\n\nPlanner advisory JSON:\n{\"action_hint\":\"move_forward\",\"confidence\":0.75,\"schema_version\":\"v1\",\"subgoal_id\":\"approach\",\"success_check\":\"world state moves toward target\",\"target\":{\"color\":\"none\",\"location_hint\":\"left\",\"object_type\":\"none\"}}\n\nLegal actions:\n0: turn left\n1: turn right\n2: move forward\n3: go to purple key 1\n4: go to grey ball 1\n5: check available actions\n"
+      },
+      {
+        "from": "gpt",
+        "value": "{\"action_id\":2,\"reason\":\"Follow the grounded subgoal with a legal action.\",\"schema_version\":\"v1\"}"
+      }
+    ]
+  },
+  {
+    "conversations": [
+      {
+        "from": "human",
+        "value": "You are the executor for a structured BabyAI team.\nUse the planner JSON as advisory context only. Choose exactly one action index.\nReturn JSON only with this schema:\n{\"schema_version\":\"v1\",\"reason\":\"one short sentence, max 20 words\",\"action_id\":0}\n\nRequirements:\n- JSON only\n- reason must be one short sentence with at most 20 words\n- action_id must be an integer index into the legal action list below\n- Do not output the final BabyAI action text yourself\n\nPrevious action: none\nObservation:\nNo change in state.\nAvailable actions: [\"turn left\", \"turn right\", \"move forward\", \"go to purple key 1\", \"go to grey ball 1\", \"check available actions\"]\n\nPlanner advisory JSON:\n{\"action_hint\":\"turn_left\",\"confidence\":0.75,\"schema_version\":\"v1\",\"subgoal_id\":\"explore\",\"success_check\":\"world state moves toward target\",\"target\":{\"color\":\"none\",\"location_hint\":\"left\",\"object_type\":\"none\"}}\n\nLegal actions:\n0: turn left\n1: turn right\n2: move forward\n3: go to purple key 1\n4: go to grey ball 1\n5: check available actions\n"
+      },
+      {
+        "from": "gpt",
+        "value": "{\"action_id\":0,\"reason\":\"Follow the grounded subgoal with a legal action.\",\"schema_version\":\"v1\"}"
+      }
+    ]
+  },
+  {
+    "conversations": [
+      {
+        "from": "human",
+        "value": "You are the executor for a structured BabyAI team.\nUse the planner JSON as advisory context only. Choose exactly one action index.\nReturn JSON only with this schema:\n{\"schema_version\":\"v1\",\"reason\":\"one short sentence, max 20 words\",\"action_id\":0}\n\nRequirements:\n- JSON only\n- reason must be one short sentence with at most 20 words\n- action_id must be an integer index into the legal action list below\n- Do not output the final BabyAI action text yourself\n\nPrevious action: none\nObservation:\nYour goal: pick up the purple key\nIn front of you in this room, you can see several objects: There is a yellow key 1 0 steps in front of you and 1 steps to your left.  There is a yellow ball 1 1 steps in front of you and 2 steps to your left.  There is a green key 1 2 steps in front of you and 2 steps to your left.  There is a purple key 1 2 steps in front of you and 2 steps to your right.  There is a purple closed door 1 2 steps in front of you and 3 steps to your left.  There is a red closed door 1 4 steps in front of you and 2 steps to your right.  There is a yellow closed door 1 3 steps in front of you and 3 steps to your right.  The room has walls around you. You are facing a wall 4 steps away. You are not carrying anything.\nAvailable actions: [\"turn left\", \"turn right\", \"move forward...[truncated]\n\nPlanner advisory JSON:\n{\"action_hint\":\"turn_right\",\"confidence\":0.75,\"schema_version\":\"v1\",\"subgoal_id\":\"explore\",\"success_check\":\"world state moves toward target\",\"target\":{\"color\":\"none\",\"location_hint\":\"left\",\"object_type\":\"none\"}}\n\nLegal actions:\n0: turn left\n1: turn right\n2: move forward\n3: pickup yellow key 1\n4: pickup yellow ball 1\n5: pickup green key 1\n6: pickup purple key 1\n7: toggle and go through red closed door 1\n8: toggle and go through yellow closed door 1\n9: go to yellow key 1\n10: go to yellow ball 1\n11: go to green key 1\n12: go to purple key 1\n13: go to red closed door 1\n14: go to yellow closed door 1\n15: check available actions\n"
+      },
+      {
+        "from": "gpt",
+        "value": "{\"action_id\":1,\"reason\":\"Follow the grounded subgoal with a legal action.\",\"schema_version\":\"v1\"}"
+      }
+    ]
+  }
+]

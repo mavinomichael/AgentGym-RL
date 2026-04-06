@@ -85,6 +85,40 @@ import torch
 from verl.utils.torch_functional import masked_mean
 
 
+def _ensure_nonempty_response_mask(data: DataProto, response_mask: torch.Tensor) -> torch.Tensor:
+    if int(response_mask.sum().item()) > 0:
+        return response_mask
+
+    fallback_keys = (
+        "executor_response_mask",
+        "executor_reviewer_response_mask",
+        "planner_response_mask",
+        "planner_reviewer_response_mask",
+    )
+    for key in fallback_keys:
+        if key not in data.batch.keys():
+            continue
+        candidate = data.batch[key]
+        if candidate.shape[-1] != response_mask.shape[-1]:
+            candidate = candidate[:, -response_mask.shape[-1]:]
+        if int(candidate.sum().item()) > 0:
+            data.batch["response_mask"] = candidate
+            print(f"[response_mask_fallback] using {key} because response_mask was empty")
+            return candidate
+
+    attention_tail = data.batch["attention_mask"][:, -response_mask.shape[-1]:].to(response_mask.dtype)
+    synthetic_mask = torch.zeros_like(response_mask)
+    valid_rows = attention_tail.sum(dim=-1) > 0
+    if valid_rows.any():
+        last_indices = attention_tail.sum(dim=-1).long() - 1
+        synthetic_mask[valid_rows, last_indices[valid_rows]] = 1
+        data.batch["response_mask"] = synthetic_mask
+        print("[response_mask_fallback] using synthetic final-token mask because response_mask was empty")
+        return synthetic_mask
+
+    return response_mask
+
+
 def find_latest_ckpt_path_aistudio(path, directory_format="global_step_{}"):
     if path is None:
         return None
@@ -110,7 +144,7 @@ def find_latest_ckpt_path_aistudio(path, directory_format="global_step_{}"):
 def apply_kl_penalty(data: DataProto, kl_ctrl: core_algos.AdaptiveKLController, kl_penalty='kl'):
     token_level_scores = data.batch['token_level_scores']
     batch_size = data.batch.batch_size[0]
-    response_mask = data.batch['response_mask']
+    response_mask = _ensure_nonempty_response_mask(data, data.batch['response_mask'])
 
     # compute kl between ref_policy and current policy
     if 'ref_log_prob' in data.batch.keys():
@@ -141,7 +175,7 @@ def compute_advantage(data: DataProto, adv_estimator, gamma=1.0, lam=1.0, num_re
     # TODO: add other ways to estimate advantages
     if adv_estimator == 'gae':
         values = data.batch['values']
-        response_mask = data.batch['response_mask']
+        response_mask = _ensure_nonempty_response_mask(data, data.batch['response_mask'])
         token_level_rewards = data.batch['token_level_rewards']
         if values.shape[-1] != token_level_rewards.shape[-1]:
             # Critic values can include prompt positions; align all tensors to the response tail.

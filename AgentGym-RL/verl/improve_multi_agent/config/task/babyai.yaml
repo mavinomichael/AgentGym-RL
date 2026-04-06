@@ -1,0 +1,15 @@
+task_name: babyai
+train_file: AgentItemId/train/babyai_train.json
+max_prompt_length: 1024
+max_response_length: 4096
+default_max_rounds: 20
+rollout_max_tokens: 192
+planner_max_tokens: 96
+executor_max_tokens: 96
+train_batch_size: 16
+rollout_n: 4
+ppo_mini_batch_size: 8
+ppo_micro_batch_size_per_gpu: 1
+critic_ppo_micro_batch_size_per_gpu: 1
+default_timeout: 600
+total_epochs: 10

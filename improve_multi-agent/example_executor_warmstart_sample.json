@@ -1,0 +1,31 @@
+{
+  "training_step": 1,
+  "item_id": 1242,
+  "rank": 0,
+  "round": 1,
+  "observation_excerpt": "Your goal: go to the red ball\nIn front of you in this room, you can see several objects: The room has walls around you. You are facing a wall 3 steps away. You are not carrying anything.\nAvailable actions: [\"turn left\", \"turn right\", \"move forward\", \"check available actions\"]",
+  "available_actions": [
+    "turn left",
+    "turn right",
+    "move forward",
+    "check available actions"
+  ],
+  "extracted_action": "move forward",
+  "planner_json": {
+    "schema_version": "v1",
+    "subgoal_id": "approach",
+    "target": {
+      "object_type": "none",
+      "color": "none",
+      "location_hint": "left"
+    },
+    "action_hint": "move_forward",
+    "success_check": "world state moves toward target",
+    "confidence": 0.75
+  },
+  "executor_target": {
+    "schema_version": "v1",
+    "reason": "Follow the grounded subgoal with a legal action.",
+    "action_id": 2
+  }
+}

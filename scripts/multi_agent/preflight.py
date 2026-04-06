@@ -7,6 +7,7 @@ import argparse
 import importlib
 import os
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
@@ -72,13 +73,14 @@ def check_path_exists(name: str, path_value: str) -> CheckResult:
     return CheckResult(name, path.exists(), str(path))
 
 
-def check_dataset_paths(task_name: str, mode: str, data_root: Path) -> Iterable[CheckResult]:
+def check_dataset_paths(task_name: str, mode: str, data_root: Path, train_file_override: str = "") -> Iterable[CheckResult]:
     task_profile = get_task_profile(task_name)
     if mode == "train":
+        train_file = train_file_override or os.environ.get("TRAIN_FILE", "").strip() or task_profile.train_file
         yield CheckResult(
             "train_dataset",
-            (data_root / task_profile.train_file).exists(),
-            str((data_root / task_profile.train_file).resolve()),
+            (data_root / train_file).exists(),
+            str((data_root / train_file).resolve()),
         )
         return
 
@@ -119,9 +121,45 @@ def check_server_url(base_url: str) -> CheckResult:
 
 def check_webarena_env() -> Iterable[CheckResult]:
     required_urls = ["SHOPPING", "SHOPPING_ADMIN", "REDDIT", "GITLAB", "MAP", "WIKIPEDIA", "HOMEPAGE"]
+    public_fallback_hosts = {
+        "MAP": ["openstreetmap.org"],
+        "WIKIPEDIA": ["wikipedia.org"],
+    }
+    allow_public_fallbacks = os.environ.get("WEB_ARENA_ALLOW_PUBLIC_FALLBACKS", "0") == "1"
     for key in required_urls:
         value = os.environ.get(key, "")
         yield CheckResult(f"env:{key}", bool(value), value or "<unset>")
+        if value:
+            fallback_hosts = public_fallback_hosts.get(key, [])
+            uses_public_fallback = any(host in value for host in fallback_hosts)
+            yield CheckResult(
+                f"env:{key}:exact",
+                (not uses_public_fallback) or allow_public_fallbacks,
+                (
+                    "public fallback in use (allowed)"
+                    if uses_public_fallback and allow_public_fallbacks
+                    else "public fallback in use"
+                    if uses_public_fallback
+                    else value
+                ),
+            )
+            ok = False
+            detail = f"{value} -> no successful response"
+            for attempt in range(3):
+                try:
+                    with request.urlopen(value, timeout=8) as response:
+                        status = getattr(response, "status", None) or response.getcode()
+                    ok = 200 <= status < 400
+                    detail = f"{value} -> {status}"
+                    if ok:
+                        break
+                except error.HTTPError as exc:
+                    detail = f"{value} -> HTTP {exc.code}"
+                except Exception as exc:  # pragma: no cover - depends on runtime network state
+                    detail = f"{value} -> {exc}"
+                if attempt < 2:
+                    time.sleep(2)
+            yield CheckResult(f"env:{key}:reachable", ok, detail)
 
     api_key = os.environ.get("OPENAI_API_KEY", "")
     yield CheckResult("env:OPENAI_API_KEY", bool(api_key), "set" if api_key else "<unset>")
@@ -154,6 +192,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--gpus", type=int, default=None)
     parser.add_argument("--model-path", default=os.environ.get("MODEL_PATH", ""))
     parser.add_argument("--data-root", default=os.environ.get("DATA_ROOT", str(TRAIN_ROOT)))
+    parser.add_argument("--train-file", default=os.environ.get("TRAIN_FILE", ""))
     parser.add_argument("--server-url", default=os.environ.get("ENV_SERVER_URL", "http://127.0.0.1:36005"))
     parser.add_argument("--webarena-env-file", default=os.environ.get("WEB_ARENA_ENV_FILE", str(REPO_ROOT / "AgentGym" / "agentenv-webarena" / ".env")))
     return parser.parse_args()
@@ -177,7 +216,7 @@ def main() -> int:
         results.append(CheckResult("model_path", False, "MODEL_PATH is unset"))
 
     data_root = Path(args.data_root).expanduser()
-    results.extend(check_dataset_paths(args.task, args.mode, data_root))
+    results.extend(check_dataset_paths(args.task, args.mode, data_root, train_file_override=args.train_file.strip()))
     results.append(check_import(spec.package_name))
     results.append(check_server_url(args.server_url))
 

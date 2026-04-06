@@ -11,8 +11,14 @@ WEB_ARENA_ENV_FILE="${WEB_ARENA_ENV_FILE:-$SERVER_ROOT/.env}"
 HOST="${HOST:-0.0.0.0}"
 PORT="${PORT:-36005}"
 
+export PATH="$HOME/.local/bin:$PATH"
+
 multi_agent::source_env_file "$WEB_ARENA_ENV_FILE"
-for required_var in SHOPPING SHOPPING_ADMIN REDDIT GITLAB MAP WIKIPEDIA HOMEPAGE OPENAI_API_KEY; do
+multi_agent::set_webarena_default_env
+if [[ ! -f "$WEB_ARENA_ENV_FILE" ]]; then
+  multi_agent::write_webarena_env_file "$WEB_ARENA_ENV_FILE"
+fi
+for required_var in SHOPPING SHOPPING_ADMIN REDDIT GITLAB MAP WIKIPEDIA HOMEPAGE; do
   multi_agent::require_var "$required_var"
 done
 multi_agent::print_server_header "launch" "webarena" "$HOST" "$PORT"

@@ -4,6 +4,7 @@
 
 import ast
 from dataclasses import dataclass
+import os
 import re
 from typing import List, Optional, Tuple
 
@@ -26,6 +27,9 @@ QWEN_SYSTEM_PROMPT = "You are Qwen, created by Alibaba Cloud. You are a helpful 
 PLANNER_MIN_WORDS = 2
 PLANNER_MAX_WORDS = 6
 PLANNER_MAX_CHARS = 48
+WEBARENA_PLANNER_MIN_WORDS = 3
+WEBARENA_PLANNER_MAX_WORDS = 18
+WEBARENA_PLANNER_MAX_CHARS = 160
 PLANNER_FILLER_OPENERS = (
     "given that",
     "given",
@@ -57,6 +61,34 @@ PLANNER_DIRECTIONS = ("left", "right", "forward", "ahead", "front")
 PLANNER_REVIEW_MAX_WORDS = 32
 PLANNER_REVIEW_MAX_CHARS = 220
 REVIEWER_JUNK_RE = re.compile(r"^[\W_!?.:,;|`~^=-]+$")
+WEBARENA_ACTION_FULLMATCH_PATTERNS = (
+    re.compile(r"click ?\[(\d+)\]"),
+    re.compile(r"hover ?\[(\d+)\]"),
+    re.compile(r"type ?\[(\d+)\] ?\[(.+)\](?: ?\[(0|1)\])?"),
+    re.compile(r"press ?\[(.+)\]"),
+    re.compile(r"scroll ?\[?(up|down)\]?"),
+    re.compile(r"goto ?\[(.+)\]"),
+    re.compile(r"new_tab"),
+    re.compile(r"go_back"),
+    re.compile(r"go_forward"),
+    re.compile(r"tab_focus ?\[(\d+)\]"),
+    re.compile(r"close_tab"),
+    re.compile(r"stop(?: ?\[(.+)\])?"),
+)
+WEBARENA_ACTION_SYNTAX_PATTERNS = (
+    re.compile(r"click ?\[\d+\]"),
+    re.compile(r"hover ?\[\d+\]"),
+    re.compile(r"type ?\[\d+\] ?\[.+?\](?: ?\[[01]\])?"),
+    re.compile(r"press ?\[.+?\]"),
+    re.compile(r"scroll ?\[?(?:up|down)\]?"),
+    re.compile(r"goto ?\[.+?\]"),
+    re.compile(r"\bnew_tab\b"),
+    re.compile(r"\bgo_back\b"),
+    re.compile(r"\bgo_forward\b"),
+    re.compile(r"tab_focus ?\[\d+\]"),
+    re.compile(r"\bclose_tab\b"),
+    re.compile(r"stop(?: ?\[.+?\])?"),
+)
 
 
 @dataclass(frozen=True)
@@ -89,6 +121,19 @@ class ExecutorReviewerDecision:
     valid: bool
     verdict: str
     reason: str
+
+
+def _multi_agent_prompt_style(task_profile: Optional[TaskProfile]) -> str:
+    if task_profile is not None and task_profile.task_name == "babyai":
+        return "plain_split"
+    style = os.environ.get("MULTI_AGENT_PROMPT_STYLE", "tagged").strip().lower()
+    if style in {"plain", "plain_split", "no_tag", "no-tags", "notag", "untagged"}:
+        return "plain_split"
+    return "tagged"
+
+
+def _uses_plain_split_prompting(task_profile: Optional[TaskProfile]) -> bool:
+    return _multi_agent_prompt_style(task_profile) == "plain_split"
 
 
 def build_multi_agent_instruction(
@@ -152,6 +197,42 @@ def build_planner_turn_prompt(observation: str, task_profile: Optional[TaskProfi
             "Output only your reasoning, plan, hint, or suggestion."
         )
 
+    if task_profile is not None and task_profile.task_name == "webarena":
+        if _uses_plain_split_prompting(task_profile):
+            return (
+                "You are part of a web navigation team, and you are the planner that wants to finish every goal you are given.\n\n"
+                "Every round you will be given the current WebArena observation, and you must provide one short grounded planner note that helps another agent choose the next useful move.\n\n"
+                "Another agent will produce the final environment-facing WebArena response.\n\n"
+                "Rules:\n"
+                "- Stay grounded in the observation only.\n"
+                "- Help with the next useful web action, target element, or subgoal.\n"
+                "- Write exactly one short sentence.\n"
+                "- Keep it concrete, useful, and under 18 words when possible.\n"
+                "- You may mention likely clicks, types, scrolls, or navigation targets if helpful.\n"
+                "- Do not emit the final WebArena response.\n"
+                "- Do not imitate the single-agent response contract.\n"
+                "- Do not write the phrase 'Let's think step-by-step' or 'In summary, the next action I will perform is'.\n"
+                "- Do not emit the triple-backticked action block yourself.\n"
+                "- Do not use role labels or prompt headers.\n\n"
+                f"Observation:\n{observation}\n\n"
+                "Output only the planner draft."
+            )
+        return (
+            "[Planner Turn]\n"
+            "[Environment Observation]\n"
+            f"{observation}\n\n"
+            "You are the Planner for a web navigation team.\n\n"
+            "The Executor must produce the next valid WebArena response in the original single-agent format with reasoning and exactly one triple-backticked action block.\n"
+            "Help the Executor choose the next useful web action.\n\n"
+            "Rules:\n"
+            "- Stay grounded in the observation only.\n"
+            "- Explain the next useful target, navigation step, or action strategy.\n"
+            "- Do not emit the final WebArena response.\n"
+            "- Do not emit the triple-backticked action block yourself.\n"
+            "- Do not output extra role labels beyond the headers already in this prompt.\n\n"
+            "Output only the planner draft."
+        )
+
     return (
         f"{observation}\n\n"
         "You are the Planner.\n\n"
@@ -177,6 +258,40 @@ def build_planner_retry_prompt(
         validation_reason: str,
         task_profile: Optional[TaskProfile] = None,
 ) -> str:
+    if task_profile is not None and task_profile.task_name == "webarena":
+        if _uses_plain_split_prompting(task_profile):
+            return (
+                "Your previous planner draft was invalid and will not be shown to the executor.\n"
+                f"Failure reason: {validation_reason}\n\n"
+                f"Observation:\n{observation}\n\n"
+                "Previous invalid planner draft:\n"
+                f"{invalid_planner_output}\n\n"
+                "Respond again.\n\n"
+                "Rules:\n"
+                "- Stay grounded in the observation only.\n"
+                "- Help the executor choose the next useful web action.\n"
+                "- Do not emit the final WebArena response.\n"
+                "- Do not emit the triple-backticked action block yourself.\n"
+                "- Do not use role labels or prompt headers.\n\n"
+                "Output only the planner draft."
+            )
+        return (
+            "[Planner Retry]\n"
+            "Your previous planner draft was invalid and will not be shown to the Executor.\n"
+            f"Failure reason: {validation_reason}\n\n"
+            "[Environment Observation]\n"
+            f"{observation}\n\n"
+            "[Previous Invalid Planner Output]\n"
+            f"{invalid_planner_output}\n\n"
+            "Respond again.\n\n"
+            "Rules:\n"
+            "- Stay grounded in the observation only.\n"
+            "- Help the Executor choose the next useful web action.\n"
+            "- Do not emit the final WebArena response.\n"
+            "- Do not emit the triple-backticked action block yourself.\n"
+            "- Do not add extra role labels beyond the prompt headers.\n\n"
+            "Output only the planner draft."
+        )
     return (
         "[Planner Retry]\n"
         "Your previous planner message was invalid and will not be shown to the Executor.\n"
@@ -314,25 +429,57 @@ def build_executor_reviewer_prompt(
         review_reason: Optional[str] = None,
         task_profile: Optional[TaskProfile] = None,
 ) -> str:
+    if task_profile is not None and task_profile.task_name == "babyai":
+        available_actions_block = _format_available_actions_block(observation)
+        return (
+            "You are part of an exploration team, and you are the reviewer that wants to finish every goal you are given.\n\n"
+            "Every round you will be given an observation, the available actions, the planner suggestion, and the executor's proposed response.\n\n"
+            "Your job is to decide whether the executor's proposed response is valid and should be sent to the environment.\n\n"
+            f"You can use the following actions:\n\n{available_actions_block}\n\n"
+            "The planner suggestion is:\n\n"
+            f"{reviewed_plan}\n\n"
+            "The executor's proposed response is:\n\n"
+            f"{executor_output}\n\n"
+            "Your response must use the following format:\n\n"
+            "Verdict:\n"
+            "<PASS or RETRY>\n\n"
+            "Reason:\n"
+            "<short reason>\n\n"
+            "Rules:\n"
+            "- PASS only if the executor output matches the required final response format exactly.\n"
+            "- PASS only if the executor output contains exactly one valid Action.\n"
+            "- PASS only if the Action is exactly one of the available actions.\n"
+            "- RETRY if the executor output is missing Thought: or Action:.\n"
+            "- RETRY if the executor output contains multiple actions.\n"
+            "- RETRY if the Action is not one of the available actions.\n"
+            "- RETRY if the executor output copies the planner suggestion verbatim instead of producing the final response format.\n"
+            "- RETRY if the executor output contains role labels, prompt scaffolding, or unsupported text.\n"
+            "- Do not rewrite the executor output yourself.\n"
+            "- Keep the reason short and concrete.\n\n"
+            f"Observation:\n{observation}\n\n"
+            "Output only the Verdict and Reason."
+        )
+
     review_reason_block = f"Previous review reason: {review_reason}\n\n" if review_reason else ""
     return (
-        "[Executor Reviewer Turn]\n"
-        "[Environment Observation]\n"
-        f"{observation}\n\n"
-        "[Reviewed Planner Plan]\n"
+        "You are part of an exploration team, and you are the reviewer that wants to finish every goal you are given.\n\n"
+        "Every round you will be given an observation, the planner suggestion, and the executor's proposed response.\n\n"
+        "Your job is to decide whether the executor's proposed response is valid and should be sent to the environment.\n\n"
+        f"Observation:\n{observation}\n\n"
+        "The planner suggestion is:\n\n"
         f"{reviewed_plan}\n\n"
-        "[Executor Output]\n"
+        "The executor's proposed response is:\n\n"
         f"{executor_output}\n\n"
         f"{review_reason_block}"
-        "You are the Executor Reviewer.\n"
-        "Judge whether the executor output matches the original single-agent task-native format and can be checked by deterministic validation.\n\n"
-        "Output exactly this schema:\n"
+        "Your response must use the following format:\n"
         "Verdict: PASS | RETRY\n"
         "Reason: <short reason>\n\n"
         "Rules:\n"
         f"- Executor retries already used: {retry_count}\n"
-        "- PASS only if the output looks properly structured and grounded in the observation.\n"
-        "- Use RETRY when the output contains garbage, wrong format, multiple actions, role labels, or unsupported action text.\n"
+        "- PASS only if the executor output matches the required task-native response format and looks grounded in the observation.\n"
+        "- PASS only if the executor output contains exactly one grounded next action.\n"
+        "- Use RETRY when the output contains garbage, wrong format, multiple actions, role labels, prompt scaffolding, or unsupported action text.\n"
+        "- Use RETRY when the executor output repeats the planner suggestion verbatim instead of producing the final response.\n"
         "- Do not repair or rewrite the executor output yourself.\n"
         "Output only the schema."
     )
@@ -358,6 +505,42 @@ def build_executor_turn_prompt(
             "<Your Action>\n\n"
             f"Observation:\n{observation}\n"
             "Output exactly one Action line."
+        )
+
+    if task_profile is not None and task_profile.task_name == "webarena":
+        if _uses_plain_split_prompting(task_profile):
+            return (
+                "You are part of a web navigation team, and you are the executor that wants to finish every goal you are given.\n\n"
+                "Every round you will be given the current WebArena observation and a planner suggestion.\n\n"
+                "The original WebArena task instruction, available actions, and environment-facing response contract remain unchanged.\n\n"
+                "The planner suggestion is optional guidance. Use it only if it helps, and ignore it if it conflicts with the observation.\n\n"
+                "Planner suggestion:\n\n"
+                f"{planner_message}\n\n"
+                "Your response must follow the original WebArena single-agent contract:\n"
+                "- Reason step by step using the current observation.\n"
+                "- End with the phrase: In summary, the next action I will perform is\n"
+                "- Then include exactly one action inside triple backticks.\n"
+                "- Put every action parameter in square brackets.\n"
+                "- Do not include more than one triple-backticked block.\n"
+                "- Do not place action command syntax outside the final triple-backticked block.\n"
+                "- Do not use role labels or prompt headers.\n\n"
+                "Do not copy the planner suggestion verbatim as your final answer.\n\n"
+                f"Observation:\n{observation}\n\n"
+                "Output only the final environment-facing WebArena response."
+            )
+        return (
+            "[Executor Turn]\n"
+            "[Environment Observation]\n"
+            f"{observation}\n\n"
+            "[Latest Planner Message]\n"
+            f"{planner_message}\n\n"
+            "You are the Executor for a web navigation team.\n"
+            "Produce the next environment response exactly as the original single-agent WebArena agent would.\n"
+            "Use the planner message as guidance only; if it conflicts with the observation, follow the observation.\n"
+            "Do not copy the planner suggestion verbatim as your final answer.\n"
+            "Format requirement: Use the WebArena native format with reasoning and exactly one triple-backticked action block.\n"
+            "Do not prepend role labels like Planner: or Executor:.\n"
+            "Output only the final environment-facing WebArena response."
         )
 
     format_hint = (
@@ -405,6 +588,38 @@ def build_executor_retry_prompt(
         if task_profile is not None
         else "Use the original task-native format exactly."
     )
+    if task_profile is not None and task_profile.task_name == "webarena":
+        if _uses_plain_split_prompting(task_profile):
+            return (
+                "Your previous response was invalid and was not sent to the environment.\n"
+                f"Failure reason: {validation_reason}\n\n"
+                f"Observation:\n{observation}\n\n"
+                "Planner suggestion:\n\n"
+                f"{planner_message}\n\n"
+                "Previous invalid response:\n"
+                f"{invalid_executor_output}\n\n"
+                "Respond again with exactly one valid WebArena response in the original single-agent format.\n"
+                "Use reasoning and exactly one triple-backticked action block.\n"
+                "Do not repeat the planner suggestion verbatim.\n"
+                "Do not include role labels or prompt headers.\n"
+                "Output only the final environment-facing response."
+            )
+        return (
+            "[Executor Retry]\n"
+            "Your previous response was invalid and was not sent to the environment.\n"
+            f"Failure reason: {validation_reason}\n\n"
+            "[Environment Observation]\n"
+            f"{observation}\n\n"
+            "[Latest Planner Message]\n"
+            f"{planner_message}\n\n"
+            "[Previous Invalid Executor Output]\n"
+            f"{invalid_executor_output}\n\n"
+            "Respond again with exactly one valid WebArena response in the original single-agent format.\n"
+            "Use reasoning and exactly one triple-backticked action block.\n"
+            "Do not repeat the planner suggestion verbatim.\n"
+            "Do not include extra role labels beyond the prompt headers.\n"
+            "Output only the final environment-facing response."
+        )
     if task_profile is not None and task_profile.task_name == "babyai":
         available_actions = extract_available_actions_from_observation(observation)
         action_list = ", ".join(available_actions) if available_actions else "(read from observation)"
@@ -492,6 +707,13 @@ def rewrite_planner_payload(
     if not normalized:
         return None
 
+    if task_profile is not None and task_profile.task_name == "webarena":
+        rewritten = _rewrite_webarena_planner_payload(normalized)
+        if not rewritten:
+            return None
+        validation = validate_planner_payload(rewritten, observation=observation, task_profile=task_profile)
+        return validation.message if validation.valid else None
+
     available_actions = extract_available_actions_from_observation(observation)
     stripped_action = _strip_use_action_wrapper(normalized, available_actions)
     if stripped_action:
@@ -574,19 +796,90 @@ def _format_available_actions_block(observation: str) -> str:
 def _planner_min_words(task_profile: Optional[TaskProfile]) -> int:
     if task_profile is not None and task_profile.task_name == "babyai":
         return 3
+    if task_profile is not None and task_profile.task_name == "webarena":
+        return WEBARENA_PLANNER_MIN_WORDS
     return PLANNER_MIN_WORDS
 
 
 def _planner_max_words(task_profile: Optional[TaskProfile]) -> int:
     if task_profile is not None and task_profile.task_name == "babyai":
         return 10
+    if task_profile is not None and task_profile.task_name == "webarena":
+        return WEBARENA_PLANNER_MAX_WORDS
     return PLANNER_MAX_WORDS
 
 
 def _planner_max_chars(task_profile: Optional[TaskProfile]) -> int:
     if task_profile is not None and task_profile.task_name == "babyai":
         return 80
+    if task_profile is not None and task_profile.task_name == "webarena":
+        return WEBARENA_PLANNER_MAX_CHARS
     return PLANNER_MAX_CHARS
+
+
+def _contains_webarena_planner_contract_tokens(text: str) -> bool:
+    lowered = text.lower()
+    return (
+        "```" in text
+        or "let's think step-by-step" in lowered
+        or "in summary, the next action i will perform is" in lowered
+    )
+
+
+def _canonicalize_webarena_planner_phrase(text: str) -> str:
+    phrase = _collapse_planner_text(text)
+    phrase = phrase.replace("```", " ")
+    phrase = phrase.replace('"', "")
+    phrase = phrase.replace("'", "")
+    phrase = re.sub(r"\s+", " ", phrase).strip(" -:;,.")
+    if not phrase:
+        return ""
+    words = phrase.split()
+    if len(words) > WEBARENA_PLANNER_MAX_WORDS:
+        phrase = " ".join(words[:WEBARENA_PLANNER_MAX_WORDS])
+    if len(phrase) > WEBARENA_PLANNER_MAX_CHARS:
+        phrase = phrase[:WEBARENA_PLANNER_MAX_CHARS].rstrip(" ,.;:")
+    if phrase:
+        phrase = phrase[0].upper() + phrase[1:]
+    return phrase
+
+
+def _rewrite_webarena_planner_payload(text: str) -> Optional[str]:
+    collapsed = _collapse_planner_text(text)
+    if not collapsed:
+        return None
+
+    quoted_label_match = re.search(
+        r"(?:click|open|select|visit|navigate to|go to)\s+(?:on\s+)?['\"]([^'\"]{2,80})['\"]",
+        collapsed,
+        re.IGNORECASE,
+    )
+    if quoted_label_match:
+        target = _canonicalize_webarena_planner_phrase(quoted_label_match.group(1))
+        return f"Open {target}" if target else None
+
+    action_hint_match = re.search(
+        r"(?:click|open|select|visit|check|search for|look for|navigate to|go to|type into)\s+(?:the\s+)?['\"]?([^'\".]{2,80})['\"]?",
+        collapsed,
+        re.IGNORECASE,
+    )
+    if action_hint_match:
+        target = _canonicalize_webarena_planner_phrase(action_hint_match.group(1))
+        lowered = collapsed.lower()
+        if "search for" in lowered:
+            return f"Search for {target}" if target else None
+        if any(token in lowered for token in ("type", "enter")):
+            return f"Type into {target}" if target else None
+        if any(token in lowered for token in ("click", "open", "select", "visit", "navigate", "go to")):
+            return f"Open {target}" if target else None
+        return f"Check {target}" if target else None
+
+    for segment in re.split(r"(?<=[.!?])\s+|\n+", collapsed):
+        candidate = _canonicalize_webarena_planner_phrase(segment)
+        if candidate:
+            return candidate
+
+    return _canonicalize_webarena_planner_phrase(collapsed) or None
 
 
 def _normalize_action_text(action: str) -> str:
@@ -855,6 +1148,8 @@ def validate_planner_payload(
         return PlannerPayloadValidation(valid=False, reason="empty", message=None)
     if _contains_disallowed_planner_tokens(normalized):
         return PlannerPayloadValidation(valid=False, reason="contains_role_or_schema_tokens", message=None)
+    if task_profile is not None and task_profile.task_name == "webarena" and _contains_webarena_planner_contract_tokens(normalized):
+        return PlannerPayloadValidation(valid=False, reason="contains_executor_contract", message=None)
     if task_profile is not None and task_profile.task_name == "babyai" and re.search(r"\[[^\]]+\]", normalized):
         return PlannerPayloadValidation(valid=False, reason="contains_role_or_schema_tokens", message=None)
     collapsed = _collapse_planner_text(normalized)
@@ -915,8 +1210,48 @@ def extract_available_actions_from_observation(observation: str) -> List[str]:
     return [item for item in actions if item]
 
 
+def _extract_webarena_action_blocks(text: str) -> List[Tuple[int, int, str]]:
+    return [(match.start(), match.end(), match.group(1).strip()) for match in re.finditer(r"```(.*?)```", text, re.DOTALL)]
+
+
+def _is_parseable_webarena_action(action: str) -> bool:
+    stripped = action.strip()
+    if not stripped:
+        return False
+    return any(pattern.fullmatch(stripped) for pattern in WEBARENA_ACTION_FULLMATCH_PATTERNS)
+
+
+def _contains_webarena_action_syntax(text: str) -> bool:
+    stripped = text.strip()
+    if not stripped:
+        return False
+    return any(pattern.search(stripped) for pattern in WEBARENA_ACTION_SYNTAX_PATTERNS)
+
+
+def _has_webarena_action_syntax_outside_block(text: str, block_span: Tuple[int, int]) -> bool:
+    block_start, block_end = block_span
+    outside = f"{text[:block_start]}\n{text[block_end:]}"
+    return _contains_webarena_action_syntax(outside)
+
+
+def _validate_webarena_executor_response(text: str) -> ExecutorPayloadValidation:
+    blocks = _extract_webarena_action_blocks(text)
+    if len(blocks) != 1:
+        return ExecutorPayloadValidation(valid=False, reason="invalid_format")
+
+    block_start, block_end, action = blocks[0]
+    if not _is_parseable_webarena_action(action):
+        return ExecutorPayloadValidation(valid=False, reason="invalid_format")
+    if _has_webarena_action_syntax_outside_block(text, (block_start, block_end)):
+        return ExecutorPayloadValidation(valid=False, reason="invalid_format")
+    return ExecutorPayloadValidation(valid=True, reason="ok", action=action)
+
+
 def extract_executor_action(raw_text: str, task_profile: TaskProfile) -> Optional[str]:
     text = normalize_executor_payload(raw_text, task_profile)
+    if task_profile.task_name == "webarena":
+        validation = _validate_webarena_executor_response(text)
+        return validation.action if validation.valid else None
     action_matches = re.findall(r"Action:\s*(.*?)(?=\n|$)", text, re.DOTALL)
     if len(action_matches) != 1:
         return None
@@ -930,7 +1265,7 @@ def _format_validators(task_name: str):
         "textcraft": lambda text: bool(re.search(r"Thought:\s*.*Action:\s*.+", text, re.DOTALL)),
         "searchqa": lambda text: bool(re.match(r"\s*<(think|search|information|answer)>.*", text, re.DOTALL)),
         "sciworld": lambda text: bool(text.strip()),
-        "webarena": lambda text: "```" in text,
+        "webarena": lambda text: _validate_webarena_executor_response(text).valid,
     }
     return validators.get(task_name, lambda text: bool(text.strip()))
 
@@ -947,6 +1282,9 @@ def validate_executor_payload(
         planner_message: Optional[str] = None,
 ) -> ExecutorPayloadValidation:
     normalized = normalize_executor_payload(raw_text, task_profile)
+    if task_profile.task_name == "webarena":
+        return _validate_webarena_executor_response(normalized)
+
     valid_format = is_executor_payload_valid(normalized, task_profile)
 
     if task_profile.task_name != "babyai":
