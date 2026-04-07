@@ -42,7 +42,73 @@ Primary metric and trace sources:
 
 ### 1. When does collapse begin?
 
-Collapse onset is **regime-dependent**, not universal.
+Collapse onset is **regime-dependent**, not universal. More importantly, the first sign is visible in the \emph{content of the messages}, not just in the step number.
+
+#### What collapse looks like when it begins
+
+The earliest trace-level signature across our runs is:
+
+**the model stops speaking in grounded environment language and starts speaking in protocol artifacts, schema fragments, fallback text, or degenerate tokens.**
+
+Concretely:
+
+- **Tagged 2-agent ScalingRL**: the first suspicious planner message is not nonsense yet; it is a \emph{role token leaking into the semantic channel}.
+  - First visible leak:
+    - planner raw output: `[Planner] Check room for ball.`
+  - Why this matters:
+    - the planner is already copying prompt scaffolding into what should be environment-grounded guidance
+    - later the collapse becomes explicit recursive wrapper copying:
+      - planner raw output: `[Planner]\n[Executor Turn]\n[Environment Observation]\n[Executor Response]\n`
+      - executor raw output begins repeating `[Executor Turn]`, `[Environment Observation]`, `[Reviewers Turn]`
+
+- **Fixed-round tagged 2-agent**: the first sign is \emph{planner verbosity drift}.
+  - Onset trace:
+    - planner raw output: `Check if there is a red ball in the room or if you need to move to another part of the room.`
+  - Why this matters:
+    - this is not invalid by meaning, but it is already too long for the planner contract
+    - it is the earliest sign that the planner is drifting away from a compact control signal toward uncontrolled free-form narration
+
+- **Coarse no-tag 2-agent ScalingRL**: the first sign is \emph{executor action invention}.
+  - Onset trace:
+    - planner raw output: `red ball 1`
+    - executor raw output: `Thought: red ball 1 is not available\n\nAction:\n\"unknown\"`
+  - Why this matters:
+    - once the executor emits `"unknown"` instead of one legal BabyAI action, collapse has started behaviorally even though there are still no role tags
+
+- **Dense no-tag 2-agent ScalingRL**: the first sign is \emph{conversation-transcript leakage into the executor output}.
+  - Onset trace:
+    - planner raw output: `Let's check the available actions for any visible objects`
+    - executor first pass raw output: `check available actions\n\nuser\nOutput:\nAvailable actions: []\n\nThere are no available actions visible in front of you...`
+    - executor final raw output: `You are facing a wall\n\nAction:\nmove forward`
+  - Why this matters:
+    - the executor is no longer producing one clean environment-native action response
+    - it is pulling in chat transcript fragments like `user\nOutput:`
+    - this is the no-tag equivalent of scaffold contamination
+
+- **3-agent reviewer run**: the first sign is \emph{schema disagreement between executor and reviewer channels}.
+  - Earliest suspicious message:
+    - executor first pass raw output: `Action:\nturn left\ncheck available actions`
+    - executor final raw output: `Thought:\nFollow suggestion\n\nAction:\nturn left\ncheck available actions`
+  - Why this matters:
+    - one executor turn is now trying to emit two actions
+    - later the reviewer schema leaks directly into executor output:
+      - `Verdict:\nPASS\n\nReason:\nOK`
+    - this is the clearest trace-level sign that the interface, not just one role, is destabilizing
+
+- **WebArena clean 2-agent**: the first sign is \emph{instant tag-only / punctuation collapse}.
+  - First bad planner message:
+    - planner raw output: `!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!`
+  - First bad executor message:
+    - executor raw output: `!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!...`
+  - Why this matters:
+    - this is not a wrong action; it is a complete abandonment of the task/action contract
+    - the model goes from one grounded planner message at step 1 to pure degenerate tokens almost immediately
+
+So the answer to "when does collapse begin?" in trace terms is:
+
+**collapse begins the moment the model's messages stop being grounded control signals and start becoming protocol leakage, transcript leakage, schema contamination, invented actions, or pure punctuation spam.**
+
+The step number only tells us \emph{how early}; the trace content tells us \emph{what collapse actually is}.
 
 - **Tagged 2-agent ScalingRL**: first warning sign by `step 55` when planner headers start leaking into planner text; full recursive scaffold contamination by `step 98-100`.
   - Evidence:
@@ -204,4 +270,3 @@ These are useful interpretation claims, but they should be labeled more carefull
 3. **Treating planner and executor as one homogeneous PPO population is a plausible contributor to instability.**
 
 Those three are well motivated by the traces and by the deep-research synthesis, but they are **not** isolated causal ablations in the current paper.
-

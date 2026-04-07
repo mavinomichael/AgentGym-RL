@@ -224,6 +224,8 @@ Figure~\ref{fig:success_panels} compares the main BabyAI success curves. Figure~
 \subsection{A. When does collapse begin?}
 Collapse onset is \textbf{not uniform}. It depends strongly on the regime.
 
+More importantly, the first signal is visible in the \emph{content} of the messages before it is visible in a scalar metric. Across regimes, collapse begins when role outputs stop acting like grounded control signals and begin acting like protocol artifacts: visible headers, schema fragments, transcript spillover, invented actions, fallback text, or pure punctuation spam. In other words, the earliest reliable sign is not ``the reward dropped'' but ``the model stopped speaking in environment-native language.''
+
 \textbf{Tagged two-agent ScalingInter-RL.} Collapse begins early. The first visible warning appears by \textbf{step 55}, where the planner starts copying visible prompt headers into its plan. By \textbf{step 100}, the run reaches near-terminal recursive scaffold contamination: Pass@1 falls to $0.0333$, executor format violations rise to $0.8$, and planner invalid-format reaches $0.9889$.
 
 \textbf{No-tag BabyAI ScalingInter-RL.} Collapse is later and more gradual. In the dense run, the system remains strong through \textbf{step 350}, degrades at \textbf{step 400}, and fully collapses by \textbf{450--500}. The coarse no-tag run shows the same pattern, with collapse arriving slightly earlier in terms of performance loss after the step-200 peak.
