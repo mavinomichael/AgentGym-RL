@@ -1,0 +1,340 @@
+# Multi-agent extension.
+# Derived from: /Users/mavinomichael/PycharmProjects/AgentGym-RL/AgentGym-RL/verl/agent_trainer/ppo/ray_trainer.py
+# Original file left untouched for comparison.
+
+from copy import deepcopy
+import re
+import uuid
+
+import numpy as np
+import torch
+from verl import DataProto
+from verl.agent_trainer.ppo.ray_trainer import (
+    RayPPOTrainer as BaseRayPPOTrainer,
+    ResourcePoolManager,
+    Role,
+    FixedRoundsScheduler,
+    StepRoundsScheduler,
+    _timer,
+    apply_kl_penalty,
+    compute_advantage,
+    compute_timing_metrics,
+    reduce_metrics,
+)
+from verl.agent_trainer.ppo.ray_trainer import compute_data_metrics as compute_single_agent_metrics
+from verl.extend_multi_agent.utils.agent_dataset.rl_dataset import RLHFDataset, collate_fn
+
+
+def _parse_save_steps(raw_value):
+    if raw_value is None:
+        return set()
+    if isinstance(raw_value, str):
+        return {int(token) for token in re.findall(r"\d+", raw_value)}
+
+    save_steps = set()
+    try:
+        for item in raw_value:
+            if item is None:
+                continue
+            save_steps.add(int(item))
+    except TypeError:
+        return set()
+    return save_steps
+
+
+def _infer_task_name(batch) -> str:
+    try:
+        item_ids = batch.non_tensor_batch.get("item_id")
+        if item_ids is not None and len(item_ids) > 0:
+            return str(item_ids[0]).split("_", 1)[0]
+    except Exception:
+        pass
+    return "unknown"
+
+
+def compute_data_metrics(batch, use_critic=True):
+    metrics = compute_single_agent_metrics(batch=batch, use_critic=use_critic)
+    if "planner_response_mask" not in batch.batch.keys():
+        return metrics
+
+    task_name = _infer_task_name(batch)
+    planner_tokens = batch.batch["planner_response_mask"].sum(-1).float()
+    executor_tokens = batch.batch["executor_response_mask"].sum(-1).float()
+    reward_events = batch.batch["reward_event_mask"].sum(-1).float()
+    env_rounds = batch.batch.get("team_env_rounds", batch.batch["task_rounds"]).float()
+    valid_actions = batch.batch.get("executor_action_valid", torch.ones_like(env_rounds, dtype=torch.float32)).float()
+    valid_format = batch.batch.get("executor_native_format_valid", torch.ones_like(env_rounds, dtype=torch.float32)).float()
+    env_step_failed = batch.batch.get("env_step_failed", torch.zeros_like(env_rounds, dtype=torch.float32)).float()
+    timeout_occurred = batch.batch.get("timeout_occurred", torch.zeros_like(env_rounds, dtype=torch.float32)).float()
+    invalid_format_terminated = batch.batch.get(
+        "invalid_format_terminated", torch.zeros_like(env_rounds, dtype=torch.float32)
+    ).float()
+    invalid_action_terminated = batch.batch.get(
+        "invalid_action_terminated", torch.zeros_like(env_rounds, dtype=torch.float32)
+    ).float()
+    planner_output_valid = batch.batch.get(
+        "planner_output_valid", torch.ones_like(env_rounds, dtype=torch.float32)
+    ).float()
+    invalid_terminated = invalid_format_terminated + invalid_action_terminated
+
+    metrics.update(
+        {
+            "planner_tokens/mean": torch.mean(planner_tokens).detach().item(),
+            "executor_tokens/mean": torch.mean(executor_tokens).detach().item(),
+            "planner_to_executor_ratio": (
+                (torch.mean(planner_tokens) / (torch.mean(executor_tokens) + 1e-6)).detach().item()
+            ),
+            "executor_invalid_action_rate": (1.0 - torch.mean(valid_actions)).detach().item(),
+            f"invalid_action_rate/{task_name}": (1.0 - torch.mean(valid_actions)).detach().item(),
+            "env_rounds/mean": torch.mean(env_rounds).detach().item(),
+            "reward_events/mean": torch.mean(reward_events).detach().item(),
+            f"env_step_failures/{task_name}": torch.mean(env_step_failed).detach().item(),
+            f"timeout_rate/{task_name}": torch.mean(timeout_occurred).detach().item(),
+            f"executor_native_format_violations/{task_name}": (1.0 - torch.mean(valid_format)).detach().item(),
+            f"planner_invalid_format_rate/{task_name}": (1.0 - torch.mean(planner_output_valid)).detach().item(),
+            "planner_invalid_json_rate": (1.0 - torch.mean(planner_output_valid)).detach().item(),
+            "executor_invalid_json_rate": (1.0 - torch.mean(valid_format)).detach().item(),
+            "invalid_env_action_rate": (1.0 - torch.mean(valid_actions)).detach().item(),
+            f"invalid_format_termination_rate/{task_name}": torch.mean(invalid_format_terminated).detach().item(),
+            f"invalid_action_termination_rate/{task_name}": torch.mean(invalid_action_terminated).detach().item(),
+            f"invalid_termination_rate/{task_name}": torch.mean(invalid_terminated).detach().item(),
+        }
+    )
+    if "planner_fallback_used" in batch.batch.keys():
+        planner_fallback_used = batch.batch["planner_fallback_used"].float()
+        metrics[f"planner_fallback_rate/{task_name}"] = torch.mean(planner_fallback_used).detach().item()
+    if "planner_tag_only" in batch.batch.keys():
+        planner_tag_only = batch.batch["planner_tag_only"].float()
+        metrics[f"planner_tag_only_rate/{task_name}"] = torch.mean(planner_tag_only).detach().item()
+    if "planner_rewrite_used" in batch.batch.keys():
+        planner_rewrite_used = batch.batch["planner_rewrite_used"].float()
+        metrics[f"planner_rewrite_rate/{task_name}"] = torch.mean(planner_rewrite_used).detach().item()
+    if "planner_exact_action" in batch.batch.keys():
+        planner_exact_action = batch.batch["planner_exact_action"].float()
+        metrics[f"planner_exact_action_rate/{task_name}"] = torch.mean(planner_exact_action).detach().item()
+    if "planner_degenerate_fragment" in batch.batch.keys():
+        planner_degenerate_fragment = batch.batch["planner_degenerate_fragment"].float()
+        metrics[f"planner_degenerate_fragment_rate/{task_name}"] = (
+            torch.mean(planner_degenerate_fragment).detach().item()
+        )
+    if "planner_message_token_count" in batch.batch.keys():
+        planner_message_token_count = batch.batch["planner_message_token_count"].float()
+        metrics[f"planner_avg_token_length/{task_name}"] = torch.mean(planner_message_token_count).detach().item()
+    if "executor_first_pass_valid" in batch.batch.keys():
+        executor_first_pass_valid = batch.batch["executor_first_pass_valid"].float()
+        metrics[f"executor_first_pass_valid_rate/{task_name}"] = torch.mean(executor_first_pass_valid).detach().item()
+    if "executor_retry_used" in batch.batch.keys():
+        executor_retry_used = batch.batch["executor_retry_used"].float()
+        metrics[f"executor_retry_used_rate/{task_name}"] = torch.mean(executor_retry_used).detach().item()
+    if "executor_retry_resolved" in batch.batch.keys():
+        executor_retry_resolved = batch.batch["executor_retry_resolved"].float()
+        metrics[f"executor_retry_resolved_rate/{task_name}"] = torch.mean(executor_retry_resolved).detach().item()
+    if "executor_retry_count" in batch.batch.keys():
+        executor_retry_count = batch.batch["executor_retry_count"].float()
+        metrics[f"executor_retry_count_mean/{task_name}"] = torch.mean(executor_retry_count).detach().item()
+    if "executor_action_changed_after_retry" in batch.batch.keys():
+        executor_action_changed_after_retry = batch.batch["executor_action_changed_after_retry"].float()
+        metrics[f"executor_action_changed_after_retry_rate/{task_name}"] = (
+            torch.mean(executor_action_changed_after_retry).detach().item()
+        )
+    if "planner_reviewer_response_mask" in batch.batch.keys():
+        planner_reviewer_tokens = batch.batch["planner_reviewer_response_mask"].sum(-1).float()
+        metrics["planner_reviewer_tokens/mean"] = torch.mean(planner_reviewer_tokens).detach().item()
+    if "executor_reviewer_response_mask" in batch.batch.keys():
+        executor_reviewer_tokens = batch.batch["executor_reviewer_response_mask"].sum(-1).float()
+        metrics["executor_reviewer_tokens/mean"] = torch.mean(executor_reviewer_tokens).detach().item()
+    if "planner_review_retry_count" in batch.batch.keys():
+        planner_review_retry_count = batch.batch["planner_review_retry_count"].float()
+        metrics[f"planner_reviewer_retry_mean/{task_name}"] = torch.mean(planner_review_retry_count).detach().item()
+    if "planner_review_repair_count" in batch.batch.keys():
+        planner_review_repair_count = batch.batch["planner_review_repair_count"].float()
+        metrics[f"planner_reviewer_repair_rate/{task_name}"] = torch.mean(planner_review_repair_count).detach().item()
+    if "executor_review_retry_count" in batch.batch.keys():
+        executor_review_retry_count = batch.batch["executor_review_retry_count"].float()
+        metrics[f"executor_reviewer_retry_mean/{task_name}"] = torch.mean(executor_review_retry_count).detach().item()
+    if "executor_review_passed" in batch.batch.keys():
+        executor_review_passed = batch.batch["executor_review_passed"].float()
+        metrics[f"executor_reviewer_pass_rate/{task_name}"] = torch.mean(executor_review_passed).detach().item()
+    return metrics
+
+
+class RayPPOTrainer(BaseRayPPOTrainer):
+    def _create_dataloader(self):
+        from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
+
+        self.train_dataset = RLHFDataset(
+            data_file=self.config.data.train_file,
+            tokenizer=self.tokenizer,
+            data_config=self.config.data,
+            agentgym_config=self.config.actor_rollout_ref.agentgym,
+            multi_agent_config=self.config.get("multi_agent", None),
+        )
+        if self.config.data.shuffle:
+            train_dataloader_generator = torch.Generator()
+            train_dataloader_generator.manual_seed(self.config.data.get("seed", 1))
+            sampler = RandomSampler(data_source=self.train_dataset, generator=train_dataloader_generator)
+        else:
+            sampler = SequentialSampler(data_source=self.train_dataset)
+
+        self.train_dataloader = DataLoader(
+            dataset=self.train_dataset,
+            batch_size=self.config.data.train_batch_size,
+            drop_last=True,
+            collate_fn=collate_fn,
+            sampler=sampler,
+        )
+        assert len(self.train_dataloader) >= 1
+        print(f"Size of train dataloader: {len(self.train_dataloader)}")
+
+        total_training_steps = len(self.train_dataloader) * self.config.trainer.total_epochs
+        if self.config.trainer.total_training_steps is not None:
+            total_training_steps = self.config.trainer.total_training_steps
+
+        self.total_training_steps = total_training_steps
+        if self.config.algorithm.rounds_ctrl.type == "fixed":
+            self.rounds_scheduler = FixedRoundsScheduler(rounds=self.config.algorithm.rounds_ctrl.rounds)
+        elif self.config.algorithm.rounds_ctrl.type == "scaling_inter_stepwise":
+            self.rounds_scheduler = StepRoundsScheduler(
+                steps_scaling_inter=self.config.algorithm.rounds_ctrl.steps_scaling_inter,
+                rounds_ls=self.config.algorithm.rounds_ctrl.rounds,
+            )
+        else:
+            raise NotImplementedError
+        print(f"Total training steps: {self.total_training_steps}")
+
+        from omegaconf import OmegaConf, open_dict
+
+        OmegaConf.set_struct(self.config, True)
+        with open_dict(self.config):
+            self.config.actor_rollout_ref.actor.optim.total_training_steps = total_training_steps
+            self.config.critic.optim.total_training_steps = total_training_steps
+
+    def fit(self):
+        # ORIGINAL FLOW DIFFERENCE:
+        # single-agent path logged only aggregate trajectory metrics.
+        # multi-agent path adds planner/executor token and task-specific rollout reliability metrics.
+        from omegaconf import OmegaConf
+        from verl.utils.tracking import Tracking
+
+        logger = Tracking(
+            project_name=self.config.trainer.project_name,
+            experiment_name=self.config.trainer.experiment_name,
+            default_backend=self.config.trainer.logger,
+            config=OmegaConf.to_container(self.config, resolve=True),
+        )
+
+        self.global_steps = 0
+        self._load_checkpoint()
+        explicit_save_steps = _parse_save_steps(self.config.trainer.get("save_steps", []))
+
+        def should_save_checkpoint(step: int) -> bool:
+            if step in explicit_save_steps:
+                return True
+            return self.config.trainer.save_freq > 0 and step % self.config.trainer.save_freq == 0
+
+        if self.config.trainer.storage_mode == "aistudio":
+            self._save_checkpoint()
+
+        self.global_steps += 1
+
+        for _epoch in range(self.config.trainer.total_epochs):
+            for batch_dict in self.train_dataloader:
+                metrics = {}
+                timing_raw = {}
+
+                batch: DataProto = DataProto.from_single_dict(batch_dict)
+                gen_batch = batch.pop(
+                    batch_keys=["input_ids", "attention_mask", "position_ids"],
+                    non_tensor_batch_keys=["item_id", "raw_prompt"],
+                )
+                gen_batch.meta_info["global_steps"] = self.global_steps
+                gen_batch.meta_info["max_rounds"] = self.rounds_scheduler.get_rounds()
+                metrics.update({"max_rounds": self.rounds_scheduler.get_rounds()})
+
+                with _timer("step", timing_raw):
+                    with _timer("gen", timing_raw):
+                        gen_batch_output = self.actor_rollout_wg.generate_sequences(gen_batch)
+
+                    if self.config.algorithm.adv_estimator == "remax":
+                        with _timer("gen_max", timing_raw):
+                            gen_baseline_batch = deepcopy(gen_batch)
+                            gen_baseline_batch.meta_info["do_sample"] = False
+                            gen_baseline_output = self.actor_rollout_wg.generate_sequences(gen_baseline_batch)
+                            batch = batch.union(gen_baseline_output)
+                            reward_baseline_tensor = batch.batch["rewards"].sum(dim=-1)
+                            batch.pop(batch_keys=list(gen_baseline_output.batch.keys()))
+                            batch.batch["reward_baselines"] = reward_baseline_tensor
+                            del gen_baseline_batch, gen_baseline_output
+
+                    batch.non_tensor_batch["uid"] = np.array([str(uuid.uuid4()) for _ in range(len(batch.batch))], dtype=object)
+                    batch = batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True)
+                    batch = batch.union(gen_batch_output)
+                    self._balance_batch(batch, metrics=metrics)
+                    batch.meta_info["global_token_num"] = torch.sum(batch.batch["attention_mask"], dim=-1).tolist()
+
+                    with _timer("old_log_prob", timing_raw):
+                        old_log_prob = self.actor_rollout_wg.compute_log_prob(batch)
+                        batch = batch.union(old_log_prob)
+
+                    if self.use_reference_policy:
+                        with _timer("ref", timing_raw):
+                            ref_log_prob = self.ref_policy_wg.compute_ref_log_prob(batch)
+                            batch = batch.union(ref_log_prob)
+
+                    if self.use_critic:
+                        with _timer("values", timing_raw):
+                            values = self.critic_wg.compute_values(batch)
+                            batch = batch.union(values)
+
+                    with _timer("adv", timing_raw):
+                        reward_tensor = batch.batch["scores"]
+                        batch.batch["token_level_scores"] = reward_tensor
+                        if not self.config.actor_rollout_ref.actor.get("use_kl_loss", False):
+                            batch, kl_metrics = apply_kl_penalty(
+                                batch,
+                                kl_ctrl=self.kl_ctrl,
+                                kl_penalty=self.config.algorithm.kl_penalty,
+                            )
+                            metrics.update(kl_metrics)
+                        else:
+                            batch.batch["token_level_rewards"] = batch.batch["token_level_scores"]
+
+                        batch = compute_advantage(
+                            batch,
+                            adv_estimator=self.config.algorithm.adv_estimator,
+                            gamma=self.config.algorithm.gamma,
+                            lam=self.config.algorithm.lam,
+                            num_repeat=self.config.actor_rollout_ref.rollout.n,
+                        )
+
+                    if self.use_critic:
+                        with _timer("update_critic", timing_raw):
+                            critic_output = self.critic_wg.update_critic(batch)
+                        critic_output_metrics = reduce_metrics(critic_output.meta_info["metrics"])
+                        metrics.update(critic_output_metrics)
+
+                    if self.config.trainer.critic_warmup <= self.global_steps:
+                        with _timer("update_actor", timing_raw):
+                            actor_output = self.actor_rollout_wg.update_actor(batch)
+                        actor_output_metrics = reduce_metrics(actor_output.meta_info["metrics"])
+                        metrics.update(actor_output_metrics)
+
+                    if should_save_checkpoint(self.global_steps):
+                        with _timer("save_checkpoint", timing_raw):
+                            self._save_checkpoint()
+
+                metrics.update(compute_data_metrics(batch=batch, use_critic=self.use_critic))
+                metrics.update(compute_timing_metrics(batch=batch, timing_raw=timing_raw))
+                logger.log(data=metrics, step=self.global_steps)
+
+                self.global_steps += 1
+                self.rounds_scheduler.step()
+
+                if self.global_steps >= self.total_training_steps:
+                    if should_save_checkpoint(self.global_steps) and not should_save_checkpoint(self.global_steps - 1):
+                        with _timer("save_checkpoint", timing_raw):
+                            self._save_checkpoint()
+                    return
+
+
+__all__ = ["RayPPOTrainer", "ResourcePoolManager", "Role"]

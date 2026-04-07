@@ -40,7 +40,37 @@ export PLANNER_PPO_WEIGHT="${PLANNER_PPO_WEIGHT:-1.0}"
 export PLANNER_KL_WEIGHT="${PLANNER_KL_WEIGHT:-1.5}"
 export EXECUTOR_PPO_WEIGHT="${EXECUTOR_PPO_WEIGHT:-1.0}"
 export EXECUTOR_KL_WEIGHT="${EXECUTOR_KL_WEIGHT:-1.0}"
+export ENV_TIMEOUT="${ENV_TIMEOUT:-45}"
+export DEBUG_PROGRESS="${DEBUG_PROGRESS:-0}"
+export DEBUG_ALL_RANKS="${DEBUG_ALL_RANKS:-0}"
+export SKIP_VLLM_OFFLOAD="${SKIP_VLLM_OFFLOAD:-0}"
 export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
+export ENFORCE_ROLLOUT_HARNESS="${ENFORCE_ROLLOUT_HARNESS:-true}"
+export HARNESS_SUMMARY_PATH="${HARNESS_SUMMARY_PATH:-$SAVE_ROOT/improve_multi_agent/rollout_harness/learned_planner_frozen_executor/summary.json}"
+export VERL_IMPROVE_DEBUG_PROGRESS="${VERL_IMPROVE_DEBUG_PROGRESS:-$DEBUG_PROGRESS}"
+export VERL_IMPROVE_DEBUG_ALL_RANKS="${VERL_IMPROVE_DEBUG_ALL_RANKS:-$DEBUG_ALL_RANKS}"
+export VERL_AGENTGYM_TIMEOUT="${VERL_AGENTGYM_TIMEOUT:-$ENV_TIMEOUT}"
+export VERL_IMPROVE_SKIP_VLLM_OFFLOAD="${VERL_IMPROVE_SKIP_VLLM_OFFLOAD:-$SKIP_VLLM_OFFLOAD}"
+if [[ "${DEBUG_ALL_RANKS}" == "1" ]]; then
+  export RAY_DEDUP_LOGS="${RAY_DEDUP_LOGS:-0}"
+fi
+
+if [[ "$ENFORCE_ROLLOUT_HARNESS" == "true" ]]; then
+  python3 - "$REPO_ROOT" "$HARNESS_SUMMARY_PATH" <<'PY'
+import sys
+from pathlib import Path
+
+repo_root = Path(sys.argv[1])
+for candidate in (repo_root / "AgentGym-RL", repo_root):
+    candidate_str = str(candidate)
+    if candidate_str not in sys.path:
+        sys.path.insert(0, candidate_str)
+
+from verl.improve_multi_agent.rollout_harness import ensure_harness_passed
+
+ensure_harness_passed(sys.argv[2])
+PY
+fi
 
 if [[ "${MODEL_PATH}" == "/home/mavinomichael/AgentGym-RL/models/Qwen2.5-7B-Instruct" ]]; then
   STAGE3_ROOT="$SAVE_ROOT/improve_multi_agent/improve_babyai_planner_frozen_rl_v1"
@@ -86,6 +116,7 @@ python3 -m verl.improve_multi_agent.main_ppo \
   improve_multi_agent.features.role_local_advantage="$ROLE_LOCAL_ADVANTAGE" \
   improve_multi_agent.features.role_aux_rewards="$ROLE_AUX_REWARDS" \
   improve_multi_agent.features.milestone_rewards="$MILESTONE_REWARDS" \
+  actor_rollout_ref.agentgym.timeout="$ENV_TIMEOUT" \
   improve_multi_agent.roles.planner.ppo_weight="$PLANNER_PPO_WEIGHT" \
   improve_multi_agent.roles.planner.kl_weight="$PLANNER_KL_WEIGHT" \
   improve_multi_agent.roles.executor.ppo_weight="$EXECUTOR_PPO_WEIGHT" \

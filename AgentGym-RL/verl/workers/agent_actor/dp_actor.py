@@ -16,6 +16,7 @@ Single Process Actor
 """
 
 import itertools
+import os
 from typing import Tuple
 
 import torch
@@ -34,6 +35,24 @@ import verl.utils.torch_functional as verl_F
 from flash_attn.bert_padding import pad_input, unpad_input, rearrange, index_first_axis
 
 __all__ = ['DataParallelPPOActor']
+
+
+def _debug_enabled() -> bool:
+    return os.environ.get('VERL_IMPROVE_DEBUG_PROGRESS', '0') == '1'
+
+
+def _debug_all_ranks() -> bool:
+    return os.environ.get('VERL_IMPROVE_DEBUG_ALL_RANKS', '0') == '1'
+
+
+def _debug(message: str) -> None:
+    if not _debug_enabled():
+        return
+    rank = 0
+    if torch.distributed.is_available() and torch.distributed.is_initialized():
+        rank = torch.distributed.get_rank()
+    if rank == 0 or _debug_all_ranks():
+        print(f"[improve-dp-actor][rank={rank}] {message}", flush=True)
 
 
 class DataParallelPPOActor(BasePPOActor):
@@ -143,11 +162,15 @@ class DataParallelPPOActor(BasePPOActor):
     def _optimizer_step(self):
         assert self.config.grad_clip is not None
 
+        _debug("_optimizer_step:clip_grad_norm:start")
         if isinstance(self.actor_module, FSDP):
             grad_norm = self.actor_module.clip_grad_norm_(max_norm=self.config.grad_clip)
         else:
             grad_norm = torch.nn.utils.clip_grad_norm_(self.actor_module.parameters(), max_norm=self.config.grad_clip)
+        _debug("_optimizer_step:clip_grad_norm:end")
+        _debug("_optimizer_step:optimizer_step:start")
         self.actor_optimizer.step()
+        _debug("_optimizer_step:optimizer_step:end")
         return grad_norm
 
     def compute_log_prob(self, data: DataProto) -> torch.Tensor:
@@ -203,6 +226,7 @@ class DataParallelPPOActor(BasePPOActor):
     def update_policy(self, data: DataProto):
         # make sure we are in training mode
         self.actor_module.train()
+        _debug("update_policy:start")
 
         temperature = data.meta_info['temperature']  # temperature must be in the data.meta_info to avoid slient error
 
@@ -225,6 +249,7 @@ class DataParallelPPOActor(BasePPOActor):
 
         metrics = {}
         for batch_idx, data in enumerate(dataloader):
+            _debug(f"update_policy:minibatch_start idx={batch_idx} batch_size={len(data)}")
             # split batch into micro_batches
             mini_batch = data
             if self.config.use_dynamic_bsz:
@@ -235,9 +260,12 @@ class DataParallelPPOActor(BasePPOActor):
                 # split batch into micro_batches
                 micro_batches = mini_batch.split(self.config.ppo_micro_batch_size_per_gpu)
 
+            _debug(f"update_policy:minibatch_split idx={batch_idx} micro_batches={len(micro_batches)}")
             self.actor_optimizer.zero_grad()
+            _debug(f"update_policy:zero_grad_done idx={batch_idx}")
 
-            for data in micro_batches:
+            for micro_idx, data in enumerate(micro_batches):
+                _debug(f"update_policy:microbatch_start idx={batch_idx}.{micro_idx} batch_size={len(data)}")
                 data = data.cuda()  # actor device is cpu when using offload
                 response_mask = data['response_mask']
                 old_log_prob = data['old_log_probs']
@@ -247,7 +275,9 @@ class DataParallelPPOActor(BasePPOActor):
                 entropy_coeff = self.config.entropy_coeff
 
                 # all return: (bsz, response_length)
+                _debug(f"update_policy:forward_start idx={batch_idx}.{micro_idx}")
                 entropy, log_prob = self._forward_micro_batch(micro_batch=data, temperature=temperature)
+                _debug(f"update_policy:forward_end idx={batch_idx}.{micro_idx}")
                 if 'ppo_loss_weights' in data.keys():
                     weighted_mask = response_mask.float() * data['ppo_loss_weights'].float()
                     denom = torch.clamp_min(weighted_mask.sum(), 1.0)
@@ -307,7 +337,9 @@ class DataParallelPPOActor(BasePPOActor):
                     loss = policy_loss * (len(data) / self.config.ppo_mini_batch_size)
                 else:
                     loss = policy_loss / self.gradient_accumulation
+                _debug(f"update_policy:backward_start idx={batch_idx}.{micro_idx}")
                 loss.backward()
+                _debug(f"update_policy:backward_end idx={batch_idx}.{micro_idx}")
 
                 data = {
                     'actor/entropy_loss': entropy_loss.detach().item(),
@@ -316,9 +348,14 @@ class DataParallelPPOActor(BasePPOActor):
                     'actor/ppo_kl': ppo_kl.detach().item(),
                 }
                 append_to_dict(metrics, data)
+                _debug(f"update_policy:microbatch_end idx={batch_idx}.{micro_idx}")
 
+            _debug(f"update_policy:optimizer_step_start idx={batch_idx}")
             grad_norm = self._optimizer_step()
+            _debug(f"update_policy:optimizer_step_end idx={batch_idx}")
             data = {'actor/grad_norm': grad_norm.detach().item()}
             append_to_dict(metrics, data)
+            _debug(f"update_policy:minibatch_end idx={batch_idx}")
         self.actor_optimizer.zero_grad()
+        _debug("update_policy:end")
         return metrics

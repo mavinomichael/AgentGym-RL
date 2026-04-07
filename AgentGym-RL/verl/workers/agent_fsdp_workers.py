@@ -132,6 +132,21 @@ class ActorRolloutRefWorker(Worker):
                                                            self.ulysses_sequence_parallel_size)
             self.config.ref.log_prob_micro_batch_size_per_gpu = self.config.ref.log_prob_micro_batch_size
 
+    @staticmethod
+    def _debug_enabled() -> bool:
+        return os.getenv("VERL_IMPROVE_DEBUG_PROGRESS", "0") == "1"
+
+    @staticmethod
+    def _debug_all_ranks() -> bool:
+        return os.getenv("VERL_IMPROVE_DEBUG_ALL_RANKS", "0") == "1"
+
+    def _debug(self, message: str) -> None:
+        if self._debug_enabled() and (self._debug_all_ranks() or self.rank == 0):
+            print(
+                f"[improve-worker][role={self.role}][rank={self.rank}][{datetime.datetime.utcnow().strftime('%H:%M:%S')}] {message}",
+                flush=True,
+            )
+
     def _build_model_optimizer(self,
                                model_path,
                                fsdp_config,
@@ -388,25 +403,34 @@ class ActorRolloutRefWorker(Worker):
 
     @register(dispatch_mode=Dispatch.DP_COMPUTE_PROTO)
     def update_actor(self, data: DataProto):
+        self._debug("update_actor:start")
         data = data.to('cuda')
+        self._debug("update_actor:data_to_cuda:end")
 
         assert self._is_actor
         if self._is_offload_param:
             load_fsdp_param_and_grad(module=self.actor_module_fsdp,
                                      device_id=torch.cuda.current_device(),
                                      load_grad=self._is_offload_grad)
+            self._debug("update_actor:load_param:end")
         if self._is_offload_optimizer:
             load_fsdp_optimizer(optimizer=self.actor_optimizer, device_id=torch.cuda.current_device())
+            self._debug("update_actor:load_optimizer:end")
 
         data.batch = data.batch.cuda()
+        self._debug("update_actor:batch_to_cuda:end")
 
         log_gpu_memory_usage('Before update policy', logger=logger)
 
         with self.ulysses_sharding_manager:
+            self._debug("update_actor:ulysses_entered")
             data = self.ulysses_sharding_manager.preprocess_data(data=data)
+            self._debug("update_actor:preprocess:end")
             # perform training
             with Timer(name='update_policy', logger=None) as timer:
+                self._debug("update_actor:inner_update:start")
                 metrics = self.actor.update_policy(data=data)
+                self._debug("update_actor:inner_update:end")
             delta_time = timer.last
             global_num_tokens = data.meta_info['global_token_num']
             estimated_flops, promised_flops = self.flops_counter.estimate_flops(global_num_tokens, delta_time)
@@ -421,18 +445,27 @@ class ActorRolloutRefWorker(Worker):
             # TODO: here, we should return all metrics
             output = DataProto(meta_info={'metrics': metrics})
 
+            self._debug("update_actor:postprocess:start")
             output = self.ulysses_sharding_manager.postprocess_data(data=output)
+            self._debug("update_actor:postprocess:end")
+            self._debug("update_actor:to_cpu:start")
             output = output.to('cpu')
+            self._debug("update_actor:to_cpu:end")
 
         if self._is_offload_param:
             offload_fsdp_param_and_grad(module=self.actor_module_fsdp, offload_grad=self._is_offload_grad)
+            self._debug("update_actor:offload_param:end")
         if self._is_offload_optimizer:
             offload_fsdp_optimizer(optimizer=self.actor_optimizer)
+            self._debug("update_actor:offload_optimizer:end")
         torch.cuda.empty_cache()
+        self._debug("update_actor:empty_cache:end")
+        self._debug("update_actor:end")
         return output
 
     @register(dispatch_mode=Dispatch.DP_COMPUTE_PROTO)
     def generate_sequences(self, prompts: DataProto):
+        self._debug(f"generate_sequences:start batch_size={len(prompts.batch)}")
         prompts = prompts.to('cuda')
 
         assert self._is_rollout
@@ -455,11 +488,15 @@ class ActorRolloutRefWorker(Worker):
             log_gpu_memory_usage('After entering rollout sharding manager', logger=logger)
 
             prompts = self.rollout_sharding_manager.preprocess_data(prompts)
+            self._debug("generate_sequences:rollout_call:start")
             output = self.rollout.generate_sequences(prompts=prompts)
+            self._debug("generate_sequences:rollout_call:end")
 
             log_gpu_memory_usage('After rollout generation', logger=logger)
 
+            self._debug("generate_sequences:postprocess:start")
             output = self.rollout_sharding_manager.postprocess_data(output)
+            self._debug("generate_sequences:postprocess:end")
 
         output = output.to('cpu')
 
@@ -469,10 +506,12 @@ class ActorRolloutRefWorker(Worker):
         # clear kv cache
         torch.cuda.empty_cache()
         log_gpu_memory_usage('After recompute log prob', logger=logger)
+        self._debug("generate_sequences:end")
         return output
 
     @register(dispatch_mode=Dispatch.DP_COMPUTE_PROTO)
     def compute_log_prob(self, data: DataProto):
+        self._debug("compute_log_prob:start")
         assert self._is_actor
         if self._is_offload_param:
             load_fsdp_param_and_grad(module=self.actor_module_fsdp,
@@ -506,10 +545,12 @@ class ActorRolloutRefWorker(Worker):
         # clear kv cache
         torch.cuda.empty_cache()
         log_gpu_memory_usage('After compute_log_prob', logger=logger)
+        self._debug("compute_log_prob:end")
         return output
 
     @register(dispatch_mode=Dispatch.DP_COMPUTE_PROTO)
     def compute_ref_log_prob(self, data: DataProto):
+        self._debug("compute_ref_log_prob:start")
         assert self._is_ref
 
         data = data.to('cuda')
@@ -533,6 +574,7 @@ class ActorRolloutRefWorker(Worker):
             self.ref_policy.actor_module._handle.reshard(True)
 
         torch.cuda.empty_cache()
+        self._debug("compute_ref_log_prob:end")
         return output
 
     @register(dispatch_mode=Dispatch.ONE_TO_ALL)
@@ -608,6 +650,21 @@ class CriticWorker(Worker):
             self.config.ppo_micro_batch_size_per_gpu = self.config.ppo_micro_batch_size
             self.config.forward_micro_batch_size_per_gpu = self.config.forward_micro_batch_size
             assert self.config.ppo_mini_batch_size % self.config.ppo_micro_batch_size_per_gpu == 0
+
+    @staticmethod
+    def _debug_enabled() -> bool:
+        return os.getenv("VERL_IMPROVE_DEBUG_PROGRESS", "0") == "1"
+
+    @staticmethod
+    def _debug_all_ranks() -> bool:
+        return os.getenv("VERL_IMPROVE_DEBUG_ALL_RANKS", "0") == "1"
+
+    def _debug(self, message: str) -> None:
+        if self._debug_enabled() and (self._debug_all_ranks() or self.rank == 0):
+            print(
+                f"[improve-critic][rank={self.rank}][{datetime.datetime.utcnow().strftime('%H:%M:%S')}] {message}",
+                flush=True,
+            )
 
     def _build_critic_model_optimizer(self, config):
         # the following line is necessary
@@ -754,6 +811,7 @@ class CriticWorker(Worker):
 
     @register(dispatch_mode=Dispatch.DP_COMPUTE_PROTO)
     def compute_values(self, data: DataProto):
+        self._debug("compute_values:start")
         data = data.to('cuda')
 
         if self._is_offload_param:
@@ -775,24 +833,33 @@ class CriticWorker(Worker):
         if self._is_offload_param:
             offload_fsdp_param_and_grad(module=self.critic_module, offload_grad=self._is_offload_grad)
         torch.cuda.empty_cache()
+        self._debug("compute_values:end")
         return output
 
     @register(dispatch_mode=Dispatch.DP_COMPUTE_PROTO)
     def update_critic(self, data: DataProto):
+        self._debug("update_critic:start")
         data = data.to('cuda')
+        self._debug("update_critic:data_to_cuda:end")
         if self._is_offload_param:
             load_fsdp_param_and_grad(module=self.critic_module,
                                      device_id=torch.cuda.current_device(),
                                      load_grad=self._is_offload_grad)
+            self._debug("update_critic:load_param:end")
         if self._is_offload_optimizer:
             load_fsdp_optimizer(optimizer=self.critic_optimizer, device_id=torch.cuda.current_device())
+            self._debug("update_critic:load_optimizer:end")
 
         # perform forward computation
         with self.ulysses_sharding_manager:
+            self._debug("update_critic:ulysses_entered")
             data = self.ulysses_sharding_manager.preprocess_data(data=data)
+            self._debug("update_critic:preprocess:end")
 
             with Timer(name='update_critic', logger=None) as timer:
+                self._debug("update_critic:inner_update:start")
                 metrics = self.critic.update_critic(data=data)
+                self._debug("update_critic:inner_update:end")
             delta_time = timer.last
 
             global_num_tokens = data.meta_info['global_token_num']
@@ -804,14 +871,22 @@ class CriticWorker(Worker):
             metrics['critic/lr'] = lr
 
             output = DataProto(batch=None, meta_info={'metrics': metrics})
+            self._debug("update_critic:postprocess:start")
             output = self.ulysses_sharding_manager.postprocess_data(data=output)
+            self._debug("update_critic:postprocess:end")
 
         if self._is_offload_param:
             offload_fsdp_param_and_grad(module=self.critic_module, offload_grad=self._is_offload_grad)
+            self._debug("update_critic:offload_param:end")
         if self._is_offload_optimizer:
             offload_fsdp_optimizer(optimizer=self.critic_optimizer)
+            self._debug("update_critic:offload_optimizer:end")
         torch.cuda.empty_cache()
+        self._debug("update_critic:empty_cache:end")
+        self._debug("update_critic:to_cpu:start")
         output = output.to('cpu')
+        self._debug("update_critic:to_cpu:end")
+        self._debug("update_critic:end")
         return output
 
     @register(dispatch_mode=Dispatch.ONE_TO_ALL)

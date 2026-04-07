@@ -1,0 +1,133 @@
+# Multi-agent extension.
+# Derived from: /Users/mavinomichael/PycharmProjects/AgentGym-RL/AgentGym-RL/verl/agent_trainer/config/generation.yaml
+# Original file left untouched for comparison.
+
+defaults:
+  - task: webarena
+  - runtime: qwen2_5_7b_1gpu_smoke
+  - _self_
+
+trainer:
+  nnodes: ${runtime.nnodes}
+  n_gpus_per_node: ${runtime.n_gpus_per_node}
+
+data:
+  path: ${oc.env:DATA_ROOT,.}/${task.eval_dir}
+  max_prompt_length: ${task.eval_max_prompt_length}
+  max_response_length: ${task.eval_max_response_length}
+  prompt_key: item_id
+  n_samples: ${runtime.eval_n_samples}
+  output_path: null
+  batch_size: ${task.eval_batch_size}
+
+multi_agent:
+  enabled: true
+  topology: planner_executor
+  shared_policy: true
+  centralized_critic: true
+  count_rounds_as: env_steps
+  reward_mode: delta_per_executor_step
+  invalid_output:
+    policy: terminate_with_penalty
+    penalty: -0.2
+    max_retries: 2
+    retry_temperature: 0.2
+    retry_max_tokens: 80
+    planner_max_retries: 0
+    planner_retry_temperature: 0.1
+    planner_retry_max_tokens: 16
+  debug:
+    trace_executor_payload: false
+    trace_dir: /mnt/data/logs
+    trace_max_chars: 800
+  roles:
+    planner:
+      max_tokens: ${task.planner_max_tokens}
+      temperature: ${runtime.eval_temperature}
+      ppo_weight: 1.0
+      kl_weight: 4.0
+    planner_reviewer:
+      max_tokens: 96
+      temperature: ${runtime.eval_temperature}
+      ppo_weight: 0.5
+      kl_weight: 6.0
+    executor:
+      max_tokens: ${task.executor_max_tokens}
+      temperature: ${runtime.eval_temperature}
+      ppo_weight: 1.0
+      kl_weight: 1.0
+    executor_reviewer:
+      max_tokens: 64
+      temperature: ${runtime.eval_temperature}
+      ppo_weight: 0.5
+      kl_weight: 6.0
+
+agentgym:
+  task_name: ${task.task_name}
+  env_addr: ${runtime.env_server_url}
+  max_retries: 10
+  max_rounds: ${task.eval_max_rounds}
+  timeout: ${task.default_timeout}
+
+model:
+  path: ${runtime.model_path}
+  external_lib: null
+
+rollout:
+  name: vllm
+  temperature: ${runtime.eval_temperature}
+  top_k: -1
+  top_p: 1
+  prompt_length: ${data.max_prompt_length}
+  response_length: ${data.max_response_length}
+  dtype: bfloat16
+  gpu_memory_utilization: ${runtime.eval_gpu_memory_utilization}
+  ignore_eos: False
+  enforce_eager: True
+  free_cache_engine: True
+  load_format: dummy_dtensor
+  tensor_model_parallel_size: ${runtime.tensor_model_parallel_size}
+  max_num_batched_tokens: ${runtime.max_num_batched_tokens}
+  max_model_len: ${runtime.max_model_len}
+  max_num_seqs: ${runtime.max_num_seqs}
+  log_prob_micro_batch_size: null
+  log_prob_micro_batch_size_per_gpu: 1
+  log_prob_use_dynamic_bsz: ${actor.use_dynamic_bsz}
+  log_prob_max_token_len_per_gpu: ${actor.ppo_max_token_len_per_gpu}
+  max_tokens: ${task.rollout_max_tokens}
+  disable_log_stats: True
+  enable_chunked_prefill: True
+  do_sample: True
+  n: 1
+  send_interval: 1
+  rollout_log_dir: ${oc.env:SAVE_ROOT,checkpoints}/eval_logs/${task.task_name}
+
+actor:
+  strategy: fsdp
+  ppo_mini_batch_size: ${task.ppo_mini_batch_size}
+  ppo_micro_batch_size: null
+  ppo_micro_batch_size_per_gpu: 1
+  use_dynamic_bsz: False
+  ppo_max_token_len_per_gpu: ${runtime.actor_ppo_max_token_len_per_gpu}
+  grad_clip: 1.0
+  clip_ratio: 0.2
+  entropy_coeff: 0.001
+  use_kl_loss: False
+  kl_loss_coef: 0.001
+  kl_loss_type: low_var_kl
+  ppo_epochs: 1
+  shuffle: False
+  ulysses_sequence_parallel_size: 1
+  optim:
+    lr: 1e-6
+    lr_warmup_steps_ratio: 0.
+    min_lr_ratio: null
+    warmup_style: constant
+    total_training_steps: -1
+  fsdp_config:
+    wrap_policy:
+      min_num_params: 0
+    param_offload: False
+    grad_offload: False
+    optimizer_offload: False
+    fsdp_size: -1

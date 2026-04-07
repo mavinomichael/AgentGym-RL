@@ -28,6 +28,13 @@ from .rewarding import (
     detect_babyai_milestones,
     detect_subgoal_completion,
 )
+from .rollout_harness import (
+    ScriptedExecutorAgent,
+    ScriptedPlannerAgent,
+    aggregate_episode_records,
+    ensure_harness_passed,
+    run_babyai_rollout_episode,
+)
 from .trace_bootstrap import (
     build_executor_sft_dataset,
     build_planner_sft_dataset,
@@ -56,7 +63,12 @@ __all__ = [
     "compute_rolewise_gae_advantage_return",
     "detect_babyai_milestones",
     "detect_subgoal_completion",
+    "aggregate_episode_records",
+    "ensure_harness_passed",
     "render_babyai_action_payload",
+    "run_babyai_rollout_episode",
+    "ScriptedExecutorAgent",
+    "ScriptedPlannerAgent",
     "validate_executor_json",
     "validate_planner_json",
 ]

@@ -109,6 +109,8 @@ else
   bash "$SCRIPT_DIR/run_babyai_planner_warmstart.sh"
 fi
 run_planner_eval
+echo "[rollout harness] recovery ladder before RL"
+bash "$SCRIPT_DIR/run_babyai_rollout_recovery_ladder.sh"
 echo "[stage 3] planner RL with frozen executor"
 bash "$SCRIPT_DIR/run_babyai_planner_frozen_rl.sh"
 echo "[stage 4] light joint RL with milestones"

@@ -25,11 +25,15 @@ export CRITIC_MAX_TOKEN_LEN_PER_GPU="${CRITIC_MAX_TOKEN_LEN_PER_GPU:-4096}"
 export USE_REMOVE_PADDING="${USE_REMOVE_PADDING:-true}"
 export ACTOR_PARAM_OFFLOAD="${ACTOR_PARAM_OFFLOAD:-true}"
 export ACTOR_GRAD_OFFLOAD="${ACTOR_GRAD_OFFLOAD:-true}"
-export ACTOR_OPTIMIZER_OFFLOAD="${ACTOR_OPTIMIZER_OFFLOAD:-true}"
+# Actor optimizer offload is also disabled in smoke mode to avoid the same
+# post-update offload stall pattern seen on the critic side.
+export ACTOR_OPTIMIZER_OFFLOAD="${ACTOR_OPTIMIZER_OFFLOAD:-false}"
 export REF_PARAM_OFFLOAD="${REF_PARAM_OFFLOAD:-true}"
 export CRITIC_PARAM_OFFLOAD="${CRITIC_PARAM_OFFLOAD:-true}"
 export CRITIC_GRAD_OFFLOAD="${CRITIC_GRAD_OFFLOAD:-true}"
-export CRITIC_OPTIMIZER_OFFLOAD="${CRITIC_OPTIMIZER_OFFLOAD:-true}"
+# Critic optimizer offload is disabled in smoke mode because we have repeatedly
+# stalled after `update_critic:offload_param:end` and before `offload_optimizer:end`.
+export CRITIC_OPTIMIZER_OFFLOAD="${CRITIC_OPTIMIZER_OFFLOAD:-false}"
 export ROLE_LOCAL_OPTIMIZATION="${ROLE_LOCAL_OPTIMIZATION:-true}"
 export ROLE_LOCAL_ADVANTAGE="${ROLE_LOCAL_ADVANTAGE:-true}"
 export ROLE_AUX_REWARDS="${ROLE_AUX_REWARDS:-true}"
@@ -38,11 +42,35 @@ export PLANNER_PPO_WEIGHT="${PLANNER_PPO_WEIGHT:-1.0}"
 export PLANNER_KL_WEIGHT="${PLANNER_KL_WEIGHT:-1.5}"
 export EXECUTOR_PPO_WEIGHT="${EXECUTOR_PPO_WEIGHT:-0.0}"
 export EXECUTOR_KL_WEIGHT="${EXECUTOR_KL_WEIGHT:-0.0}"
+export ENV_TIMEOUT="${ENV_TIMEOUT:-45}"
+export DEBUG_PROGRESS="${DEBUG_PROGRESS:-1}"
+export DEBUG_ALL_RANKS="${DEBUG_ALL_RANKS:-1}"
+export SKIP_VLLM_OFFLOAD="${SKIP_VLLM_OFFLOAD:-1}"
+export CLEAN_RAY_BEFORE_RUN="${CLEAN_RAY_BEFORE_RUN:-1}"
 export N_GPUS="${N_GPUS:-8}"
+export ENFORCE_ROLLOUT_HARNESS="${ENFORCE_ROLLOUT_HARNESS:-true}"
+export HARNESS_SUMMARY_PATH="${HARNESS_SUMMARY_PATH:-$SAVE_ROOT/improve_multi_agent/rollout_harness/learned_planner_frozen_executor/summary.json}"
 
 if [[ ! -d "$MODEL_PATH" ]]; then
   echo "Planner warm-start checkpoint not found at $MODEL_PATH" >&2
   exit 1
+fi
+
+if [[ "$ENFORCE_ROLLOUT_HARNESS" == "true" ]]; then
+  python3 - "$REPO_ROOT" "$HARNESS_SUMMARY_PATH" <<'PY'
+import sys
+from pathlib import Path
+
+repo_root = Path(sys.argv[1])
+for candidate in (repo_root / "AgentGym-RL", repo_root):
+    candidate_str = str(candidate)
+    if candidate_str not in sys.path:
+        sys.path.insert(0, candidate_str)
+
+from verl.improve_multi_agent.rollout_harness import ensure_harness_passed
+
+ensure_harness_passed(sys.argv[2])
+PY
 fi
 
 LOG_ROOT="${LOG_ROOT:-$SAVE_ROOT/improve_multi_agent/smoke_logs}"
@@ -52,6 +80,11 @@ SUMMARY_PATH="$SUMMARY_ROOT/${EXP_NAME}.json"
 CHECKPOINT_ROOT="$SAVE_ROOT/improve_multi_agent/$EXP_NAME"
 
 mkdir -p "$LOG_ROOT" "$SUMMARY_ROOT" "$CHECKPOINT_ROOT"
+rm -f "$SUMMARY_PATH"
+
+if [[ "$CLEAN_RAY_BEFORE_RUN" == "1" ]]; then
+  ray stop --force >/dev/null 2>&1 || true
+fi
 
 python3 "$SCRIPT_DIR/monitor_stage3_smoke.py" \
   --log-path "$LOG_PATH" \

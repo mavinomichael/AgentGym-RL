@@ -2,6 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+REPO_ROOT=$(cd "$SCRIPT_DIR/../.." && pwd)
 SAVE_ROOT="${SAVE_ROOT:-/mnt/data/saves}"
 PLANNER_WARMSTART_CKPT="$SAVE_ROOT/improve_multi_agent/improve_babyai_planner_warmstart_v1/global_step_200"
 BASE_MODEL_DEFAULT="/home/mavinomichael/AgentGym-RL/models/Qwen2.5-7B-Instruct"
@@ -32,8 +33,27 @@ export REF_PARAM_OFFLOAD="${REF_PARAM_OFFLOAD:-true}"
 export CRITIC_PARAM_OFFLOAD="${CRITIC_PARAM_OFFLOAD:-true}"
 export CRITIC_GRAD_OFFLOAD="${CRITIC_GRAD_OFFLOAD:-true}"
 export CRITIC_OPTIMIZER_OFFLOAD="${CRITIC_OPTIMIZER_OFFLOAD:-true}"
+export ENFORCE_ROLLOUT_HARNESS="${ENFORCE_ROLLOUT_HARNESS:-true}"
+export HARNESS_SUMMARY_PATH="${HARNESS_SUMMARY_PATH:-$SAVE_ROOT/improve_multi_agent/rollout_harness/learned_planner_frozen_executor/summary.json}"
 if [[ ( -z "${MODEL_PATH:-}" || "${MODEL_PATH:-}" == "$BASE_MODEL_DEFAULT" ) && -d "$PLANNER_WARMSTART_CKPT" ]]; then
   export MODEL_PATH="$PLANNER_WARMSTART_CKPT"
+fi
+
+if [[ "$ENFORCE_ROLLOUT_HARNESS" == "true" ]]; then
+  python3 - "$REPO_ROOT" "$HARNESS_SUMMARY_PATH" <<'PY'
+import sys
+from pathlib import Path
+
+repo_root = Path(sys.argv[1])
+for candidate in (repo_root / "AgentGym-RL", repo_root):
+    candidate_str = str(candidate)
+    if candidate_str not in sys.path:
+        sys.path.insert(0, candidate_str)
+
+from verl.improve_multi_agent.rollout_harness import ensure_harness_passed
+
+ensure_harness_passed(sys.argv[2])
+PY
 fi
 
 bash "$SCRIPT_DIR/run_babyai_joint_rl.sh"

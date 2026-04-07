@@ -316,6 +316,22 @@ def compute_data_metrics(batch, use_critic=True):
     valid_adv = torch.masked_select(advantages, response_mask)
     valid_returns = torch.masked_select(returns, response_mask)
 
+    def _safe_mean_max_min(tensor: torch.Tensor) -> tuple[float, float, float]:
+        if tensor.numel() == 0:
+            return 0.0, 0.0, 0.0
+        return (
+            torch.mean(tensor).detach().item(),
+            torch.max(tensor).detach().item(),
+            torch.min(tensor).detach().item(),
+        )
+
+    def _safe_var(tensor: torch.Tensor) -> torch.Tensor:
+        if tensor.numel() == 0:
+            return torch.zeros((), dtype=torch.float32, device=advantages.device)
+        if tensor.numel() == 1:
+            return torch.zeros((), dtype=tensor.dtype, device=tensor.device)
+        return torch.var(tensor, unbiased=False)
+
     if use_critic:
         values = batch.batch['values']
         if values.shape[-1] != response_mask.shape[-1]:
@@ -327,8 +343,13 @@ def compute_data_metrics(batch, use_critic=True):
             valid_adv = torch.masked_select(advantages, response_mask)
             valid_returns = torch.masked_select(returns, response_mask)
         valid_values = torch.masked_select(values, response_mask)
-        return_diff_var = torch.var(valid_returns - valid_values)
-        return_var = torch.var(valid_returns)
+        return_diff_var = _safe_var(valid_returns - valid_values)
+        return_var = _safe_var(valid_returns)
+
+    adv_mean, adv_max, adv_min = _safe_mean_max_min(valid_adv)
+    returns_mean, returns_max, returns_min = _safe_mean_max_min(valid_returns)
+    if use_critic:
+        values_mean, values_max, values_min = _safe_mean_max_min(valid_values)
 
     metrics = {
         # score
@@ -361,23 +382,23 @@ def compute_data_metrics(batch, use_critic=True):
             torch.min(sequence_reward).detach().item(),
         # adv
         'critic/advantages/mean':
-            torch.mean(valid_adv).detach().item(),
+            adv_mean,
         'critic/advantages/max':
-            torch.max(valid_adv).detach().item(),
+            adv_max,
         'critic/advantages/min':
-            torch.min(valid_adv).detach().item(),
+            adv_min,
         # returns
         'critic/returns/mean':
-            torch.mean(valid_returns).detach().item(),
+            returns_mean,
         'critic/returns/max':
-            torch.max(valid_returns).detach().item(),
+            returns_max,
         'critic/returns/min':
-            torch.min(valid_returns).detach().item(),
+            returns_min,
         **({
             # values
-            'critic/values/mean': torch.mean(valid_values).detach().item(),
-            'critic/values/max': torch.max(valid_values).detach().item(),
-            'critic/values/min': torch.min(valid_values).detach().item(),
+            'critic/values/mean': values_mean,
+            'critic/values/max': values_max,
+            'critic/values/min': values_min,
             # vf explained var
             'critic/vf_explained_var': (1.0 - return_diff_var / (return_var + 1e-5)).detach().item(),
         } if use_critic else {}),
@@ -411,14 +432,18 @@ def compute_timing_metrics(batch, timing_raw):
         },
     }
 
+    timing_per_token = {}
+    for name in set(num_tokens_of_section.keys()) & set(timing_raw.keys()):
+        denom = num_tokens_of_section[name]
+        if denom <= 0:
+            continue
+        timing_per_token[f'timing_per_token_ms/{name}'] = timing_raw[name] * 1000 / denom
+
     return {
         **{
             f'timing_s/{name}': value for name, value in timing_raw.items()
         },
-        **{
-            f'timing_per_token_ms/{name}': timing_raw[name] * 1000 / num_tokens_of_section[name] for name in set(num_tokens_of_section.keys(
-            )) & set(timing_raw.keys())
-        },
+        **timing_per_token,
     }
 
 

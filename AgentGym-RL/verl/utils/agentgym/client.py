@@ -43,9 +43,17 @@ def init_env_client(args):
     if envclient_class is None:
         raise ValueError(f"Unsupported task name: {args.task_name}")
     retry = 0
+    timeout = None
+    if hasattr(args, "get"):
+        timeout = args.get("timeout", None)
+    if timeout is None:
+        timeout = getattr(args, "timeout", None)
+    if timeout is None:
+        timeout = os.getenv("VERL_AGENTGYM_TIMEOUT", 2400)
+    timeout = int(timeout)
     while True:
         try:
-            env_client = envclient_class(env_server_base=args.env_addr, data_len=1, timeout=2400)
+            env_client = envclient_class(env_server_base=args.env_addr, data_len=1, timeout=timeout)
             break
         except Exception as e:
             retry += 1

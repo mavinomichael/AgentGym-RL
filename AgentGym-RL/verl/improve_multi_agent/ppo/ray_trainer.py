@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 from copy import deepcopy
+import time
 import uuid
 
 import numpy as np
@@ -123,15 +124,32 @@ def _assert_training_batch_ready(batch: DataProto, use_reference_policy: bool) -
     ]
     if use_reference_policy and "ref_log_prob" not in batch.batch.keys():
         missing_batch_keys.append("ref_log_prob")
+    if "transition_outcome_recorded" not in batch.batch.keys():
+        missing_batch_keys.append("transition_outcome_recorded")
     missing_meta_keys = [key for key in ("global_token_num",) if key not in batch.meta_info]
     if missing_batch_keys or missing_meta_keys:
         raise RuntimeError(
             "Improve multi-agent smoke guard failed: "
             f"missing batch keys={missing_batch_keys} missing meta keys={missing_meta_keys}"
         )
+    unresolved_mask = batch.batch["transition_outcome_recorded"] < 0.5
+    if torch.any(unresolved_mask):
+        unresolved_indices = torch.nonzero(unresolved_mask, as_tuple=False).view(-1).tolist()
+        raise RuntimeError(
+            "Improve multi-agent rollout invariant failed: "
+            f"unresolved transitions at batch indices={unresolved_indices}"
+        )
 
 
 class RayPPOTrainer(BaseRayPPOTrainer):
+    @staticmethod
+    def _debug_enabled() -> bool:
+        return os.getenv("VERL_IMPROVE_DEBUG_PROGRESS", "0") == "1"
+
+    def _debug(self, message: str) -> None:
+        if self._debug_enabled():
+            print(f"[improve-trainer][{time.strftime('%H:%M:%S')}] {message}", flush=True)
+
     def _create_dataloader(self):
         from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 
@@ -209,7 +227,15 @@ class RayPPOTrainer(BaseRayPPOTrainer):
 
                 with _timer("step", timing_raw):
                     with _timer("gen", timing_raw):
+                        self._debug(
+                            f"step={self.global_steps} gen:start max_rounds={gen_batch.meta_info['max_rounds']} batch_size={len(gen_batch.batch)}"
+                        )
                         gen_batch_output = self.actor_rollout_wg.generate_sequences(gen_batch)
+                        self._debug(
+                            "step="
+                            f"{self.global_steps} gen:end response_batch={len(gen_batch_output.batch)} "
+                            f"transition_recorded_mean={float(gen_batch_output.batch['transition_outcome_recorded'].float().mean().item()):.3f}"
+                        )
 
                     if self.config.algorithm.adv_estimator == "remax":
                         with _timer("gen_max", timing_raw):
@@ -232,19 +258,26 @@ class RayPPOTrainer(BaseRayPPOTrainer):
                     batch.meta_info["global_token_num"] = torch.sum(batch.batch["attention_mask"], dim=-1).tolist()
 
                     with _timer("old_log_prob", timing_raw):
+                        self._debug(f"step={self.global_steps} old_log_prob:start")
                         old_log_prob = self.actor_rollout_wg.compute_log_prob(batch)
                         batch = batch.union(old_log_prob)
+                        self._debug(f"step={self.global_steps} old_log_prob:end")
 
                     if self.use_reference_policy:
                         with _timer("ref", timing_raw):
+                            self._debug(f"step={self.global_steps} ref_log_prob:start")
                             ref_log_prob = self.ref_policy_wg.compute_ref_log_prob(batch)
                             batch = batch.union(ref_log_prob)
+                            self._debug(f"step={self.global_steps} ref_log_prob:end")
 
                     if self.use_critic:
                         with _timer("values", timing_raw):
+                            self._debug(f"step={self.global_steps} values:start")
                             values = self.critic_wg.compute_values(batch)
                             batch = batch.union(values)
+                            self._debug(f"step={self.global_steps} values:end")
                     with _timer("adv", timing_raw):
+                        self._debug(f"step={self.global_steps} adv:start")
                         reward_tensor = batch.batch["scores"]
                         batch.batch["token_level_scores"] = reward_tensor
                         if not self.config.actor_rollout_ref.actor.get("use_kl_loss", False):
@@ -271,18 +304,25 @@ class RayPPOTrainer(BaseRayPPOTrainer):
                                 lam=self.config.algorithm.lam,
                                 num_repeat=self.config.actor_rollout_ref.rollout.n,
                             )
+                        self._debug(f"step={self.global_steps} adv:end")
                     _assert_training_batch_ready(batch, use_reference_policy=self.use_reference_policy)
                     if self.use_critic:
                         with _timer("update_critic", timing_raw):
+                            self._debug(f"step={self.global_steps} update_critic:start")
                             critic_output = self.critic_wg.update_critic(batch)
+                            self._debug(f"step={self.global_steps} update_critic:end")
                         metrics.update(reduce_metrics(critic_output.meta_info["metrics"]))
                     if self.config.trainer.critic_warmup <= self.global_steps:
                         with _timer("update_actor", timing_raw):
+                            self._debug(f"step={self.global_steps} update_actor:start")
                             actor_output = self.actor_rollout_wg.update_actor(batch)
+                            self._debug(f"step={self.global_steps} update_actor:end")
                         metrics.update(reduce_metrics(actor_output.meta_info["metrics"]))
                     if should_save_checkpoint(self.global_steps):
                         with _timer("save_checkpoint", timing_raw):
+                            self._debug(f"step={self.global_steps} save_checkpoint:start")
                             self._save_checkpoint()
+                            self._debug(f"step={self.global_steps} save_checkpoint:end")
 
                 metrics.update(compute_data_metrics(batch=batch, use_critic=self.use_critic))
                 metrics.update(compute_timing_metrics(batch=batch, timing_raw=timing_raw))
@@ -290,6 +330,7 @@ class RayPPOTrainer(BaseRayPPOTrainer):
                 metrics["collapse_state"] = collapse_state.status
                 metrics["collapse_reasons"] = ",".join(collapse_state.reasons)
                 logger.log(data=metrics, step=self.global_steps)
+                self._debug(f"step:{self.global_steps} logged collapse_state={collapse_state.status}")
 
                 if collapse_state.status == "collapse":
                     summary_path = os.path.join(collapse_dir, f"step_{self.global_steps:06d}.json")

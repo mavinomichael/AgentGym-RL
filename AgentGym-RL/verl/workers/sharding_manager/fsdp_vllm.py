@@ -14,6 +14,7 @@
 
 import os
 import logging
+import time
 import numpy as np
 import torch
 from torch.distributed.fsdp.fully_sharded_data_parallel import FullyShardedDataParallel as FSDP
@@ -31,6 +32,23 @@ from .base import BaseShardingManager
 
 logger = logging.getLogger(__file__)
 logger.setLevel(os.getenv('VERL_PPO_LOGGING_LEVEL', 'WARN'))
+
+
+def _debug_enabled() -> bool:
+    return os.getenv("VERL_IMPROVE_DEBUG_PROGRESS", "0") == "1"
+
+
+def _debug_all_ranks() -> bool:
+    return os.getenv("VERL_IMPROVE_DEBUG_ALL_RANKS", "0") == "1"
+
+
+def _debug(message: str) -> None:
+    rank = torch.distributed.get_rank() if torch.distributed.is_initialized() else 0
+    if _debug_enabled() and (_debug_all_ranks() or rank == 0):
+        print(
+            f"[improve-fsdp-vllm][rank={rank}][{time.strftime('%H:%M:%S')}] {message}",
+            flush=True,
+        )
 
 
 class FSDPVLLMShardingManager(BaseShardingManager):
@@ -69,11 +87,15 @@ class FSDPVLLMShardingManager(BaseShardingManager):
             self.gen_random_states = None
 
     def __enter__(self):
+        _debug("__enter__:start")
         log_gpu_memory_usage('Before state_dict() in sharding manager memory', logger=logger)
+        _debug("__enter__:state_dict:start")
         params = self.module.state_dict()
+        _debug("__enter__:state_dict:end")
         log_gpu_memory_usage('After state_dict() in sharding manager memory', logger=logger)
         # Copy, not share memory
         load_format = 'hf' if self.full_params else 'dtensor'
+        _debug(f"__enter__:sync_model_weights:start load_format={load_format}")
         if vllm_version in ('0.4.2', '0.5.4', '0.6.3'):
             self.inference_engine.sync_model_weights(params, load_format=load_format)
         else:
@@ -85,6 +107,7 @@ class FSDPVLLMShardingManager(BaseShardingManager):
                     params, self.inference_engine.llm_engine.model_executor.driver_worker.worker.model_runner.model)
             else:
                 raise NotImplementedError(f'load_format {load_format} not implemented')
+        _debug("__enter__:sync_model_weights:end")
         log_gpu_memory_usage('After sync model weights in sharding manager', logger=logger)
 
         del params
@@ -101,14 +124,19 @@ class FSDPVLLMShardingManager(BaseShardingManager):
         if self.device_mesh is not None:
             self.torch_random_states = torch.cuda.get_rng_state()
             torch.cuda.set_rng_state(self.gen_random_states)
+        _debug("__enter__:end")
 
     def __exit__(self, exc_type, exc_value, traceback):
+        _debug("__exit__:start")
         log_gpu_memory_usage('Before vllm offload in sharding manager', logger=logger)
-        # TODO(ZSL): check this
-        if vllm_version in ('0.4.2', '0.5.4', '0.6.3'):
-            self.inference_engine.offload_model_weights()
+        if os.getenv("VERL_IMPROVE_SKIP_VLLM_OFFLOAD", "0") == "1":
+            _debug("__exit__:skip_offload")
         else:
-            self.inference_engine.sleep(level=1)
+            # TODO(ZSL): check this
+            if vllm_version in ('0.4.2', '0.5.4', '0.6.3'):
+                self.inference_engine.offload_model_weights()
+            else:
+                self.inference_engine.sleep(level=1)
         log_gpu_memory_usage('After vllm offload in sharding manager', logger=logger)
 
         # self.module.to('cuda')
@@ -124,6 +152,7 @@ class FSDPVLLMShardingManager(BaseShardingManager):
         if self.device_mesh is not None:
             self.gen_random_states = torch.cuda.get_rng_state()
             torch.cuda.set_rng_state(self.torch_random_states)
+        _debug("__exit__:end")
 
     def preprocess_data(self, data: DataProto) -> DataProto:
         # TODO: Current impl doesn't consider FSDP with torch micro-dp
@@ -144,6 +173,7 @@ class FSDPVLLMShardingManager(BaseShardingManager):
         return data
 
     def postprocess_data(self, data: DataProto) -> DataProto:
+        _debug("postprocess_data:start")
         # TODO: Current impl doesn't consider FSDP with torch micro-dp
         local_world_size = vllm_ps.get_tensor_model_parallel_world_size()
         src_rank = (torch.distributed.get_rank() // local_world_size) * local_world_size
@@ -160,4 +190,5 @@ class FSDPVLLMShardingManager(BaseShardingManager):
             # TODO: shall we build a micro_dp group for vllm when integrating with vLLM?
             local_prompts = data.chunk(chunks=tp_size)
             data = local_prompts[dp_rank % tp_size]
+        _debug("postprocess_data:end")
         return data

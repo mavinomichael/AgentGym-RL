@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
+import os
 import re
+import time
 from typing import Any, Dict, List, Optional
 
 import numpy as np
@@ -61,15 +63,33 @@ class vLLMRollout(LegacyVLLMRollout):
             multi_agent_config=improve_config,
             **kwargs,
         )
+        self.rank = torch.distributed.get_rank() if torch.distributed.is_initialized() else 0
         self.trace_executor_payload = True
+        if self.trace_executor_payload:
+            self.trace_dir = str(self._multi_agent_get("debug.trace_dir", "/mnt/data/logs"))
+            self.trace_file = os.path.join(self.trace_dir, f"executor_payload_trace_rank{self.rank}.jsonl")
+            os.makedirs(self.trace_dir, exist_ok=True)
         self.topology = "planner_executor"
         self.invalid_output_max_retries = 0
         self.planner_max_retries = 0
         self.planner_interval = int(self._multi_agent_get("planner_interval", 3))
-        self.rank = torch.distributed.get_rank() if torch.distributed.is_initialized() else 0
+        self.debug_progress = os.getenv("VERL_IMPROVE_DEBUG_PROGRESS", "0") == "1"
+        self.debug_all_ranks = os.getenv("VERL_IMPROVE_DEBUG_ALL_RANKS", "0") == "1"
+
+    def _debug(self, message: str) -> None:
+        if self.debug_progress and (self.debug_all_ranks or self.rank == 0):
+            print(f"[improve-rollout][{time.strftime('%H:%M:%S')}] {message}", flush=True)
 
     def _planner_message_to_prompt(self, message: PlannerMessage) -> str:
         return message.to_json()
+
+    def _build_turn_prompt_token_ids(self, prompt: str) -> List[int]:
+        messages = [{"role": "user", "content": prompt}]
+        try:
+            return self.tokenizer.apply_chat_template(messages, add_generation_prompt=True, tokenize=True)
+        except Exception:
+            encoded = self.tokenizer(prompt, add_special_tokens=False)
+            return list(encoded["input_ids"])
 
     def _feature_enabled(self, key: str, default: bool = True) -> bool:
         if self.improve_config is None:
@@ -114,6 +134,9 @@ class vLLMRollout(LegacyVLLMRollout):
         do_sample = prompts.meta_info.get("do_sample", True)
 
         batch_size = prompts.batch["input_ids"].size(0) * self.config.n
+        self._debug(
+            f"generate_sequences:start global_steps={global_steps} max_rounds={max_rounds} batch_size={batch_size}"
+        )
         rollout_handler_ls = self.preprocess_prompt_to_rollout_handler(prompts, n=self.config.n)
         env_clients = [init_env_client(self.agentgym_config) for _ in range(batch_size)]
         previous_scores = [0.0] * batch_size
@@ -134,6 +157,8 @@ class vLLMRollout(LegacyVLLMRollout):
             handler.milestone_hit_rate = 0.0
             handler.subgoal_success_rate = 0.0
             handler.collapse_state = "ok"
+            handler.transition_outcome_recorded = 0.0
+            handler.transition_terminal_failure = 0.0
             try:
                 env_clients[idx].reset(handler.item_id)
                 observation = env_clients[idx].observe()
@@ -143,6 +168,8 @@ class vLLMRollout(LegacyVLLMRollout):
                 handler.env_step_failed = 1.0
                 handler.executor_action_valid = 0.0
                 handler.latest_observation = str(exc)
+                handler.transition_outcome_recorded = 1.0
+                handler.transition_terminal_failure = 1.0
 
         rounds = 0
         rollout_bar = tqdm(total=max_rounds, desc="Improve multi-agent rounds", disable=torch.distributed.get_rank() != 0)
@@ -150,9 +177,13 @@ class vLLMRollout(LegacyVLLMRollout):
         while rounds < max_rounds:
             active_indices = [idx for idx, handler in enumerate(rollout_handler_ls) if not handler.done]
             if not active_indices:
+                self._debug(f"round={rounds + 1} no_active_indices -> rollout_complete")
                 break
 
             replanning_indices = [idx for idx in active_indices if force_replan_next[idx] or planner_steps_remaining[idx] <= 0]
+            self._debug(
+                f"round={rounds + 1} start active={len(active_indices)} replanning={len(replanning_indices)}"
+            )
             if replanning_indices:
                 planner_prompt_ids = []
                 planner_prompt_texts = []
@@ -163,21 +194,23 @@ class vLLMRollout(LegacyVLLMRollout):
                     planner_legal_actions.append(legal_actions)
                     planner_prompt = build_planner_prompt(handler.latest_observation, legal_actions=legal_actions)
                     handler.latest_planner_prompt = planner_prompt
-                    handler.add_user_message(self.tokenizer, planner_prompt)
                     planner_prompt_texts.append(planner_prompt)
-                    planner_prompt_ids.append(handler.get_generation_prompt(self.tokenizer))
+                    planner_prompt_ids.append(self._build_turn_prompt_token_ids(planner_prompt))
                 with self.update_sampling_params(**self._sampling_overrides("planner", do_sample, kwargs.copy())):
+                    self._debug(f"round={rounds + 1} planner_generate:start prompts={len(planner_prompt_ids)}")
                     planner_output = self.inference_engine.generate(
                         prompts=None,
                         prompt_token_ids=planner_prompt_ids,
                         sampling_params=self.sampling_params,
                         use_tqdm=False,
                     )
+                    self._debug(f"round={rounds + 1} planner_generate:end prompts={len(planner_prompt_ids)}")
                 planner_response_ids = self._extract_response_token_ids(planner_output)
                 for local_i, idx in enumerate(replanning_indices):
                     handler = rollout_handler_ls[idx]
                     raw_text = self.tokenizer.decode(planner_response_ids[local_i], skip_special_tokens=True)
                     legal_actions = planner_legal_actions[local_i]
+                    handler.add_user_message(self.tokenizer, planner_prompt_texts[local_i])
                     validation = validate_planner_json(raw_text, legal_actions)
                     planner_message = validation.message
                     current_plans[idx] = planner_message
@@ -232,23 +265,25 @@ class vLLMRollout(LegacyVLLMRollout):
                     planner_message=planner_message,
                     legal_actions=legal_actions,
                 )
-                handler.add_user_message(self.tokenizer, executor_prompt)
                 executor_prompt_texts.append(executor_prompt)
-                executor_prompt_ids.append(handler.get_generation_prompt(self.tokenizer))
+                executor_prompt_ids.append(self._build_turn_prompt_token_ids(executor_prompt))
 
             with self.update_sampling_params(**self._sampling_overrides("executor", do_sample, kwargs.copy())):
+                self._debug(f"round={rounds + 1} executor_generate:start prompts={len(executor_prompt_ids)}")
                 executor_output = self.inference_engine.generate(
                     prompts=None,
                     prompt_token_ids=executor_prompt_ids,
                     sampling_params=self.sampling_params,
                     use_tqdm=False,
                 )
+                self._debug(f"round={rounds + 1} executor_generate:end prompts={len(executor_prompt_ids)}")
             executor_response_ids = self._extract_response_token_ids(executor_output)
             step_trace_events = []
             for local_i, idx in enumerate(active_indices):
                 handler = rollout_handler_ls[idx]
                 raw_text = self.tokenizer.decode(executor_response_ids[local_i], skip_special_tokens=True)
                 legal_actions = legal_actions_by_idx[idx]
+                handler.add_user_message(self.tokenizer, executor_prompt_texts[local_i])
                 validation = validate_executor_json(raw_text, legal_actions)
                 handler.executor_first_pass_valid = 1.0 if validation.valid else 0.0
                 handler.executor_retry_used = 0.0
@@ -358,6 +393,8 @@ class vLLMRollout(LegacyVLLMRollout):
                         handler.latest_observation = state
                         handler.executor_action_valid = 1.0
                         handler.executor_native_format_valid = 1.0
+                        handler.transition_outcome_recorded = 1.0
+                        handler.transition_terminal_failure = 0.0
                         valid_action_streaks[idx] += 1
                         executor_legal_action_rate[idx] = 1.0
                         handler.executor_legal_action_rate = 1.0
@@ -380,6 +417,8 @@ class vLLMRollout(LegacyVLLMRollout):
                         valid_action_streaks[idx] = 0
                         executor_legal_action_rate[idx] = 0.0
                         handler.executor_legal_action_rate = 0.0
+                        handler.transition_outcome_recorded = 1.0
+                        handler.transition_terminal_failure = 1.0
                         trace_event["env_state_excerpt"] = self._clip(exc)
                         trace_event["validation_reason"] = "env_exception"
                         force_replan_next[idx] = True
@@ -403,6 +442,8 @@ class vLLMRollout(LegacyVLLMRollout):
                     executor_legal_action_rate[idx] = 0.0
                     handler.executor_legal_action_rate = 0.0
                     handler.latest_observation = f"Terminated due to invalid executor output ({validation.reason})."
+                    handler.transition_outcome_recorded = 1.0
+                    handler.transition_terminal_failure = 1.0
                     trace_event["env_state_excerpt"] = self._clip(handler.latest_observation)
                     force_replan_next[idx] = True
 
@@ -410,6 +451,14 @@ class vLLMRollout(LegacyVLLMRollout):
                 trace_event["executor_native_format_valid"] = bool(handler.executor_native_format_valid)
                 step_trace_events.append(trace_event)
 
+            valid_count = sum(1 for event in step_trace_events if event["validation_valid"])
+            env_step_count = sum(1 for event in step_trace_events if event["env_step_called"])
+            done_count = sum(1 for idx in active_indices if rollout_handler_ls[idx].done)
+            self._debug(
+                "round="
+                f"{rounds + 1} executor_process:end valid={valid_count}/{len(active_indices)} "
+                f"env_step_called={env_step_count}/{len(active_indices)} done_now={done_count}/{len(active_indices)}"
+            )
             trace_reasons = self._trace_reasons_for_step(step_trace_events, global_steps)
             if trace_reasons:
                 for event in step_trace_events:
@@ -420,6 +469,9 @@ class vLLMRollout(LegacyVLLMRollout):
             rollout_bar.update(1)
 
         rollout_bar.close()
+        self._debug(
+            f"generate_sequences:end rounds_completed={rounds} completed_handlers={sum(handler.done for handler in rollout_handler_ls)}/{len(rollout_handler_ls)}"
+        )
         if self.reward_mode == "final_only":
             for handler in rollout_handler_ls:
                 handler.mark_last_executor_reward(handler.score)
@@ -456,6 +508,8 @@ class vLLMRollout(LegacyVLLMRollout):
         planner_json_validity_tensor = []
         executor_legal_action_rate_tensor = []
         subgoal_success_rate = []
+        transition_outcome_recorded = []
+        transition_terminal_failure = []
         messages = []
         for handler in rollout_handler_ls:
             handler.truncate_output_ids()
@@ -491,6 +545,8 @@ class vLLMRollout(LegacyVLLMRollout):
             planner_json_validity_tensor.append(float(getattr(handler, "planner_json_validity", 0.0)))
             executor_legal_action_rate_tensor.append(float(getattr(handler, "executor_legal_action_rate", 0.0)))
             subgoal_success_rate.append(float(getattr(handler, "subgoal_success_rate", 0.0)))
+            transition_outcome_recorded.append(float(getattr(handler, "transition_outcome_recorded", 0.0)))
+            transition_terminal_failure.append(float(getattr(handler, "transition_terminal_failure", 0.0)))
             messages.append(handler.messages)
 
         response_ids = self._pad_tensor_list(response_ids, self.tokenizer.pad_token_id, self.config.response_length)
@@ -549,6 +605,8 @@ class vLLMRollout(LegacyVLLMRollout):
                 "planner_json_validity": torch.tensor(planner_json_validity_tensor, dtype=torch.float32, device=cur_device),
                 "executor_legal_action_rate": torch.tensor(executor_legal_action_rate_tensor, dtype=torch.float32, device=cur_device),
                 "subgoal_success_rate": torch.tensor(subgoal_success_rate, dtype=torch.float32, device=cur_device),
+                "transition_outcome_recorded": torch.tensor(transition_outcome_recorded, dtype=torch.float32, device=cur_device),
+                "transition_terminal_failure": torch.tensor(transition_terminal_failure, dtype=torch.float32, device=cur_device),
             },
             batch_size=(batch_size,),
         )

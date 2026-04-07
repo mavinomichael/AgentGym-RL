@@ -1,0 +1,27 @@
+# Multi-agent extension.
+
+task_name: webarena
+train_file: AgentItemId/webarena_train.json
+eval_dir: AgentEval/webarena
+max_prompt_length: 750
+max_response_length: 14098
+default_max_rounds: 15
+rollout_max_tokens: 512
+planner_max_tokens: 192
+executor_max_tokens: 512
+train_batch_size: 32
+rollout_n: 4
+ppo_mini_batch_size: 4
+ppo_micro_batch_size_per_gpu: 1
+critic_ppo_micro_batch_size_per_gpu: 1
+default_timeout: 600
+invalid_action_patterns:
+  - "Cannot parse action from response."
+  - "TimeoutError"
+  - "Error in step:"
+executor_native_format_hint: "Use the WebArena native format with reasoning and exactly one triple-backticked action block."
+eval_max_prompt_length: 750
+eval_max_response_length: 14098
+eval_batch_size: 32
+eval_max_rounds: 15
+total_epochs: 25

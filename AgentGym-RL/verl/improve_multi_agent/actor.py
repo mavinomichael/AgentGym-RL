@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import itertools
+import os
 from typing import Dict
 
 import torch
@@ -11,6 +12,24 @@ from verl.utils.py_functional import append_to_dict
 from verl.utils.seqlen_balancing import get_reverse_idx, rearrange_micro_batches
 from verl.utils.torch_functional import masked_mean
 from verl.workers.agent_actor.dp_actor import DataParallelPPOActor
+
+
+def _debug_enabled() -> bool:
+    return os.environ.get("VERL_IMPROVE_DEBUG_PROGRESS", "0") == "1"
+
+
+def _debug_all_ranks() -> bool:
+    return os.environ.get("VERL_IMPROVE_DEBUG_ALL_RANKS", "0") == "1"
+
+
+def _debug(message: str) -> None:
+    if not _debug_enabled():
+        return
+    rank = 0
+    if torch.distributed.is_available() and torch.distributed.is_initialized():
+        rank = torch.distributed.get_rank()
+    if rank == 0 or _debug_all_ranks():
+        print(f"[improve-role-actor][rank={rank}] {message}", flush=True)
 
 
 class RoleAwareDataParallelPPOActor(DataParallelPPOActor):
@@ -61,7 +80,9 @@ class RoleAwareDataParallelPPOActor(DataParallelPPOActor):
         }
 
     def update_policy(self, data: DataProto):
+        _debug("update_policy:enter")
         self.actor_module.train()
+        _debug("update_policy:train_mode_set")
         temperature = data.meta_info["temperature"]
         select_keys = [
             "input_ids",
@@ -82,6 +103,7 @@ class RoleAwareDataParallelPPOActor(DataParallelPPOActor):
         select_keys.extend([key for key in optional_keys if key in data.batch.keys()])
         batch = data.select(batch_keys=select_keys).batch
         dataloader = batch.split(self.config.ppo_mini_batch_size)
+        _debug(f"update_policy:batch_size={len(batch)} minibatches={len(dataloader)}")
 
         metrics = {}
         use_role_local_optimization = bool(getattr(self.config, "role_local_optimization", True))
@@ -101,13 +123,17 @@ class RoleAwareDataParallelPPOActor(DataParallelPPOActor):
                 gradient_accumulation = self.config.ppo_mini_batch_size // self.config.ppo_micro_batch_size_per_gpu
                 micro_batches = mini_batch.split(self.config.ppo_micro_batch_size_per_gpu)
 
+            _debug(f"update_policy:minibatch_start micro_batches={len(micro_batches)}")
             self.actor_optimizer.zero_grad()
             for micro in micro_batches:
                 micro = micro.cuda()
                 response_mask = micro["response_mask"]
                 old_log_prob = micro["old_log_probs"]
                 advantages = micro["advantages"]
+                _debug(f"update_policy:microbatch_start batch_size={len(micro)}")
+                _debug("update_policy:forward_start")
                 entropy, log_prob = self._forward_micro_batch(micro_batch=micro, temperature=temperature)
+                _debug("update_policy:forward_end")
                 negative_approx_kl = log_prob - old_log_prob
                 ratio = torch.exp(negative_approx_kl)
 
@@ -119,6 +145,12 @@ class RoleAwareDataParallelPPOActor(DataParallelPPOActor):
                 planner_mask = micro.get("planner_response_mask", torch.zeros_like(response_mask)).float() * weighted_mask
                 executor_mask = micro.get("executor_response_mask", torch.zeros_like(response_mask)).float() * weighted_mask
                 remaining_mask = torch.clamp(weighted_mask - planner_mask - executor_mask, min=0.0)
+                _debug(
+                    "update_policy:mask_totals "
+                    f"planner={float(planner_mask.sum().item()):.1f} "
+                    f"executor={float(executor_mask.sum().item()):.1f} "
+                    f"other={float(remaining_mask.sum().item()):.1f}"
+                )
                 if not use_role_local_optimization:
                     remaining_mask = weighted_mask
                     planner_mask = torch.zeros_like(weighted_mask)
@@ -164,11 +196,19 @@ class RoleAwareDataParallelPPOActor(DataParallelPPOActor):
                     entropy_loss = zero
                     other_policy_loss = zero
 
-                policy_loss = (
-                    planner_terms["policy_loss"] * planner_mask.sum()
-                    + executor_terms["policy_loss"] * executor_mask.sum()
-                    + other_policy_loss * remaining_mask.sum()
-                ) / total_mask_denom
+                active_mask = planner_mask + executor_mask + remaining_mask
+                if torch.count_nonzero(active_mask).item() == 0:
+                    # In planner-frozen RL some ranks can receive samples with zero planner
+                    # weight. Keep autograd connected so all FSDP ranks still participate
+                    # in the same backward collectives instead of returning a detached zero.
+                    policy_loss = (log_prob * 0.0).sum()
+                    _debug("update_policy:zero_active_mask_graph_loss")
+                else:
+                    policy_loss = (
+                        planner_terms["policy_loss"] * planner_mask.sum()
+                        + executor_terms["policy_loss"] * executor_mask.sum()
+                        + other_policy_loss * remaining_mask.sum()
+                    ) / total_mask_denom
 
                 if self.config.use_kl_loss:
                     ref_log_prob = micro["ref_log_prob"]
@@ -207,7 +247,9 @@ class RoleAwareDataParallelPPOActor(DataParallelPPOActor):
                     loss = policy_loss * (len(micro) / self.config.ppo_mini_batch_size)
                 else:
                     loss = policy_loss / gradient_accumulation
+                _debug("update_policy:backward_start")
                 loss.backward()
+                _debug("update_policy:backward_end")
 
                 data = {
                     "actor/planner_pg_loss": planner_terms["pg_loss"].detach().item(),
@@ -224,8 +266,13 @@ class RoleAwareDataParallelPPOActor(DataParallelPPOActor):
                     "actor/other_ppo_kl": ppo_kl.detach().item(),
                 }
                 append_to_dict(metrics, data)
+                _debug("update_policy:microbatch_end")
 
+            _debug("update_policy:optimizer_step_start")
             grad_norm = self._optimizer_step()
+            _debug("update_policy:optimizer_step_end")
             append_to_dict(metrics, {"actor/grad_norm": grad_norm.detach().item()})
+            _debug("update_policy:minibatch_end")
         self.actor_optimizer.zero_grad()
+        _debug("update_policy:end")
         return metrics

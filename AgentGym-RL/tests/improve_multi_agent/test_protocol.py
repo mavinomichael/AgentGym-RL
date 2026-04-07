@@ -17,12 +17,6 @@ monitoring = load_improve_multi_agent_module(
     "verl.improve_multi_agent.monitoring",
     "verl/improve_multi_agent/monitoring.py",
 )
-rollout_module = load_improve_multi_agent_module(
-    "verl.improve_multi_agent.workers.rollout.agent_vllm_rollout.vllm_rollout",
-    "verl/improve_multi_agent/workers/rollout/agent_vllm_rollout/vllm_rollout.py",
-)
-
-
 def test_planner_validation_accepts_schema_valid_json():
     legal_actions = ["turn left", "turn right", "move forward", "pick up red key 1"]
     payload = {
@@ -58,6 +52,31 @@ def test_executor_validation_requires_legal_action_index():
     invalid = protocol.validate_executor_json('{"schema_version":"v1","reason":"Too far.","action_id":9}', legal_actions)
     assert invalid.valid is False
     assert invalid.reason == "action_id_out_of_range"
+
+
+def test_planner_validation_repairs_near_schema_json():
+    legal_actions = ["turn left", "turn right", "move forward"]
+    raw = (
+        '{"action_hint":"move_forward","confidence":0.75,"schema_version":"v1","subgoal_id":"approach",'
+        '"success_check_check state moves toward target","target":{"color":"none","location_hint":"left","object_type":"none"}}'
+    )
+    validation = protocol.validate_planner_json(raw, legal_actions)
+    assert validation.valid is True
+    assert validation.reason.startswith("ok_repaired")
+    assert validation.message.action_hint == "move_forward"
+
+
+def test_executor_validation_recovers_planner_shaped_output():
+    legal_actions = ["turn left", "turn right", "move forward", "pick up red ball 1"]
+    raw = (
+        '{"action_hint":"pickup","confidence":0.75,"schema_version":"v1","subgoal_id":"pickup",'
+        '"success_check_check inventory changes after pickup","target":{"color":"red","location_hint":"front","object_type":"ball"}}'
+    )
+    validation = protocol.validate_executor_json(raw, legal_actions)
+    assert validation.valid is True
+    assert validation.reason == "ok_repaired_from_planner"
+    assert validation.action == "pick up red ball 1"
+    assert validation.decision.action_id == 3
 
 
 def test_executor_renderer_produces_babyai_native_payload():
@@ -150,14 +169,10 @@ def test_rolewise_advantage_and_reward_normalizer():
     assert returns.shape == rewards.shape
 
 
-def test_align_non_tensor_entries_keeps_nested_payloads_one_dimensional():
-    aligned = rollout_module.vLLMRollout._align_non_tensor_entries(
-        entries=[[{"role": "user"}], [{"role": "assistant"}]],
-        target_size=2,
-    )
-    assert aligned.shape == (2,)
-    assert aligned.dtype == object
-    assert aligned[0] == [{"role": "user"}]
+def test_extract_available_actions_and_safe_json_dumps_are_stable():
+    observation = 'Obs\\nAvailable actions: ["turn left", "turn right", "move forward"]'
+    assert protocol.extract_available_actions(observation) == ["turn left", "turn right", "move forward"]
+    assert protocol.safe_json_dumps({"b": 2, "a": 1}) == '{"a":1,"b":2}'
 
 
 def test_collapse_monitor_detects_warning_then_collapse():

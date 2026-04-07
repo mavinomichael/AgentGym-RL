@@ -1,6 +1,13 @@
 # Multi-Agent Collapse Investigation: BabyAI and WebArena Deep Research Handoff
 
-Updated on 2026-04-05. This packet is designed so ChatGPT Deep Research can inspect the repo, reuse the exact source files, and draft a paper that pivots from “multi-agent improvement” to “collapse investigation” across both BabyAI and WebArena.
+Updated on 2026-04-07. This packet is designed so ChatGPT Deep Research can inspect the repo, reuse the exact source files, and draft a paper that pivots from “multi-agent improvement” to “collapse investigation” across both BabyAI and WebArena.
+
+## 2026-04-07 Question-Led Update
+- Collapse Q\&A memo: `/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/2026-03-30_multi_agent_collapse_paper_handoff/COLLAPSE_QUESTIONS_AND_ANSWERS.md`
+- Regime summary used for the question figures: `/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/2026-03-30_multi_agent_collapse_paper_handoff/collapse_regime_summary.tsv`
+- New figure: `/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/2026-03-30_multi_agent_collapse_paper_handoff/figures/fig_collapse_timeline.png`
+- New figure: `/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/2026-03-30_multi_agent_collapse_paper_handoff/figures/fig_recovery_summary.png`
+- Updated paper LaTeX draft: `/Users/mavinomichael/PycharmProjects/AgentGym-RL/reports/2026-03-30_multi_agent_collapse_paper_handoff/MULTI_AGENT_COLLAPSE_UPDATED.tex`
 
 ## Original AgentGym-RL Reference
 - README: `/Users/mavinomichael/PycharmProjects/AgentGym-RL/README.md`

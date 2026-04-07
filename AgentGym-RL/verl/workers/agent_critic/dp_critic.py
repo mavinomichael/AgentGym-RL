@@ -15,6 +15,7 @@
 Implement a multiprocess PPOCritic
 """
 import itertools
+import os
 
 import torch
 from torch import nn, optim
@@ -32,6 +33,24 @@ from verl.utils.seqlen_balancing import rearrange_micro_batches, get_reverse_idx
 from flash_attn.bert_padding import pad_input, unpad_input, rearrange, index_first_axis
 
 __all__ = ['DataParallelPPOCritic']
+
+
+def _debug_enabled() -> bool:
+    return os.environ.get('VERL_IMPROVE_DEBUG_PROGRESS', '0') == '1'
+
+
+def _debug_all_ranks() -> bool:
+    return os.environ.get('VERL_IMPROVE_DEBUG_ALL_RANKS', '0') == '1'
+
+
+def _debug(message: str) -> None:
+    if not _debug_enabled():
+        return
+    rank = 0
+    if torch.distributed.is_available() and torch.distributed.is_initialized():
+        rank = torch.distributed.get_rank()
+    if rank == 0 or _debug_all_ranks():
+        print(f"[improve-dp-critic][rank={rank}] {message}", flush=True)
 
 
 class DataParallelPPOCritic(BasePPOCritic):
@@ -94,11 +113,15 @@ class DataParallelPPOCritic(BasePPOCritic):
     def _optimizer_step(self):
         assert self.config.grad_clip is not None
 
+        _debug("_optimizer_step:clip_grad_norm:start")
         if isinstance(self.critic_module, FSDP):
             grad_norm = self.critic_module.clip_grad_norm_(self.config.grad_clip)
         else:
             grad_norm = torch.nn.utils.clip_grad_norm_(self.critic_module.parameters(), max_norm=self.config.grad_clip)
+        _debug("_optimizer_step:clip_grad_norm:end")
+        _debug("_optimizer_step:optimizer_step:start")
         self.critic_optimizer.step()
+        _debug("_optimizer_step:optimizer_step:end")
         return grad_norm
 
     def compute_values(self, data: DataProto) -> torch.Tensor:
@@ -136,6 +159,7 @@ class DataParallelPPOCritic(BasePPOCritic):
         # make sure we are in training mode
         self.critic_module.train()
         metrics = {}
+        _debug("update_critic:start")
 
         select_keys = ['input_ids', 'attention_mask', 'position_ids', 'values', 'returns', 'response_mask']
         batch = data.select(batch_keys=select_keys).batch
@@ -144,6 +168,7 @@ class DataParallelPPOCritic(BasePPOCritic):
         dataloader = batch.split(self.config.ppo_mini_batch_size)
 
         for batch_idx, data in enumerate(dataloader):
+            _debug(f"update_critic:minibatch_start idx={batch_idx} batch_size={len(data)}")
             # split batch into micro_batches
             mini_batch = data
             if self.config.use_dynamic_bsz:
@@ -153,16 +178,21 @@ class DataParallelPPOCritic(BasePPOCritic):
                 micro_batches = mini_batch.split(self.config.ppo_micro_batch_size_per_gpu)
                 self.gradient_accumulation = self.config.ppo_mini_batch_size // self.config.ppo_micro_batch_size_per_gpu
 
+            _debug(f"update_critic:minibatch_split idx={batch_idx} micro_batches={len(micro_batches)}")
             self.critic_optimizer.zero_grad()
+            _debug(f"update_critic:zero_grad_done idx={batch_idx}")
 
-            for data in micro_batches:
+            for micro_idx, data in enumerate(micro_batches):
+                _debug(f"update_critic:microbatch_start idx={batch_idx}.{micro_idx} batch_size={len(data)}")
                 data = data.cuda()  # critic device is cpu when using offload
                 values = data['values']
                 returns = data['returns']
 
                 eos_mask = data['response_mask']
 
+                _debug(f"update_critic:forward_start idx={batch_idx}.{micro_idx}")
                 vpreds = self._forward_micro_batch(data)
+                _debug(f"update_critic:forward_end idx={batch_idx}.{micro_idx}")
 
                 if not (vpreds.shape[-1] == values.shape[-1] == returns.shape[-1] == eos_mask.shape[-1]):
                     # Align to the response tail if prompt positions leaked into one of the tensors.
@@ -185,7 +215,9 @@ class DataParallelPPOCritic(BasePPOCritic):
                 else:
                     loss = vf_loss / self.gradient_accumulation
 
+                _debug(f"update_critic:backward_start idx={batch_idx}.{micro_idx}")
                 loss.backward()
+                _debug(f"update_critic:backward_end idx={batch_idx}.{micro_idx}")
 
                 data = {
                     'critic/vf_loss': vf_loss.detach().item(),
@@ -194,9 +226,14 @@ class DataParallelPPOCritic(BasePPOCritic):
                 }
 
                 append_to_dict(metrics, data)
+                _debug(f"update_critic:microbatch_end idx={batch_idx}.{micro_idx}")
 
+            _debug(f"update_critic:optimizer_step_start idx={batch_idx}")
             grad_norm = self._optimizer_step()
+            _debug(f"update_critic:optimizer_step_end idx={batch_idx}")
             data = {'critic/grad_norm': grad_norm.detach().item()}
             append_to_dict(metrics, data)
+            _debug(f"update_critic:minibatch_end idx={batch_idx}")
         self.critic_optimizer.zero_grad()
+        _debug("update_critic:end")
         return metrics
